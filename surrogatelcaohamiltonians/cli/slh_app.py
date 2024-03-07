@@ -37,7 +37,7 @@ def train(
     log_level: str = typer.Option("info", help="Sets the training logging level."),
 ):
     """
-    Starts the training of a model with parameters provided by a configuration file.
+    Starts the training of a H/S model with parameters provided by a configuration file.
     """
     console.print("Eventually this will set up a training")
 
@@ -84,7 +84,7 @@ def train(
 @app.command()
 def docs():
     """
-    Opens the documentation website in your browser.
+    Opens the documentation page once we eventually have one.
     """
     console.print("This will eventually open docs")
     # typer.launch("https://apax.readthedocs.io/en/latest/")
