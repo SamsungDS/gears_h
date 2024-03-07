@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "surrogatelcaohamiltonians"
+version = "0.0.0"
+description = "Package to learn electronic structure hamiltonians in an LCAO basis"
+authors = ["Anubhab Haldar <a.haldar@samsung.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+typer = "^0.9.0"
+rich = "^13.7.1"
+sphinx = "^7.2.6"
+
+[tool.poetry.scripts]
+slh = 'surrogatelcaohamiltonians.cli.slh_app:app'
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
