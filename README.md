@@ -1,3 +1,5 @@
+Everything here is more of a wishlist than a guarantee unless explicitly stated otherwise. Such is research.
+
 # Surrogate LCAO Hamiltonians
 
 SLH seeks to surrogatize and approximate density functional theory (or otherwise) hamiltonians and (optionally) overlap matrices in a basis of localized spherical orbitals.
