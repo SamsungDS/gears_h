@@ -1,12 +1,59 @@
 from typing import Any
+from functools import partial
 
-
+import e3x
 import jax
 import jax.numpy as jnp
 import jaxtyping
 
+import flax.linen as nn
+
 Array = jaxtyping.Array
 Float = jaxtyping.Float
+e3x.Config.set_cartesian_order(False)
+
+
+class SpeciesAwareRadialBasis(nn.Module):
+  cutoff: float
+  num_radial: int = 8
+  max_degree: int = 3
+  num_elemental_embedding: int = 64
+
+  def setup(self):
+    self.radial_function = partial(e3x.nn.sinc, limit=self.cutoff)
+    # TODO Do we really want anything more than Bismuth? No. No, we do not.
+    self.embedding = e3x.nn.Embed(83, self.num_elemental_embedding, name="elemental embedding")
+  
+  @nn.compact
+  def __call__(self, neighbour_displacements, Z_j):
+    """_summary_
+
+    Parameters
+    ----------
+    neighbour_displacements : _type_
+        _description_
+    Z_j : _type_
+        _description_
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
+    basis_expansion = e3x.nn.basis(
+      neighbour_displacements,
+      num=self.num_radial,
+      max_degree=self.max_degree,
+      radial_fn=self.radial_function,
+      cutoff_fn=partial(e3x.nn.cosine_cutoff, cutoff=self.cutoff),
+      )
+    
+    # We transform the embedding dimension to the radial basis dimension 
+    # so we can product meaningfully
+    transformed_embedding = e3x.nn.Dense(self.num_radial, name="transform embedding")(self.embedding(Z_j))
+    y = e3x.nn.Tensor(max_degree=self.max_degree, include_pseudotensors=False, name="emb x basis")(transformed_embedding, basis_expansion)
+    # TODO This swish here is just for nonlinearity. I don't know if we actually need it.
+    return e3x.nn.swish(y)
 
 
 def jinclike(x: Float[Array, '...'], num: int, limit: float = 1.0):
@@ -50,3 +97,6 @@ def jinclike(x: Float[Array, '...'], num: int, limit: float = 1.0):
 
   return factor1 * factor2 * \
     (jnp.sinc(x / limit * (i + 1)) + jnp.sinc(x / limit * (i + 2)))
+
+
+
