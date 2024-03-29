@@ -20,6 +20,11 @@ jaxtyping = "^0.2.28"
 slh = 'surrogatelcaohamiltonians.cli.slh_app:app'
 
 
+[tool.poetry.group.docs.dependencies]
+sphinx = "^7.2.6"
+myst-parser = "^2.0.0"
+sphinx-rtd-theme = "^2.0.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

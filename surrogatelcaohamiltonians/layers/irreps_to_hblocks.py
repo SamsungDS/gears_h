@@ -15,4 +15,4 @@ class HamiltonianMapper(nn.Module):
     def __call__(self, neighbour_irreps):
         y = e3x.nn.Dense(features=1)(neighbour_irreps)
         # y = neighbour_irreps[..., 0].sum(axis=-3)
-        return jnp.einsum('...l,nml->...nm', y[..., 0], self.cgc).sum(axis=-3)
+        return jnp.einsum("...l,nml->...nm", y[..., 0], self.cgc).sum(axis=-3)
