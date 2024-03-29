@@ -18,6 +18,7 @@ class SpeciesAwareRadialBasis(nn.Module):
   num_radial: int = 8
   max_degree: int = 3
   num_elemental_embedding: int = 64
+  embedding_residual_connection: int = True
 
   def setup(self):
     self.radial_function = partial(e3x.nn.sinc, limit=self.cutoff)
@@ -52,6 +53,10 @@ class SpeciesAwareRadialBasis(nn.Module):
     # so we can product meaningfully
     transformed_embedding = e3x.nn.Dense(self.num_radial, name="transform embedding")(self.embedding(Z_j))
     y = e3x.nn.Tensor(max_degree=self.max_degree, include_pseudotensors=False, name="emb x basis")(transformed_embedding, basis_expansion)
+
+    if self.embedding_residual_connection:
+      y = e3x.nn.add(y, transformed_embedding)
+
     # TODO This swish here is just for nonlinearity. I don't know if we actually need it.
     return e3x.nn.swish(y)
 
