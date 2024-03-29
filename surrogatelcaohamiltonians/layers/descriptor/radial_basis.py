@@ -25,15 +25,15 @@ class SpeciesAwareRadialBasis(nn.Module):
     self.embedding = e3x.nn.Embed(83, self.num_elemental_embedding, name="elemental embedding")
   
   @nn.compact
-  def __call__(self, neighbour_displacements, Z_j):
+  def __call__(self, neighbour_displacements: Float[Array, '... 3'], Z_j: Float[Array, '...']):
     """_summary_
 
     Parameters
     ----------
-    neighbour_displacements : _type_
-        _description_
+    neighbour_displacements : 
+        Input array containing vectors to neighbours around a given point.
     Z_j : _type_
-        _description_
+        Input array of atomic numbers of the points.
 
     Returns
     -------

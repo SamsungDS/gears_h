@@ -1,16 +1,11 @@
 
 import e3x
 import jax
-import jax.numpy as jnp
-
-from functools import partial
 import flax.linen as nn
 
-from typing import Optional
+from jaxtyping import Float, Array, Int
 
 from surrogatelcaohamiltonians.layers.descriptor.radial_basis import SpeciesAwareRadialBasis
-
-from jaxtyping import Float, Array, Int
 
 e3x.Config.set_cartesian_order(False)
 
@@ -61,9 +56,15 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
     # y is currently n_neighbours x 2 x (basis_max_degree + 1)**2 x num_basis_features
     
     transformed_embedding = e3x.nn.Dense(self.radial_basis.num_radial, name="transform embedding")(self.embedding(Z_i))
+    
+    # This is currently num_pairs x 2 x (moment_max_degree + 1)^2 x basis
     y = e3x.nn.Tensor(max_degree=self.moment_max_degree, name="emb x basis")(transformed_embedding, y)
 
+    # Contract over all neighbours of atoms indexed by idx_i
+    # This is the ONLY "message-passing" step.
+    # This is now num_atoms x 2 x (moment_max_degree + 1)^2 x basis
+    y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
+    
     # TODO In principle we might want a residual connection here of y for training
     # stability reasons, but we can also do that later.
-    
     return y
