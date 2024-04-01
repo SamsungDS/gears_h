@@ -20,17 +20,34 @@ def pairwise_hamiltonian_from_file(filename: Path):
   hblocks = [block for block in data.values()]
   return bond_atom_indices, bond_vectors, hblocks
 
-# TODO Need not be a json specificallyh, we'll see
+# TODO Need not be a json specifically, we'll see
 def orbital_spec_from_file(filename: Path):
   return json.load(open(filename, mode='r'))
 
+def pairwise_hamiltonian_from_file(filename: Path):
+  data = np.load(filename)
+  ijlist = [k for k in data.keys()]
+  displacement_ham_list = [v for v in data.values()]
+  
 
 def snapshot_from_directory(
     directory: Path,
     atoms_filename: str = "atoms.extxyz",
     orbital_spec_filename: str = "orbital_ells.json",
-    hamiltonian_dataset_filename: str = "hamiltonians.npz"
+    hamiltonian_dataset_filename: str = "hblocks.npz"
 ):
   atoms = read(directory / atoms_filename)
   orbital_spec = orbital_spec_from_file(directory / orbital_spec_filename)
   bond_atom_indices, bond_vectors, hamiltonian_blocks = pairwise_hamiltonian_from_file(directory / hamiltonian_dataset_filename)
+  return atoms, orbital_spec, (bond_atom_indices, bond_vectors, hamiltonian_blocks)
+
+
+# class AtomisticDataset:
+
+#   def __init__(
+#       self,
+#       inputs,
+#       labels,
+#       n_epoch: int,
+#   ):
+    

@@ -1,0 +1,72 @@
+from dataclasses import dataclass
+from functools import cache
+from itertools import product
+from surrogatelcaohamiltonians.utilities.mapper import get_mapping_spec
+
+import numpy as np
+
+
+@dataclass(frozen=True)
+class BlockIrrepMappingSpec:
+    # Slices for subblocking a block
+    block_slices: list[tuple[slice, slice]]
+    # Slices of CG coeffs to transform back and forth
+    cgc_slices: list[tuple[slice, slice, slice]]
+    # Slices of irreps array corresponding to subblocks
+    irreps_slices: list[tuple[int, slice, int]]
+    cgc: np.ndarray
+    mask_array: np.ndarray
+
+
+@dataclass(frozen=True)
+class MultiElementPairHBlockMapper:
+    element_pairs: list[tuple[int, int]]
+    hblock_mappers: list[BlockIrrepMappingSpec]
+
+    @cache
+    def mapper(self, Z_i, Z_j):
+        return self.hblock_mappers[self.element_pairs.index((Z_i, Z_j))]
+
+    def hblock_to_irrep(self, hblock, irreps_array, Z_i, Z_j):
+        mapping_spec = self.mapper(Z_i, Z_j)
+
+        ms = mapping_spec
+        for block_slice, cgc_slice, irreps_slice in zip(
+            ms.block_slices, ms.cgc_slices, ms.irreps_slices, strict=True
+        ):
+            irreps_array[irreps_slice] = np.einsum(
+                "mn,lmn->l", hblock[block_slice], ms.cgc[cgc_slice]
+            )
+
+    def irrep_to_hblock(self, hblock, irreps_array, Z_i, Z_j):
+        mapping_spec = self.mapper(Z_i, Z_j)
+
+        ms = mapping_spec
+        for block_slice, cgc_slice, irreps_slice in zip(
+            ms.block_slices, ms.cgc_slices, ms.irreps_slices, strict=True
+        ):
+            hblock[block_slice] = np.einsum(
+                "l,lmn->mn", irreps_array[irreps_slice], ms.cgc[cgc_slice]
+            )
+
+
+def make_mapper_from_elements(atomic_numbers_list, species_ells_dict):
+    element_pair_list = []
+    hblock_mapper_list = []
+    for Z_i, Z_j in product(atomic_numbers_list, atomic_numbers_list):
+        ells1 = species_ells_dict[Z_i]
+        ells2 = species_ells_dict[Z_j]
+        block_slices, irreps_slices, cgc_slices, mask, cgc = get_mapping_spec(
+            ells1, ells2
+        )
+        element_pair_list.append((Z_j, Z_j))
+        hblock_mapper_list.append(
+            BlockIrrepMappingSpec(
+                block_slices=block_slices,
+                cgc_slices=cgc_slices,
+                irreps_slices=irreps_slices,
+                cgc=cgc,
+                mask_array=mask,
+            )
+        )
+    return MultiElementPairHBlockMapper(element_pairs=element_pair_list, hblock_mappers=hblock_mapper_list)
