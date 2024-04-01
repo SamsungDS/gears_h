@@ -15,6 +15,10 @@ sphinx = "^7.2.6"
 jax = "^0.4.25"
 e3x = "^1.0.1"
 jaxtyping = "^0.2.28"
+pydantic = "^2.6.4"
+tqdm = "^4.66.2"
+matscipy = "^1.0.0"
+tensorflow = "^2.16.1"
 
 [tool.poetry.scripts]
 slh = 'surrogatelcaohamiltonians.cli.slh_app:app'

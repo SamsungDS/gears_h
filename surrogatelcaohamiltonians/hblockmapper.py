@@ -20,15 +20,11 @@ class BlockIrrepMappingSpec:
 
 @dataclass(frozen=True)
 class MultiElementPairHBlockMapper:
-    element_pairs: list[tuple[int, int]]
-    hblock_mappers: list[BlockIrrepMappingSpec]
-
-    @cache
-    def mapper(self, Z_i, Z_j):
-        return self.hblock_mappers[self.element_pairs.index((Z_i, Z_j))]
+    # We keep atomic_number_pairs to map onto the hamiltonian block mappers
+    mapper: dict[tuple[int, int], BlockIrrepMappingSpec]
 
     def hblock_to_irrep(self, hblock, irreps_array, Z_i, Z_j):
-        mapping_spec = self.mapper(Z_i, Z_j)
+        mapping_spec = self.mapper[(Z_i, Z_j)]
 
         ms = mapping_spec
         for block_slice, cgc_slice, irreps_slice in zip(
@@ -69,4 +65,4 @@ def make_mapper_from_elements(atomic_numbers_list, species_ells_dict):
                 mask_array=mask,
             )
         )
-    return MultiElementPairHBlockMapper(element_pairs=element_pair_list, hblock_mappers=hblock_mapper_list)
+    return MultiElementPairHBlockMapper(dict(zip(element_pair_list, hblock_mapper_list)))
