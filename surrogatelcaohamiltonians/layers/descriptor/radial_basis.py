@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Union
 from functools import partial
 
 import e3x
@@ -18,6 +18,7 @@ class SpeciesAwareRadialBasis(nn.Module):
     num_radial: int = 8
     max_degree: int = 3
     num_elemental_embedding: int = 64
+    tensor_module: Union[e3x.nn.Tensor, e3x.nn.FusedTensor] = e3x.nn.Tensor
     embedding_residual_connection: int = True
 
     def setup(self):
@@ -58,7 +59,8 @@ class SpeciesAwareRadialBasis(nn.Module):
         transformed_embedding = e3x.nn.Dense(
             self.num_radial, name="transform embedding"
         )(self.embedding(Z_j))
-        y = e3x.nn.Tensor(
+
+        y = self.tensor_module(
             max_degree=self.max_degree, include_pseudotensors=False, name="emb x basis"
         )(transformed_embedding, basis_expansion)
 
