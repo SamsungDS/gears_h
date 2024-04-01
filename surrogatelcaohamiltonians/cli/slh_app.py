@@ -152,9 +152,7 @@ def docs():
 def visualize_model(
     config_path: Path = typer.Argument(
         ...,
-        help=(
-            "This ideally visualizes the model you've configured."
-        ),
+        help=("This ideally visualizes the model you've configured."),
     )
 ):
     """

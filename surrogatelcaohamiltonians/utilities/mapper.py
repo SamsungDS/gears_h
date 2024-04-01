@@ -103,8 +103,4 @@ def get_mapping_spec(ells1, ells2):
         block_slices,
         irreps_array_slices,
         cgc_slices,
-        mask_candidate[:, :, :ifeaturemax],
-        e3x.so3.clebsch_gordan(
-            max_degree1=max(ells1), max_degree2=max(ells2), max_degree3=ellmax
-        ),
     )

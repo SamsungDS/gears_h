@@ -15,7 +15,7 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
     # basis_max_degree: int = 3
     # num_moment_features: int = 64 # TODO this can in principle be a list of ints
     max_degree: int = 4
-    tensor_module: Union[e3x.nn.Tensor, e3x.nn.FusedTensor] = e3x.nn.FusedTensor
+    tensor_module: Union[e3x.nn.Tensor, e3x.nn.FusedTensor] = e3x.nn.Tensor
 
     @nn.compact
     def __call__(
