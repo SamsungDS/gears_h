@@ -14,6 +14,8 @@ import tensorflow as tf
 
 from tqdm import tqdm
 
+from surrogatelcaohamiltonians.hblockmapper import make_mapper_from_elements, MultiElementPairHBlockMapper
+
 log = logging.getLogger(__name__)
 
 
@@ -92,3 +94,24 @@ def initialize_dataset_from_list(dataset_as_list: list):
     """Each element in the input is a tuple of (Atoms, dict of orbital ells, (NL indices, NL vectors, H blocks))"""
     orbital_ells_across_dataset = [x[1] for x in dataset_as_list]
     orbital_ells_across_dataset = dict((int(k), v) for d in orbital_ells_across_dataset for k, v in d.items())
+
+    orbital_ells_across_dataset = {6: [0, 1]}
+    element_pairwise_h_map = make_mapper_from_elements(orbital_ells_across_dataset)
+    
+    # These entirely define the output feature layer
+    max_ell_across_dataset = max([x.max_ell for x in element_pairwise_h_map.mapper.values()])
+    max_nfeatures_across_dataset = max([x.nfeatures for x in element_pairwise_h_map.mapper.values()])
+
+    dataset_mask_dict = make_dataset_mask(max_ell_across_dataset, max_nfeatures_across_dataset, element_pairwise_h_map)
+
+
+def make_dataset_mask(max_ell: int, max_nfeatures: int, pairwise_hmap: MultiElementPairHBlockMapper):
+
+    mask_dict = {}
+    for element_pair, blockmapper in pairwise_hmap.mapper.items():
+        # This is e3x convention. 2 for parity, angular momentum channels, features
+        mask_array = np.zeros((2, (max_ell + 1) ** 2, max_nfeatures), dtype=np.int8)
+        for slice in blockmapper.irreps_slices:
+            mask_array[slice] = 1
+        mask_dict[element_pair] = mask_array
+    return mask_dict
