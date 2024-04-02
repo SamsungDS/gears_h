@@ -14,6 +14,11 @@ class BlockIrrepMappingSpec:
     cgc_slices: list[tuple[slice, slice, slice]]
     # Slices of irreps array corresponding to subblocks
     irreps_slices: list[tuple[int, slice, int]]
+    max_ell: int
+    nfeatures: int
+
+    def __repr__(self):
+        return f"Mapper with Lmax={self.max_ell} Fmax={self.nfeatures}"
 
 
 @dataclass(frozen=True)
@@ -44,21 +49,24 @@ class MultiElementPairHBlockMapper:
             )
 
 
-def make_mapper_from_elements(atomic_numbers_list, species_ells_dict):
+def make_mapper_from_elements(atomic_numbers_set: set[int], species_ells_dict: dict[int, list[int]]):
     element_pair_list = []
     hblock_mapper_list = []
-    for Z_i, Z_j in product(atomic_numbers_list, atomic_numbers_list):
+
+    for Z_i, Z_j in product(atomic_numbers_set, atomic_numbers_set):
         ells1 = species_ells_dict[Z_i]
         ells2 = species_ells_dict[Z_j]
-        block_slices, irreps_slices, cgc_slices = get_mapping_spec(
+        block_slices, irreps_slices, cgc_slices, max_ell_for_pair, num_features_for_pair = get_mapping_spec(
             ells1, ells2
         )
-        element_pair_list.append((Z_j, Z_j))
+        element_pair_list.append((Z_i, Z_j))
         hblock_mapper_list.append(
             BlockIrrepMappingSpec(
                 block_slices=block_slices,
                 cgc_slices=cgc_slices,
                 irreps_slices=irreps_slices,
+                max_ell=max_ell_for_pair,
+                nfeatures=num_features_for_pair,
             )
         )
     return MultiElementPairHBlockMapper(dict(zip(element_pair_list, hblock_mapper_list)))
