@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from functools import cache
 from itertools import product
-from surrogatelcaohamiltonians.utilities.mapper import get_mapping_spec
+from surrogatelcaohamiltonians.utilities.mapmaker import get_mapping_spec
 
 import numpy as np
 
@@ -50,12 +50,13 @@ class MultiElementPairHBlockMapper:
 
 
 def make_mapper_from_elements(
-    atomic_numbers_set: set[int], species_ells_dict: dict[int, list[int]]
+        species_ells_dict: dict[int, list[int]]
 ):
     element_pair_list = []
     hblock_mapper_list = []
 
-    for Z_i, Z_j in product(atomic_numbers_set, atomic_numbers_set):
+    atomic_numbers = species_ells_dict.keys()
+    for Z_i, Z_j in product(atomic_numbers, atomic_numbers):
         ells1 = species_ells_dict[Z_i]
         ells2 = species_ells_dict[Z_j]
         (
