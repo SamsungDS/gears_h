@@ -99,4 +99,5 @@ def get_mapping_spec(ells1, ells2):
         colstart = 0
 
     assert len(block_slices) == len(irreps_array_slices) == len(cgc_slices)
+    # Add one to features here because array sizes are exclusive of index=length.
     return (block_slices, irreps_array_slices, cgc_slices, max_ell, ifeaturemax + 1)

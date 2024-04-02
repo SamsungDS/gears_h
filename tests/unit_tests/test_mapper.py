@@ -1,4 +1,4 @@
-from surrogatelcaohamiltonians.utilities.mapper import get_mapping_spec
+from surrogatelcaohamiltonians.utilities.mapmaker import get_mapping_spec
 
 
 def test_spsp_h_cgc_ia():
