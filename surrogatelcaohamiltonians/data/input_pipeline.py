@@ -131,10 +131,24 @@ def get_max_ell_and_max_features(hmap: MultiElementPairHBlockMapper):
     return max_ell_across_dataset, max_nfeatures_across_dataset
 
 
+def pad_atomic_numbers(atoms_list: list[Atoms], pad_to: int):
+    return np.row_stack([np.pad(atoms.numbers, ((0, pad_to - len(atoms)))) for atoms in atoms_list], dtype=np.int16)
+
+def pad_neighbour_data(neighbour_indices_list, neighbour_vectors_list, pad_to: int):
+    # assert len(neighbour_indices_list[0]) == 2
+    padded_neighbour_indices = np.stack(
+        [np.pad(nlidx, ((0, pad_to - len(nlidx)), (0, 0))) for nlidx in neighbour_indices_list], dtype=np.int16)
+    padded_neighbour_vectors = np.stack(
+        [np.pad(nlvec, ((0, pad_to - len(nlvec)), (0, 0))) for nlvec in neighbour_vectors_list])
+    
+    return padded_neighbour_indices, padded_neighbour_vectors
+
+
 class InMemoryDataset:
     def __init__(self, dataset_as_list, batch_size, n_epochs):
         self.n_epochs = n_epochs
         self.batch_size = max(len(dataset_as_list), batch_size)
+        self.n_data = len(dataset_as_list)
 
         self.hmap = get_hamiltonian_mapper_from_dataset(dataset_as_list=dataset_as_list)
         self.max_ell, self.nfeatures = get_max_ell_and_max_features(self.hmap)
@@ -143,3 +157,17 @@ class InMemoryDataset:
         )
         
         self.max_natoms, self.max_nneighbours = get_max_natoms_and_nneighbours(dataset_as_list)
+
+        atoms_list = [x[0] for x in dataset_as_list]
+        neighbour_indices_list = [x[-1][0] for x in dataset_as_list]
+        neighbour_vectors_list = [x[-1][1] for x in dataset_as_list]
+        hblocks_list = [x[-1][2] for x in dataset_as_list]
+
+        atomic_numbers_padded = pad_atomic_numbers(atoms_list, self.max_natoms)
+        neighbour_indices_padded, neighbour_vectors_padded = pad_neighbour_data(neighbour_indices_list, neighbour_vectors_list)
+        h_irreps_padded, h_mask = get_padded_h_irreps_and_mask(neighbour_indices_list, hblocks_list, self.hmap)
+
+    def steps_per_epoch(self):
+        # This throws away a bit of the training data, but at most 1 batch worth.
+        # A typical batch is 1-16 large so this is fine.
+        return self.n_data // (self.batch_size)
