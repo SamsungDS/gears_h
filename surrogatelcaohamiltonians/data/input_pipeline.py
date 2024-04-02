@@ -5,6 +5,7 @@ from pathlib import Path
 import json
 
 from ase.io import read
+from ase import Atoms
 
 import jax
 import jax.numpy as jnp
@@ -26,17 +27,20 @@ def pairwise_hamiltonian_from_file(filename: Path):
 
 
 # TODO Need not be a json specifically, we'll see
-def orbital_spec_from_file(filename: Path):
+def orbital_spec_from_file(filename: Path) -> dict[int, list[int]]:
     return json.load(open(filename, mode="r"))
 
 
-def pairwise_hamiltonian_from_file(directory, ijD_filename, hblocks_filename: Path):
+def pairwise_hamiltonian_from_file(
+    directory, ijD_filename, hblocks_filename: Path
+) -> tuple[np.ndarray, np.ndarray, list]:
     ijD = np.load(directory / ijD_filename)
 
     ij = ijD["ij"]
     D = ijD["D"]
 
     hblocks = np.load(directory / hblocks_filename, allow_pickle=True)["hblocks"]
+    assert len(ij) == len(D) == len(hblocks)
     return ij, D, hblocks
 
 
@@ -48,9 +52,9 @@ def snapshot_tuple_from_directory(
     hamiltonian_dataset_filename: str = "hblocks.npz",
 ):
     atoms = read(directory / atoms_filename)
-    
+
     log.debug(f"Reading in atoms {atoms} from {directory}")
-    
+
     orbital_spec = orbital_spec_from_file(directory / orbital_spec_filename)
 
     log.debug(f"Orbital spec of: {orbital_spec}")
@@ -64,14 +68,27 @@ def snapshot_tuple_from_directory(
     return atoms, orbital_spec, (bond_atom_indices, bond_vectors, hblocks)
 
 
-def read_dataset_as_list(directory: Path, marker_filename: str = "atoms.extxyz", npool=1):
-    dataset_dirlist = [subdir for subdir in directory.iterdir() if (subdir / marker_filename).exists()]
+def read_dataset_as_list(
+    directory: Path, marker_filename: str = "atoms.extxyz", nprocs=16
+) -> list[tuple[Atoms, dict[int, list[int]], tuple[np.ndarray, np.ndarray, list]]]:
+    dataset_dirlist = [
+        subdir for subdir in directory.iterdir() if (subdir / marker_filename).exists()
+    ]
+    log.info(f"Found {len(dataset_dirlist)} snapshots.")
     dataset_as_list = []
     # print(dataset_dirlist)
-    with Pool(npool) as pool:
+    with Pool(nprocs) as pool:
         with tqdm(total=len(dataset_dirlist)) as pbar:
             # TODO We eventually want to partial this
-            for datatuple in pool.imap_unordered(func=snapshot_tuple_from_directory, iterable=dataset_dirlist):
+            for datatuple in pool.imap_unordered(
+                func=snapshot_tuple_from_directory, iterable=dataset_dirlist
+            ):
                 dataset_as_list.append(datatuple)
                 pbar.update()
     return dataset_as_list
+
+
+def initialize_dataset_from_list(dataset_as_list: list):
+    """Each element in the input is a tuple of (Atoms, dict of orbital ells, (NL indices, NL vectors, H blocks))"""
+    orbital_ells_across_dataset = [x[1] for x in dataset_as_list]
+    orbital_ells_across_dataset = dict((int(k), v) for d in orbital_ells_across_dataset for k, v in d.items())

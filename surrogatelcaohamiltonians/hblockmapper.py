@@ -18,7 +18,7 @@ class BlockIrrepMappingSpec:
     nfeatures: int
 
     def __repr__(self):
-        return f"Mapper with Lmax={self.max_ell} Fmax={self.nfeatures}"
+        return f"Mapper(nblocks={len(self.block_slices)}, max_ell={self.max_ell}, nfeatures={self.nfeatures})"
 
 
 @dataclass(frozen=True)
