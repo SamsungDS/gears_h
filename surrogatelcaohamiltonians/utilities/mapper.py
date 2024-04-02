@@ -103,4 +103,6 @@ def get_mapping_spec(ells1, ells2):
         block_slices,
         irreps_array_slices,
         cgc_slices,
+        max_ell,
+        ifeaturemax
     )
