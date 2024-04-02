@@ -1,4 +1,5 @@
 import logging
+from multiprocessing import Pool
 from typing import Dict, Iterator
 from pathlib import Path
 import json
@@ -9,6 +10,8 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import tensorflow as tf
+
+from tqdm import tqdm
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +40,7 @@ def pairwise_hamiltonian_from_file(directory, ijD_filename, hblocks_filename: Pa
     return ij, D, hblocks
 
 
-def snapshot_from_directory(
+def snapshot_tuple_from_directory(
     directory: Path,
     atoms_filename: str = "atoms.extxyz",
     orbital_spec_filename: str = "orbital_ells.json",
@@ -45,7 +48,12 @@ def snapshot_from_directory(
     hamiltonian_dataset_filename: str = "hblocks.npz",
 ):
     atoms = read(directory / atoms_filename)
+    
+    log.debug(f"Reading in atoms {atoms} from {directory}")
+    
     orbital_spec = orbital_spec_from_file(directory / orbital_spec_filename)
+
+    log.debug(f"Orbital spec of: {orbital_spec}")
     (
         bond_atom_indices,
         bond_vectors,
@@ -56,14 +64,13 @@ def snapshot_from_directory(
     return atoms, orbital_spec, (bond_atom_indices, bond_vectors, hblocks)
 
 
-data = snapshot_from_directory(Path("testdata/0"))
-print(data)
-
-# class AtomisticDataset:
-
-#   def __init__(
-#       self,
-#       inputs,
-#       labels,
-#       n_epoch: int,
-#   ):
+def process_dataset(directory: Path, marker_filename: str = "atoms.extxyz", npool=1):
+    dataset_dirlist = [subdir for subdir in directory.iterdir() if (subdir / marker_filename).exists()]
+    dataset_as_list = []
+    # print(dataset_dirlist)
+    with Pool(npool) as pool:
+        with tqdm(total=len(dataset_dirlist)) as pbar:
+            for datatuple in pool.imap_unordered(func=snapshot_tuple_from_directory, iterable=dataset_dirlist):
+                dataset_as_list.append(datatuple)
+                pbar.update()
+    return dataset_as_list
