@@ -64,12 +64,13 @@ def snapshot_tuple_from_directory(
     return atoms, orbital_spec, (bond_atom_indices, bond_vectors, hblocks)
 
 
-def process_dataset(directory: Path, marker_filename: str = "atoms.extxyz", npool=1):
+def read_dataset_as_list(directory: Path, marker_filename: str = "atoms.extxyz", npool=1):
     dataset_dirlist = [subdir for subdir in directory.iterdir() if (subdir / marker_filename).exists()]
     dataset_as_list = []
     # print(dataset_dirlist)
     with Pool(npool) as pool:
         with tqdm(total=len(dataset_dirlist)) as pbar:
+            # TODO We eventually want to partial this
             for datatuple in pool.imap_unordered(func=snapshot_tuple_from_directory, iterable=dataset_dirlist):
                 dataset_as_list.append(datatuple)
                 pbar.update()
