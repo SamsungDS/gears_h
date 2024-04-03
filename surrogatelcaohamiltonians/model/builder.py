@@ -5,9 +5,10 @@ from surrogatelcaohamiltonians.layers.descriptor import (
 )
 
 from surrogatelcaohamiltonians.layers.residual_dense import DenseBlock
+from surrogatelcaohamiltonians.layers.readout import Readout
 
 
-def build_model(config):
+def build_model(config, readout_config):
 
   radial_descriptor = SpeciesAwareRadialBasis(
     cutoff=7.0,
@@ -27,4 +28,9 @@ def build_model(config):
   )
 
   neural_net = DenseBlock()
+
+  readout = Readout(
+    features=5,
+  )
+
   
