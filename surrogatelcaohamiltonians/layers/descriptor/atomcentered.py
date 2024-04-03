@@ -12,7 +12,6 @@ e3x.Config.set_cartesian_order(False)
 
 
 class AtomCenteredTensorMomentDescriptor(nn.Module):
-    cutoff: float
     radial_basis: SpeciesAwareRadialBasis
     num_moment_features: int = 64  # TODO this can in principle be a list of ints
     max_moment: int = 2
@@ -57,6 +56,8 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
         # The moments down here are 'even' in that it's y x y = yy,
         # then yy x yy = yyyy, and so on. We keep it this way until I can figure out if
         # y x yy = yy x y upto a difference in weights.
+        # TODO: This WILL error out if your first y doesn't have a high enough degree
+        # to tensor onto moment_max_degree. 
         for _ in range(self.max_moment - 1):
             y = self.tensor_module(
                 features=self.num_moment_features, max_degree=self.moment_max_degree
@@ -66,7 +67,6 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
 
         transformed_embedding = self.embedding_transformation(self.embedding(Z_i))
 
-        # TODO can we do this tensor product _after_ we do the neighbour sum?
         # This is currently num_pairs x 2 x (moment_max_degree + 1)^2 x basis
         y = e3x.nn.Tensor(max_degree=self.moment_max_degree, name="emb x basis")(
             transformed_embedding, y
