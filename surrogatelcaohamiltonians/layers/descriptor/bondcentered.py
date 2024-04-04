@@ -34,6 +34,7 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
             neighbour_displacements,
             num=num_radial_features,
             max_degree=self.max_degree,
+            # TODO: Pickable radial basis etc
             radial_fn=partial(e3x.nn.sinc, limit=self.cutoff),
             cutoff_fn=partial(e3x.nn.cosine_cutoff, cutoff=self.cutoff),
         )
