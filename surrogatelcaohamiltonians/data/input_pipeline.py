@@ -3,6 +3,7 @@ from multiprocessing import Pool
 from typing import Dict, Iterator
 from pathlib import Path
 import json
+from collections import deque
 
 from ase.io import read
 from ase import Atoms
@@ -18,6 +19,10 @@ from surrogatelcaohamiltonians.hblockmapper import (
     make_mapper_from_elements,
     MultiElementPairHBlockMapper,
 )
+
+DatasetList = list[
+    tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list]
+]
 
 log = logging.getLogger(__name__)
 
@@ -75,13 +80,13 @@ def snapshot_tuple_from_directory(
 
 def read_dataset_as_list(
     directory: Path, marker_filename: str = "atoms.extxyz", nprocs=16
-) -> list[tuple[Atoms, dict[int, list[int]], tuple[np.ndarray, np.ndarray, list]]]:
+) -> DatasetList:
     dataset_dirlist = [
         subdir for subdir in directory.iterdir() if (subdir / marker_filename).exists()
     ]
     log.info(f"Found {len(dataset_dirlist)} snapshots.")
     dataset_as_list = []
-    # print(dataset_dirlist)
+
     with Pool(nprocs) as pool:
         with tqdm(total=len(dataset_dirlist)) as pbar:
             # TODO We eventually want to partial this
@@ -105,9 +110,10 @@ def get_mask_dict(
         mask_dict[element_pair] = mask_array
     return mask_dict
 
+
 def get_max_natoms_and_nneighbours(dataset_as_list):
     max_natoms = max([len(x[0]) for x in dataset_as_list])
-    max_nneighbours = max([len(x[2][0]) for x in dataset_as_list])
+    max_nneighbours = max([len(x[2]) for x in dataset_as_list])
     return max_natoms, max_nneighbours
 
 
@@ -122,52 +128,279 @@ def get_hamiltonian_mapper_from_dataset(dataset_as_list):
 
 def get_max_ell_and_max_features(hmap: MultiElementPairHBlockMapper):
     # These entirely define the output feature layer
-    max_ell_across_dataset = max(
-        [x.max_ell for x in hmap.mapper.values()]
-    )
-    max_nfeatures_across_dataset = max(
-        [x.nfeatures for x in hmap.mapper.values()]
-    )
+    max_ell_across_dataset = max([x.max_ell for x in hmap.mapper.values()])
+    max_nfeatures_across_dataset = max([x.nfeatures for x in hmap.mapper.values()])
     return max_ell_across_dataset, max_nfeatures_across_dataset
 
 
-def pad_atomic_numbers(atoms_list: list[Atoms], pad_to: int):
-    return np.row_stack([np.pad(atoms.numbers, ((0, pad_to - len(atoms)))) for atoms in atoms_list], dtype=np.int16)
+# def pad_atomic_numbers(atoms_list: list[Atoms], pad_to: int):
+#     return np.row_stack(
+#         [np.pad(atoms.numbers, ((0, pad_to - len(atoms)))) for atoms in atoms_list],
+#         dtype=np.int16,
+#     )
 
-def pad_neighbour_data(neighbour_indices_list, neighbour_vectors_list, pad_to: int):
-    # assert len(neighbour_indices_list[0]) == 2
-    padded_neighbour_indices = np.stack(
-        [np.pad(nlidx, ((0, pad_to - len(nlidx)), (0, 0))) for nlidx in neighbour_indices_list], dtype=np.int16)
-    padded_neighbour_vectors = np.stack(
-        [np.pad(nlvec, ((0, pad_to - len(nlvec)), (0, 0))) for nlvec in neighbour_vectors_list])
+
+# def pad_neighbour_data(neighbour_indices_list, neighbour_vectors_list, pad_to: int):
+#     # assert len(neighbour_indices_list[0]) == 2
+#     padded_neighbour_indices = np.stack(
+#         [
+#             np.pad(nlidx, ((0, pad_to - len(nlidx)), (0, 0)))
+#             for nlidx in neighbour_indices_list
+#         ],
+#         dtype=np.int16,
+#     )
+#     padded_neighbour_vectors = np.stack(
+#         [
+#             np.pad(nlvec, ((0, pad_to - len(nlvec)), (0, 0)))
+#             for nlvec in neighbour_vectors_list
+#         ]
+#     )
+
+#     return padded_neighbour_indices, padded_neighbour_vectors
+
+
+def get_h_irreps(
+    hblocks: list[np.ndarray],
+    hmapper: MultiElementPairHBlockMapper,
+    atomic_numbers: np.ndarray,
+    neighbour_indices: np.ndarray,
+    max_ell,
+    readout_nfeatures,
+):
+    irreps_array = np.zeros((len(hblocks), 2, (max_ell + 1) ** 2, readout_nfeatures))
+
+    assert len(hblocks) == len(neighbour_indices)
+    for i, hblock in enumerate(hblocks):
+        # This is doing this inplace to the best of my understanding. - Anub
+        hmapper.hblock_to_irrep(
+            hblock,
+            irreps_array[i],
+            atomic_numbers[neighbour_indices[i, 0]],
+            atomic_numbers[neighbour_indices[i, 1]],
+        )
+    return irreps_array
+
+
+def get_irreps_mask(
+    mask_dict, atomic_numbers, neighbour_indices, max_ell, readout_nfeatures
+):
     
-    return padded_neighbour_indices, padded_neighbour_vectors
+    mask = np.zeros((len(neighbour_indices), 2, (max_ell + 1) ** 2, readout_nfeatures))
+    for i, idxpair in enumerate(neighbour_indices):
+        mask[i] = mask_dict[
+            (atomic_numbers[idxpair[0]], atomic_numbers[idxpair[1]])
+        ]
+    return mask
 
+
+def prepare_input_dict(dataset_as_list: DatasetList):
+    inputs_dict = {}
+    inputs_dict["numbers"] = [datatuple[0].numbers for datatuple in dataset_as_list]
+    inputs_dict["positions"] = [datatuple[0].positions for datatuple in dataset_as_list]
+
+    inputs_dict["idx_ij"] = [datatuple[2] for datatuple in dataset_as_list]
+    inputs_dict["idx_D"] = [datatuple[3] for datatuple in dataset_as_list]
+
+    return inputs_dict
+
+
+def prepare_label_dict(
+    dataset_as_list: DatasetList,
+    hmapper: MultiElementPairHBlockMapper,
+    mask_dict: dict,
+    inputs_dict,
+    max_ell,
+    readout_nfeatures,
+):
+    labels_dict = {}
+    labels_dict["h_irreps"] = [
+        get_h_irreps(
+            datatuple[-1],
+            hmapper,
+            inputs_dict["numbers"][i],
+            datatuple[2],
+            max_ell,
+            readout_nfeatures,
+        )
+        for i, datatuple in enumerate(dataset_as_list)
+    ]
+
+    # print([[v_.shape for v_ in v] for v in labels_dict["h_irreps"]])
+
+    labels_dict["mask"] = [
+        get_irreps_mask(
+            mask_dict,
+            inputs_dict["numbers"][i],
+            inputs_dict["idx_ij"][i],
+            max_ell=max_ell,
+            readout_nfeatures=readout_nfeatures
+        )
+        for i in range(len(dataset_as_list))
+    ]
+
+    # print([[v_.shape for v_ in v] for v in labels_dict["mask"]])
+    return labels_dict
 
 class InMemoryDataset:
-    def __init__(self, dataset_as_list, batch_size, n_epochs):
+    def __init__(
+        self,
+        dataset_as_list: DatasetList,
+        batch_size: int,
+        n_epochs: int,
+        is_inference: bool,
+        buffer_size=100,
+    ):
         self.n_epochs = n_epochs
         self.batch_size = max(len(dataset_as_list), batch_size)
         self.n_data = len(dataset_as_list)
+        self.is_inference = is_inference
+
+        self.count = 0
+        self.buffer = deque()
+        self.buffer_size = buffer_size
 
         self.hmap = get_hamiltonian_mapper_from_dataset(dataset_as_list=dataset_as_list)
-        self.max_ell, self.nfeatures = get_max_ell_and_max_features(self.hmap)
-        self.dataset_mask_dict = get_mask_dict(
-            self.max_ell, self.nfeatures, self.hmap
+
+        self.max_ell, self.readout_nfeatures = get_max_ell_and_max_features(self.hmap)
+        self.max_natoms, self.max_nneighbours = get_max_natoms_and_nneighbours(
+            dataset_as_list
         )
-        
-        self.max_natoms, self.max_nneighbours = get_max_natoms_and_nneighbours(dataset_as_list)
 
-        atoms_list = [x[0] for x in dataset_as_list]
-        neighbour_indices_list = [x[-1][0] for x in dataset_as_list]
-        neighbour_vectors_list = [x[-1][1] for x in dataset_as_list]
-        hblocks_list = [x[-1][2] for x in dataset_as_list]
+        self.dataset_mask_dict = get_mask_dict(
+            self.max_ell, self.readout_nfeatures, self.hmap
+        )
 
-        atomic_numbers_padded = pad_atomic_numbers(atoms_list, self.max_natoms)
-        neighbour_indices_padded, neighbour_vectors_padded = pad_neighbour_data(neighbour_indices_list, neighbour_vectors_list)
-        h_irreps_padded, h_mask = get_padded_h_irreps_and_mask(neighbour_indices_list, hblocks_list, self.hmap)
+        self.inputs = prepare_input_dict(dataset_as_list)
+
+        if not self.is_inference:
+            self.labels = prepare_label_dict(
+                dataset_as_list,
+                self.hmap,
+                self.dataset_mask_dict,
+                self.inputs,
+                self.max_ell,
+                self.readout_nfeatures,
+            )
+
+        # atoms_list = [x[0] for x in dataset_as_list]
+        # neighbour_indices_list = [x[-1][0] for x in dataset_as_list]
+        # neighbour_vectors_list = [x[-1][1] for x in dataset_as_list]
+        # hblocks_list = [x[-1][2] for x in dataset_as_list]
+
+        # atomic_numbers_padded = pad_atomic_numbers(atoms_list, self.max_natoms)
+        # neighbour_indices_padded, neighbour_vectors_padded = pad_neighbour_data(
+        #     neighbour_indices_list, neighbour_vectors_list
+        # )
+        # self.h_irreps_padded, self.h_mask = get_padded_h_irreps_and_mask(
+        #     self.dataset_mask_dict,
+        #     atomic_numbers_padded,
+        #     neighbour_indices_list,
+        #     self.max_nneighbours,
+        #     hblocks_list,
+        #     self.hmap,
+        # )
+
+        self.enqueue(min(self.buffer_size, self.n_data))
 
     def steps_per_epoch(self):
         # This throws away a bit of the training data, but at most 1 batch worth.
         # A typical batch is 1-16 large so this is fine.
         return self.n_data // (self.batch_size)
+
+    def make_signature(self) -> tf.TensorSpec:
+        # Taken from https://github.com/apax-hub/apax/blob/dev/apax/data/input_pipeline.py#L135C1-L167C25
+        # and changed to our needs
+        input_signature = {}
+        input_signature["n_atoms"] = tf.TensorSpec((), dtype=tf.int16, name="n_atoms")
+        input_signature["numbers"] = tf.TensorSpec(
+            (self.max_natoms,), dtype=tf.int16, name="numbers"
+        )
+        input_signature["positions"] = tf.TensorSpec(
+            (self.max_natoms, 3), dtype=tf.float64, name="positions"
+        )
+        # input_signature["box"] = tf.TensorSpec((3, 3), dtype=tf.float64, name="box")
+        input_signature["idx_ij"] = tf.TensorSpec(
+            (self.max_nneighbours, 2), dtype=tf.int16, name="idx_ij"
+        )
+        input_signature["idx_D"] = tf.TensorSpec(
+            (self.max_nneighbours, 3), dtype=tf.float64, name="idx_D"
+        )
+
+        if self.is_inference:
+            return input_signature
+
+        label_signature = {}
+        label_signature["h_irreps"] = tf.TensorSpec(
+            (self.max_nneighbours, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
+            dtype=tf.float64,
+            name="h_irreps",
+        )
+        label_signature["mask"] = tf.TensorSpec(
+            (self.max_nneighbours, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
+            dtype=tf.int16,
+            name="mask",
+        )
+        signature = (input_signature, label_signature)
+        return signature
+
+    def enqueue(self, num_snapshots):
+        for _ in range(num_snapshots):
+            data = self.prepare_single_snapshot(self.count)
+            self.buffer.append(data)
+            self.count += 1
+
+    def prepare_single_snapshot(self, i):
+        inputs = self.inputs
+        inputs = {k: v[i] for k, v in inputs.items()}
+        # inputs["idx"], inputs["offsets"] = pad_nl(idx, offsets, self.max_nbrs)
+
+        zeros_to_add = self.max_natoms - len(inputs["numbers"])
+        inputs["positions"] = np.pad(
+            inputs["positions"], ((0, zeros_to_add), (0, 0)), "constant"
+        )
+        inputs["numbers"] = np.pad(
+            inputs["numbers"], (0, zeros_to_add), "constant"
+        ).astype(np.int16)
+        # inputs["n_atoms"] = np.pad(
+        #     inputs["n_atoms"], (0, zeros_to_add), "constant"
+        # ).astype(np.int16)
+
+        zeros_to_add = self.max_nneighbours - len(inputs["idx_ij"])
+        inputs["idx_ij"] = np.pad(
+            inputs["idx_ij"], ((0, zeros_to_add), (0, 0)), "constant"
+        ).astype(np.int16)
+        inputs["idx_D"] = np.pad(
+            inputs["idx_D"], ((0, zeros_to_add), (0, 0)), "constant"
+        )
+
+        if self.is_inference:
+            return inputs
+
+        labels = self.labels
+        labels = {k: v[i] for k, v in labels.items()}
+        log.debug(f"{i}, {labels['h_irreps']}")
+        labels["h_irreps"] = np.pad(
+            labels["h_irreps"],
+            (
+                (0, zeros_to_add),
+                (0, 0),  # Parity dim
+                (0, 0),  # irreps dim
+                (0, 0),
+            ),  # Feature dim
+            "constant",
+        )
+
+        labels["mask"] = np.pad(
+            labels["mask"],
+            (
+                (0, zeros_to_add),
+                (0, 0),  # Parity dim
+                (0, 0),  # irreps dim
+                (0, 0),
+            ),  # Feature dim
+            "constant",
+        )
+
+        inputs = {k: tf.constant(v) for k, v in inputs.items()}
+        labels = {k: tf.constant(v) for k, v in labels.items()}
+        return (inputs, labels)
