@@ -5,6 +5,8 @@ from surrogatelcaohamiltonians.utilities.mapmaker import get_mapping_spec
 
 import numpy as np
 
+import e3x
+
 
 @dataclass(frozen=True)
 class BlockIrrepMappingSpec:
@@ -16,6 +18,7 @@ class BlockIrrepMappingSpec:
     irreps_slices: list[tuple[int, slice, int]]
     max_ell: int
     nfeatures: int
+    cgc = e3x.so3.clebsch_gordan(3, 3, 6)
 
     def __repr__(self):
         return f"Mapper(nblocks={len(self.block_slices)}, max_ell={self.max_ell}, nfeatures={self.nfeatures})"
@@ -34,7 +37,7 @@ class MultiElementPairHBlockMapper:
             ms.block_slices, ms.cgc_slices, ms.irreps_slices, strict=True
         ):
             irreps_array[irreps_slice] = np.einsum(
-                "mn,lmn->l", hblock[block_slice], ms.cgc[cgc_slice]
+                "mn,mnl->l", hblock[block_slice], ms.cgc[cgc_slice]
             )
 
     def irrep_to_hblock(self, hblock, irreps_array, Z_i, Z_j):
@@ -45,13 +48,11 @@ class MultiElementPairHBlockMapper:
             ms.block_slices, ms.cgc_slices, ms.irreps_slices, strict=True
         ):
             hblock[block_slice] = np.einsum(
-                "l,lmn->mn", irreps_array[irreps_slice], ms.cgc[cgc_slice]
+                "l,mnl->mn", irreps_array[irreps_slice], ms.cgc[cgc_slice]
             )
 
 
-def make_mapper_from_elements(
-        species_ells_dict: dict[int, list[int]]
-):
+def make_mapper_from_elements(species_ells_dict: dict[int, list[int]]):
     element_pair_list = []
     hblock_mapper_list = []
 
