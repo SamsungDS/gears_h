@@ -20,9 +20,7 @@ from surrogatelcaohamiltonians.hblockmapper import (
     MultiElementPairHBlockMapper,
 )
 
-DatasetList = list[
-    tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list]
-]
+DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list]]
 
 log = logging.getLogger(__name__)
 
@@ -184,12 +182,9 @@ def get_h_irreps(
 def get_irreps_mask(
     mask_dict, atomic_numbers, neighbour_indices, max_ell, readout_nfeatures
 ):
-    
     mask = np.zeros((len(neighbour_indices), 2, (max_ell + 1) ** 2, readout_nfeatures))
     for i, idxpair in enumerate(neighbour_indices):
-        mask[i] = mask_dict[
-            (atomic_numbers[idxpair[0]], atomic_numbers[idxpair[1]])
-        ]
+        mask[i] = mask_dict[(atomic_numbers[idxpair[0]], atomic_numbers[idxpair[1]])]
     return mask
 
 
@@ -233,13 +228,14 @@ def prepare_label_dict(
             inputs_dict["numbers"][i],
             inputs_dict["idx_ij"][i],
             max_ell=max_ell,
-            readout_nfeatures=readout_nfeatures
+            readout_nfeatures=readout_nfeatures,
         )
         for i in range(len(dataset_as_list))
     ]
 
     # print([[v_.shape for v_ in v] for v in labels_dict["mask"]])
     return labels_dict
+
 
 class InMemoryDataset:
     def __init__(

@@ -18,9 +18,8 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
     tensor_module: Union[e3x.nn.Tensor, e3x.nn.FusedTensor] = e3x.nn.Tensor
 
     @nn.compact
-    def __call__(
-        self, atomic_descriptors, neighbour_displacements, neighbours_i, neighbours_j
-    ):
+    def __call__(self, atomic_descriptors, neighbour_indices, neighbour_displacements):
+        neighbours_i, neighbours_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
         num_radial_features = atomic_descriptors.shape[-1]
 
         atom1_desc, atom2_desc = (
