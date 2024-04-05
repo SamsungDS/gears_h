@@ -13,7 +13,7 @@ import jax.numpy as jnp
 import numpy as np
 import tensorflow as tf
 
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 from surrogatelcaohamiltonians.hblockmapper import (
     make_mapper_from_elements,
@@ -158,7 +158,7 @@ def get_max_ell_and_max_features(hmap: MultiElementPairHBlockMapper):
 
 
 def get_h_irreps(
-    hblocks: list[np.ndarray],
+    hblocks: list[np.ndarray], # For one snapshot.
     hmapper: MultiElementPairHBlockMapper,
     atomic_numbers: np.ndarray,
     neighbour_indices: np.ndarray,
@@ -175,6 +175,36 @@ def get_h_irreps(
             irreps_array[i],
             atomic_numbers[neighbour_indices[i, 0]],
             atomic_numbers[neighbour_indices[i, 1]],
+        )
+    print("Irreps from old:", irreps_array[0])
+    return irreps_array
+
+def get_h_irreps2(
+    hblocks: list[np.ndarray], # For one snapshot.
+    hmapper: MultiElementPairHBlockMapper,
+    atomic_numbers: np.ndarray,
+    neighbour_indices: np.ndarray,
+    max_ell,
+    readout_nfeatures,
+):
+    from itertools import compress
+    irreps_array = np.zeros((len(hblocks), 2, (max_ell + 1) ** 2, readout_nfeatures))
+
+    assert len(hblocks) == len(neighbour_indices)
+
+    atomic_number_pairs = atomic_numbers[neighbour_indices]
+    assert atomic_number_pairs.shape[-1] == 2
+    unique_elementpairs = np.unique(atomic_number_pairs, axis=0)
+    
+    for pair in unique_elementpairs:
+        boolean_indices_of_pairs = np.all(atomic_number_pairs == pair, axis=1)
+        hblocks_of_pairs = np.stack(list(compress(hblocks, boolean_indices_of_pairs)))
+        assert len(hblocks_of_pairs) == len(irreps_array[boolean_indices_of_pairs])
+        irreps_array[boolean_indices_of_pairs] = hmapper.hblocks_to_irrep(
+            hblocks_of_pairs,
+            irreps_array[boolean_indices_of_pairs],
+            pair[0],
+            pair[1],
         )
     return irreps_array
 
@@ -208,8 +238,19 @@ def prepare_label_dict(
     readout_nfeatures,
 ):
     labels_dict = {}
-    labels_dict["h_irreps"] = [
-        get_h_irreps(
+    # labels_dict["h_irreps"] = [
+    #     get_h_irreps(
+    #         datatuple[-1],
+    #         hmapper,
+    #         inputs_dict["numbers"][i],
+    #         datatuple[2],
+    #         max_ell,
+    #         readout_nfeatures,
+    #     )
+    #     for i, datatuple in tqdm(enumerate(dataset_as_list))
+    # ]
+
+    labels_dict["h_irreps"] = [get_h_irreps2(
             datatuple[-1],
             hmapper,
             inputs_dict["numbers"][i],
@@ -217,10 +258,8 @@ def prepare_label_dict(
             max_ell,
             readout_nfeatures,
         )
-        for i, datatuple in enumerate(dataset_as_list)
+        for i, datatuple in tqdm(enumerate(dataset_as_list))
     ]
-
-    # print([[v_.shape for v_ in v] for v in labels_dict["h_irreps"]])
 
     labels_dict["mask"] = [
         get_irreps_mask(
@@ -230,10 +269,9 @@ def prepare_label_dict(
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i in range(len(dataset_as_list))
+        for i in trange(len(dataset_as_list))
     ]
 
-    # print([[v_.shape for v_ in v] for v in labels_dict["mask"]])
     return labels_dict
 
 
@@ -402,6 +440,7 @@ class InMemoryDataset:
         return (inputs, labels)
 
     def __iter__(self):
+
         while self.count < self.n_data or len(self.buffer) > 0:
             yield jax.tree_util.tree_map(jnp.asarray, self.buffer.popleft())
 
