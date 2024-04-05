@@ -18,7 +18,7 @@ class BlockIrrepMappingSpec:
     irreps_slices: list[tuple[int, slice, int]]
     max_ell: int
     nfeatures: int
-    cgc = e3x.so3.clebsch_gordan(3, 3, 6)
+    cgc = e3x.so3.clebsch_gordan(1, 1, 2)
 
     def __repr__(self):
         return f"Mapper(nblocks={len(self.block_slices)}, max_ell={self.max_ell}, nfeatures={self.nfeatures})"
@@ -36,9 +36,25 @@ class MultiElementPairHBlockMapper:
         for block_slice, cgc_slice, irreps_slice in zip(
             ms.block_slices, ms.cgc_slices, ms.irreps_slices, strict=True
         ):
-            irreps_array[irreps_slice] = np.einsum(
-                "mn,mnl->l", hblock[block_slice], ms.cgc[cgc_slice]
+            np.einsum(
+                "mn,mnl->l", hblock[block_slice], ms.cgc[cgc_slice], out=irreps_array[irreps_slice],
             )
+
+    def hblocks_to_irrep(self, hblocks, irreps_array, Z_i, Z_j):
+        assert len(hblocks) == len(irreps_array)
+        mapping_spec = self.mapper[(Z_i, Z_j)]
+
+        ms = mapping_spec
+        for block_slice, cgc_slice, irreps_slice in zip(
+            ms.block_slices, ms.cgc_slices, ms.irreps_slices, strict=True
+        ):
+            block_slice = (slice(0, len(hblocks)),) + block_slice
+            irreps_slice = (slice(0, len(hblocks)),) + irreps_slice
+            
+            np.einsum(
+                "...mn,mnl->...l", hblocks[block_slice], ms.cgc[cgc_slice], out=irreps_array[irreps_slice],
+            )
+        return irreps_array
 
     def irrep_to_hblock(self, hblock, irreps_array, Z_i, Z_j):
         mapping_spec = self.mapper[(Z_i, Z_j)]
