@@ -404,3 +404,12 @@ class InMemoryDataset:
         inputs = {k: tf.constant(v) for k, v in inputs.items()}
         labels = {k: tf.constant(v) for k, v in labels.items()}
         return (inputs, labels)
+
+    def __iter__(self):
+        while self.count < self.n_data or len(self.buffer) > 0:
+            yield self.buffer.popleft()
+
+            space = self.buffer_size - len(self.buffer)
+            if self.count + space > self.n_data:
+                space = self.n_data - self.count
+            self.enqueue(space)
