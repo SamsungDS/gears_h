@@ -243,7 +243,7 @@ class InMemoryDataset:
         dataset_as_list: DatasetList,
         batch_size: int,
         n_epochs: int,
-        is_inference: bool,
+        is_inference: bool = False,
         buffer_size=100,
     ):
         self.n_epochs = n_epochs
@@ -403,7 +403,7 @@ class InMemoryDataset:
 
     def __iter__(self):
         while self.count < self.n_data or len(self.buffer) > 0:
-            yield self.buffer.popleft()
+            yield jax.tree_util.tree_map(jnp.asarray, self.buffer.popleft())
 
             space = self.buffer_size - len(self.buffer)
             if self.count + space > self.n_data:
