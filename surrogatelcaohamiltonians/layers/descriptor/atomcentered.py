@@ -22,15 +22,15 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
     def setup(self):
         self.embedding = self.radial_basis.embedding
         self.embedding_transformation = e3x.nn.Dense(
-            self.radial_basis.num_radial, name="transform embedding"
+            self.num_moment_features, name="transform embedding"
         )
 
     @nn.compact
     def __call__(
         self,
         atomic_numbers: Float[Array, "..."],
+        neighbour_indices: Int[Array, "... num_neighbours 2"],
         neighbour_displacements: Float[Array, "... num_neighbours 3"],
-        neighbour_indices: Int[Array, "... 2 num_neighbours"],
     ):
         """_summary_
 
@@ -47,7 +47,7 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
             _description_
         """
 
-        idx_i, idx_j = neighbour_indices[0], neighbour_indices[1]
+        idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
         Z_i, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
 
         y = self.radial_basis(neighbour_displacements=neighbour_displacements, Z_j=Z_j)
@@ -57,7 +57,7 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
         # then yy x yy = yyyy, and so on. We keep it this way until I can figure out if
         # y x yy = yy x y upto a difference in weights.
         # TODO: This WILL error out if your first y doesn't have a high enough degree
-        # to tensor onto moment_max_degree. 
+        # to tensor onto moment_max_degree.
         for _ in range(self.max_moment - 1):
             y = self.tensor_module(
                 features=self.num_moment_features, max_degree=self.moment_max_degree
