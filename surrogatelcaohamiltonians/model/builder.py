@@ -9,28 +9,20 @@ from surrogatelcaohamiltonians.layers.readout import Readout
 
 
 def build_model(config, readout_config):
+    radial_descriptor = SpeciesAwareRadialBasis(
+        cutoff=7.0, num_radial=32, max_degree=2, name="radial basis"
+    )
 
-  radial_descriptor = SpeciesAwareRadialBasis(
-    cutoff=7.0,
-    num_radial=32,
-    max_degree=2,
-    name="radial basis"
-  )
+    atom_centered_descriptor = AtomCenteredTensorMomentDescriptor(
+        radial_basis=radial_descriptor, name="atomcentered descriptor"
+    )
 
-  atom_centered_descriptor = AtomCenteredTensorMomentDescriptor(
-    radial_basis=radial_descriptor,
-    name="atomcentered descriptor"
-  )
+    bond_descriptor = BondCenteredTensorMomentDescriptor(
+        cutoff=7.0, name="bond descriptor"
+    )
 
-  bond_descriptor = BondCenteredTensorMomentDescriptor(
-    cutoff=7.0,
-    name="bond descriptor"
-  )
+    neural_net = DenseBlock()
 
-  neural_net = DenseBlock()
-
-  readout = Readout(
-    features=5,
-  )
-
-  
+    readout = Readout(
+        features=5,
+    )
