@@ -28,24 +28,10 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
     @nn.compact
     def __call__(
         self,
-        atomic_numbers: Float[Array, "..."],
+        atomic_numbers: Int[Array, "num_atoms"],
         neighbour_indices: Int[Array, "... num_neighbours 2"],
         neighbour_displacements: Float[Array, "... num_neighbours 3"],
     ):
-        """_summary_
-
-        Parameters
-        ----------
-        atomic_numbers : _type_
-            _description_
-        neighbour_displacements : _type_
-            _description_
-
-        Returns
-        -------
-        _type_
-            _description_
-        """
 
         idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
         Z_i, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
