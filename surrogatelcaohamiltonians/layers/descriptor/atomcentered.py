@@ -16,7 +16,7 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
     num_moment_features: int = 64  # TODO this can in principle be a list of ints
     max_moment: int = 2
     moment_max_degree: int = 4
-    tensor_module: nn.Module = e3x.nn.TensorDense
+    use_fused_tensor: bool = False
     embedding_residual_connection: bool = True
 
     def setup(self):
@@ -59,8 +59,10 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
         # TODO: This WILL error out if your first y doesn't have a high enough degree
         # to tensor onto moment_max_degree.
         for _ in range(self.max_moment - 1):
-            y = self.tensor_module(
-                features=self.num_moment_features, max_degree=self.moment_max_degree
+            y = e3x.nn.TensorDense(
+                features=self.num_moment_features,
+                max_degree=self.moment_max_degree,
+                use_fused_tensor=self.use_fused_tensor,
             )(y)
 
         # y is currently n_neighbours x 2 x (basis_max_degree + 1)**2 x num_basis_features
