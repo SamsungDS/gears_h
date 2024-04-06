@@ -4,6 +4,7 @@ from typing import Dict, Iterator
 from pathlib import Path
 import json
 from collections import deque
+import itertools
 
 from ase.io import read
 from ase import Atoms
@@ -19,6 +20,7 @@ from surrogatelcaohamiltonians.hblockmapper import (
     make_mapper_from_elements,
     MultiElementPairHBlockMapper,
 )
+from surrogatelcaohamiltonians.data.preprocessing import prefetch_to_single_device
 
 DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list]]
 
@@ -188,7 +190,6 @@ def get_h_irreps2(
     max_ell,
     readout_nfeatures,
 ):
-    from itertools import compress
 
     irreps_array = np.zeros((len(hblocks), 2, (max_ell + 1) ** 2, readout_nfeatures))
 
@@ -200,7 +201,7 @@ def get_h_irreps2(
 
     for pair in unique_elementpairs:
         boolean_indices_of_pairs = np.all(atomic_number_pairs == pair, axis=1)
-        hblocks_of_pairs = np.stack(list(compress(hblocks, boolean_indices_of_pairs)))
+        hblocks_of_pairs = np.stack(list(itertools.compress(hblocks, boolean_indices_of_pairs)))
         assert len(hblocks_of_pairs) == len(irreps_array[boolean_indices_of_pairs])
         irreps_array[boolean_indices_of_pairs] = hmapper.hblocks_to_irrep(
             hblocks_of_pairs,
@@ -288,7 +289,7 @@ class InMemoryDataset:
         buffer_size=100,
     ):
         self.n_epochs = n_epochs
-        self.batch_size = max(len(dataset_as_list), batch_size)
+        self.batch_size = min(len(dataset_as_list), batch_size)
         self.n_data = len(dataset_as_list)
         self.is_inference = is_inference
 
@@ -348,7 +349,7 @@ class InMemoryDataset:
         # Taken from https://github.com/apax-hub/apax/blob/dev/apax/data/input_pipeline.py#L135C1-L167C25
         # and changed to our needs
         input_signature = {}
-        input_signature["n_atoms"] = tf.TensorSpec((), dtype=tf.int16, name="n_atoms")
+        # input_signature["n_atoms"] = tf.TensorSpec((), dtype=tf.int16, name="n_atoms")
         input_signature["numbers"] = tf.TensorSpec(
             (self.max_natoms,), dtype=tf.int16, name="numbers"
         )
@@ -389,7 +390,6 @@ class InMemoryDataset:
     def prepare_single_snapshot(self, i):
         inputs = self.inputs
         inputs = {k: v[i] for k, v in inputs.items()}
-        # inputs["idx"], inputs["offsets"] = pad_nl(idx, offsets, self.max_nbrs)
 
         zeros_to_add = self.max_natoms - len(inputs["numbers"])
         inputs["positions"] = np.pad(
@@ -398,9 +398,6 @@ class InMemoryDataset:
         inputs["numbers"] = np.pad(
             inputs["numbers"], (0, zeros_to_add), "constant"
         ).astype(np.int16)
-        # inputs["n_atoms"] = np.pad(
-        #     inputs["n_atoms"], (0, zeros_to_add), "constant"
-        # ).astype(np.int16)
 
         zeros_to_add = self.max_nneighbours - len(inputs["idx_ij"])
         inputs["idx_ij"] = np.pad(
@@ -444,9 +441,36 @@ class InMemoryDataset:
 
     def __iter__(self):
         while self.count < self.n_data or len(self.buffer) > 0:
-            yield jax.tree_util.tree_map(jnp.asarray, self.buffer.popleft())
+            yield self.buffer.popleft()
 
             space = self.buffer_size - len(self.buffer)
             if self.count + space > self.n_data:
                 space = self.n_data - self.count
             self.enqueue(space)
+
+    def shuffle_and_batch(self):
+        ds = (
+            tf.data.Dataset.from_generator(
+                lambda: self, output_signature=self.make_signature()
+            )
+            .repeat(self.n_epochs)
+        )
+
+        ds = ds.shuffle(
+            buffer_size=self.buffer_size, reshuffle_each_iteration=True
+        ).batch(batch_size=self.batch_size)
+        # if self.n_jit_steps > 1:
+        #     ds = ds.batch(batch_size=self.n_jit_steps)
+        ds = prefetch_to_single_device(ds.as_numpy_iterator(), 2)
+        return ds
+    
+    def batch(self) -> Iterator[jax.Array]:
+        ds = (
+            tf.data.Dataset.from_generator(
+                lambda: self, output_signature=self.make_signature()
+            )
+            .repeat(self.n_epochs)
+        )
+        ds = ds.batch(batch_size=self.batch_size)
+        ds = prefetch_to_single_device(ds.as_numpy_iterator(), 2)
+        return ds
