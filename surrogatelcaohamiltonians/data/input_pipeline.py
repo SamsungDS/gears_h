@@ -158,7 +158,7 @@ def get_max_ell_and_max_features(hmap: MultiElementPairHBlockMapper):
 
 
 def get_h_irreps(
-    hblocks: list[np.ndarray], # For one snapshot.
+    hblocks: list[np.ndarray],  # For one snapshot.
     hmapper: MultiElementPairHBlockMapper,
     atomic_numbers: np.ndarray,
     neighbour_indices: np.ndarray,
@@ -179,8 +179,9 @@ def get_h_irreps(
     print("Irreps from old:", irreps_array[0])
     return irreps_array
 
+
 def get_h_irreps2(
-    hblocks: list[np.ndarray], # For one snapshot.
+    hblocks: list[np.ndarray],  # For one snapshot.
     hmapper: MultiElementPairHBlockMapper,
     atomic_numbers: np.ndarray,
     neighbour_indices: np.ndarray,
@@ -188,6 +189,7 @@ def get_h_irreps2(
     readout_nfeatures,
 ):
     from itertools import compress
+
     irreps_array = np.zeros((len(hblocks), 2, (max_ell + 1) ** 2, readout_nfeatures))
 
     assert len(hblocks) == len(neighbour_indices)
@@ -195,7 +197,7 @@ def get_h_irreps2(
     atomic_number_pairs = atomic_numbers[neighbour_indices]
     assert atomic_number_pairs.shape[-1] == 2
     unique_elementpairs = np.unique(atomic_number_pairs, axis=0)
-    
+
     for pair in unique_elementpairs:
         boolean_indices_of_pairs = np.all(atomic_number_pairs == pair, axis=1)
         hblocks_of_pairs = np.stack(list(compress(hblocks, boolean_indices_of_pairs)))
@@ -250,7 +252,8 @@ def prepare_label_dict(
     #     for i, datatuple in tqdm(enumerate(dataset_as_list))
     # ]
 
-    labels_dict["h_irreps"] = [get_h_irreps2(
+    labels_dict["h_irreps"] = [
+        get_h_irreps2(
             datatuple[-1],
             hmapper,
             inputs_dict["numbers"][i],
@@ -440,7 +443,6 @@ class InMemoryDataset:
         return (inputs, labels)
 
     def __iter__(self):
-
         while self.count < self.n_data or len(self.buffer) > 0:
             yield jax.tree_util.tree_map(jnp.asarray, self.buffer.popleft())
 
