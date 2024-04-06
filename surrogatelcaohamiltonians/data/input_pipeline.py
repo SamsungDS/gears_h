@@ -5,6 +5,8 @@ from pathlib import Path
 import json
 from collections import deque
 import itertools
+import uuid
+
 
 from ase.io import read
 from ase import Atoms
@@ -286,16 +288,18 @@ class InMemoryDataset:
         batch_size: int,
         n_epochs: int,
         is_inference: bool = False,
-        buffer_size=100,
+        buffer_size=1000,
+        cache_path=".",
     ):
-        self.n_epochs = n_epochs
-        self.batch_size = min(len(dataset_as_list), batch_size)
         self.n_data = len(dataset_as_list)
+        self.n_epochs = n_epochs
+        self.batch_size = min(self.n_data, batch_size)
         self.is_inference = is_inference
 
         self.count = 0
         self.buffer = deque()
         self.buffer_size = buffer_size
+        self.cache_file = Path(cache_path) / str(uuid.uuid4())
 
         self.hmap = get_hamiltonian_mapper_from_dataset(dataset_as_list=dataset_as_list)
 
@@ -440,6 +444,17 @@ class InMemoryDataset:
         return (inputs, labels)
 
     def __iter__(self):
+        raise NotImplementedError
+    
+    def shuffle_and_batch(self):
+        raise NotImplementedError
+    
+    def batch(self):
+        raise NotImplementedError
+    
+
+class PureInMemoryDataset(InMemoryDataset):
+    def __iter__(self):
         while self.count < self.n_data or len(self.buffer) > 0:
             yield self.buffer.popleft()
 
@@ -453,6 +468,7 @@ class InMemoryDataset:
             tf.data.Dataset.from_generator(
                 lambda: self, output_signature=self.make_signature()
             )
+            .cache(self.cache_file.as_posix()) # This is required to cache the generator so a successful repeat can happen.
             .repeat(self.n_epochs)
         )
 
