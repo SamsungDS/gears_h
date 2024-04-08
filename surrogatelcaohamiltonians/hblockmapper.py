@@ -59,6 +59,7 @@ class MultiElementPairHBlockMapper:
                 hblocks[block_slice],
                 ms.cgc[cgc_slice],
                 out=irreps_array[irreps_slice],
+                optimize=True,
             )
         return irreps_array
 
