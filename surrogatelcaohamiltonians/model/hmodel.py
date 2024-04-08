@@ -8,14 +8,32 @@ from surrogatelcaohamiltonians.layers import (
     Readout,
 )
 
+import e3x
+import jax
+
 
 class HamiltonianModel(nn.Module):
-    atom_centered: AtomCenteredTensorMomentDescriptor = AtomCenteredTensorMomentDescriptor(
-        SpeciesAwareRadialBasis(cutoff=8.0),
+    atom_centered: AtomCenteredTensorMomentDescriptor = (
+        AtomCenteredTensorMomentDescriptor(
+            SpeciesAwareRadialBasis(
+                cutoff=6.0,
+                max_degree=2,
+                num_elemental_embedding=64,
+                num_radial=64,
+                tensor_module=e3x.nn.FusedTensor,
+            ),
+            moment_max_degree=4,
+            num_moment_features=64,
+            use_fused_tensor=True,
+        )
     )
-    bond_centered: BondCenteredTensorMomentDescriptor = BondCenteredTensorMomentDescriptor(cutoff=8.0)
-    dense: DenseBlock = DenseBlock()
-    readout: Readout = Readout(2, max_ell=2)
+    bond_centered: BondCenteredTensorMomentDescriptor = (
+        BondCenteredTensorMomentDescriptor(
+            cutoff=6.0, max_degree=4, tensor_module=e3x.nn.FusedTensor
+        )
+    )
+    dense: DenseBlock = DenseBlock(layer_width=128)
+    readout: Readout = Readout(4, max_ell=4)
 
     @nn.compact
     def __call__(self, atomic_numbers, neighbour_indices, neighbour_displacements):
