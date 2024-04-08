@@ -451,6 +451,9 @@ class InMemoryDataset:
     
     def batch(self):
         raise NotImplementedError
+
+    def cleanup(self):
+        pass
     
 
 class PureInMemoryDataset(InMemoryDataset):
@@ -480,13 +483,20 @@ class PureInMemoryDataset(InMemoryDataset):
         ds = prefetch_to_single_device(ds.as_numpy_iterator(), 2)
         return ds
     
-    def batch(self) -> Iterator[jax.Array]:
-        ds = (
-            tf.data.Dataset.from_generator(
-                lambda: self, output_signature=self.make_signature()
-            )
-            .repeat(self.n_epochs)
-        )
-        ds = ds.batch(batch_size=self.batch_size)
-        ds = prefetch_to_single_device(ds.as_numpy_iterator(), 2)
-        return ds
+    # def batch(self) -> Iterator[jax.Array]:
+    #     ds = (
+    #         tf.data.Dataset.from_generator(
+    #             lambda: self, output_signature=self.make_signature()
+    #         )
+    #         .repeat(self.n_epochs)
+    #     )
+    #     ds = ds.batch(batch_size=self.batch_size)
+    #     ds = prefetch_to_single_device(ds.as_numpy_iterator(), 2)
+    #     return ds
+    
+    def cleanup(self):
+        for p in self.cache_file.parent.glob(f"{self.file.name}.data*"):
+            p.unlink()
+
+        index_file = self.cache_file.parent / f"{self.file.name}.index"
+        index_file.unlink()
