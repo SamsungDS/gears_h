@@ -1,0 +1,3 @@
+from .radial_basis import SpeciesAwareRadialBasis
+from .atomcentered import AtomCenteredTensorMomentDescriptor
+from .bondcentered import BondCenteredTensorMomentDescriptor

@@ -1,11 +1,13 @@
-from surrogatelcaohamiltonians.utilities.mapmaker import get_mapping_spec
+from slh.utilities.mapmaker import get_mapping_spec
 
 
 def test_spsp_h_cgc_ia():
     ells1 = [0, 1]
     ells2 = [0, 1]
 
-    block_slices, ia_slices, cgc_slices, max_ell, num_features = get_mapping_spec(ells1, ells2)
+    block_slices, ia_slices, cgc_slices, max_ell, num_features = get_mapping_spec(
+        ells1, ells2
+    )
 
     cgc_mn_slices = [(x[0], x[1]) for x in cgc_slices]
     for slice_pair in [
@@ -26,7 +28,9 @@ def test_spsd_h_cgc_ia():
     ells1 = [0, 1]
     ells2 = [0, 2]
 
-    block_slices, ia_slices, cgc_slices, max_ell, num_features = get_mapping_spec(ells1, ells2)
+    block_slices, ia_slices, cgc_slices, max_ell, num_features = get_mapping_spec(
+        ells1, ells2
+    )
 
     for slice_pair in [
         (slice(0, 1), slice(0, 1)),
@@ -54,7 +58,9 @@ def test_spdsd_h_cgc_ia():
     ells1 = [0, 1, 2]
     ells2 = [0, 2]
 
-    block_slices, ia_slices, cgc_slices, max_ell, num_features = get_mapping_spec(ells1, ells2)
+    block_slices, ia_slices, cgc_slices, max_ell, num_features = get_mapping_spec(
+        ells1, ells2
+    )
 
     for slice_pair in [
         (slice(0, 1), slice(0, 1)),
