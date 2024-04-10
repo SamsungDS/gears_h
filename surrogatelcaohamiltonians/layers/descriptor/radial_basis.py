@@ -82,7 +82,7 @@ def jinclike(x: Float[Array, "..."], num: int, limit: float = 1.0):
 
     Parameters
     ----------
-    x : Float[Array, &#39;...&#39;]
+    x : Float[Array, ...]
         Input array
     num : int
         Number of basis functions
