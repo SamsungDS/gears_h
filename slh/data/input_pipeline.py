@@ -98,7 +98,6 @@ def read_dataset_as_list(
         subdir for subdir in directory.iterdir() if (subdir / marker_filename).exists()
     ]
     log.info(f"Found {len(dataset_dirlist)} snapshots.")
-    dataset_dirlist = dataset_dirlist[:50]
     dataset_as_list = [
         snapshot_tuple_from_directory(fd) for fd in tqdm(dataset_dirlist)
     ]
