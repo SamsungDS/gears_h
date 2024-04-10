@@ -8,8 +8,8 @@ import optax
 
 from tqdm import trange
 
-from surrogatelcaohamiltonians.data.input_pipeline import InMemoryDataset, PureInMemoryDataset
-from surrogatelcaohamiltonians.model.hmodel import HamiltonianModel
+from slh.data.input_pipeline import InMemoryDataset, PureInMemoryDataset
+from slh.model.hmodel import HamiltonianModel
 
 
 @partial(jax.jit, static_argnames=("model_apply", "optimizer_update"))
@@ -52,7 +52,6 @@ def fit(
     # We want to batch this over all inputs, but not the parameters of the model
     model_apply = jax.vmap(model.apply, in_axes=(None, 0, 0, 0))
 
-
     _batch_inputs, _batch_labels = next(batch_train_dataset)
     # print(len(_batch_inputs["idx_ij"][0]))
     params = model.init(
@@ -76,7 +75,7 @@ def fit(
     # #     _batch_inputs["idx_ij"],
     # #     _batch_inputs["idx_D"],
     # # )
-    optimizer = optax.adam(learning_rate=1e-3)
+    optimizer = optax.adam(learning_rate=1e-4)
     opt_state = optimizer.init(params)
 
     for iepoch in range(n_epochs):
@@ -84,7 +83,11 @@ def fit(
         for ibatch in trange(steps_per_epoch):
             tstart = time()
             params, opt_state, loss = train_step(
-                params, model_apply, optimizer.update, next(batch_train_dataset), opt_state
+                params,
+                model_apply,
+                optimizer.update,
+                next(batch_train_dataset),
+                opt_state,
             )
             # jax.block_until_ready(loss)
             # print("Batch:", ibatch, "in", time() - tstart, "seconds. Loss:", loss)

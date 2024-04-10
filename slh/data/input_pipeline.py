@@ -18,15 +18,26 @@ import tensorflow as tf
 
 from tqdm import tqdm, trange
 
-from surrogatelcaohamiltonians.hblockmapper import (
+from slh.hblockmapper import (
     make_mapper_from_elements,
     MultiElementPairHBlockMapper,
 )
-from surrogatelcaohamiltonians.data.preprocessing import prefetch_to_single_device
+from slh.data.preprocessing import prefetch_to_single_device
+from slh.data.utilities import split_idxs, split_dataset
 
 DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list]]
 
 log = logging.getLogger(__name__)
+
+
+def initialize_dataset_from_list(
+    dataset_as_list: DatasetList, num_train: int, num_val: int
+):
+    train_idx, val_idx = split_idxs(len(dataset_as_list), num_train, num_val)
+    train_ds_list, val_ds_list = split_dataset(dataset_as_list, train_idx, val_idx)
+    train_ds, val_ds = PureInMemoryDataset(train_ds_list, 1, 10), PureInMemoryDataset(
+        val_ds_list, 10, 10
+    )
 
 
 def pairwise_hamiltonian_from_file(filename: Path):
@@ -88,7 +99,9 @@ def read_dataset_as_list(
     ]
     log.info(f"Found {len(dataset_dirlist)} snapshots.")
     dataset_dirlist = dataset_dirlist[:50]
-    dataset_as_list = [snapshot_tuple_from_directory(fd) for fd in tqdm(dataset_dirlist)]
+    dataset_as_list = [
+        snapshot_tuple_from_directory(fd) for fd in tqdm(dataset_dirlist)
+    ]
     # with Pool(nprocs) as pool:
     #     with tqdm(total=len(dataset_dirlist)) as pbar:
     #         # TODO We eventually want to partial this
@@ -193,7 +206,6 @@ def get_h_irreps2(
     max_ell,
     readout_nfeatures,
 ):
-
     irreps_array = np.zeros((len(hblocks), 2, (max_ell + 1) ** 2, readout_nfeatures))
 
     assert len(hblocks) == len(neighbour_indices)
@@ -204,7 +216,9 @@ def get_h_irreps2(
 
     for pair in unique_elementpairs:
         boolean_indices_of_pairs = np.all(atomic_number_pairs == pair, axis=1)
-        hblocks_of_pairs = np.stack(list(itertools.compress(hblocks, boolean_indices_of_pairs)))
+        hblocks_of_pairs = np.stack(
+            list(itertools.compress(hblocks, boolean_indices_of_pairs))
+        )
         assert len(hblocks_of_pairs) == len(irreps_array[boolean_indices_of_pairs])
         irreps_array[boolean_indices_of_pairs] = hmapper.hblocks_to_irrep(
             hblocks_of_pairs,
@@ -305,12 +319,16 @@ class InMemoryDataset:
         self.hmap = get_hamiltonian_mapper_from_dataset(dataset_as_list=dataset_as_list)
 
         self.max_ell, self.readout_nfeatures = get_max_ell_and_max_features(self.hmap)
-        logging.info(f"Readout direct sum max_ell: {self.max_ell}, n_features: {self.readout_nfeatures}")
-        
+        logging.info(
+            f"Readout direct sum max_ell: {self.max_ell}, n_features: {self.readout_nfeatures}"
+        )
+
         self.max_natoms, self.max_nneighbours = get_max_natoms_and_nneighbours(
             dataset_as_list
         )
-        logging.info(f"Max natoms: {self.max_natoms}, nneighbours: {self.max_nneighbours}")
+        logging.info(
+            f"Max natoms: {self.max_natoms}, nneighbours: {self.max_nneighbours}"
+        )
 
         self.dataset_mask_dict = get_mask_dict(
             self.max_ell, self.readout_nfeatures, self.hmap
@@ -449,16 +467,16 @@ class InMemoryDataset:
 
     def __iter__(self):
         raise NotImplementedError
-    
+
     def shuffle_and_batch(self):
         raise NotImplementedError
-    
+
     def batch(self):
         raise NotImplementedError
 
     def cleanup(self):
         pass
-    
+
 
 class PureInMemoryDataset(InMemoryDataset):
     def __iter__(self):
@@ -475,7 +493,9 @@ class PureInMemoryDataset(InMemoryDataset):
             tf.data.Dataset.from_generator(
                 lambda: self, output_signature=self.make_signature()
             )
-            .cache(self.cache_file.as_posix()) # This is required to cache the generator so a successful repeat can happen.
+            .cache(
+                self.cache_file.as_posix()
+            )  # This is required to cache the generator so a successful repeat can happen.
             .repeat(self.n_epochs)
         )
 
@@ -486,7 +506,7 @@ class PureInMemoryDataset(InMemoryDataset):
         #     ds = ds.batch(batch_size=self.n_jit_steps)
         ds = prefetch_to_single_device(ds.as_numpy_iterator(), 2)
         return ds
-    
+
     # def batch(self) -> Iterator[jax.Array]:
     #     ds = (
     #         tf.data.Dataset.from_generator(
@@ -497,7 +517,7 @@ class PureInMemoryDataset(InMemoryDataset):
     #     ds = ds.batch(batch_size=self.batch_size)
     #     ds = prefetch_to_single_device(ds.as_numpy_iterator(), 2)
     #     return ds
-    
+
     def cleanup(self):
         for p in self.cache_file.parent.glob(f"{self.cache_file.name}.data*"):
             p.unlink()

@@ -4,7 +4,7 @@ import flax.linen as nn
 
 from jaxtyping import Float, Array, Int
 
-from surrogatelcaohamiltonians.layers.descriptor.radial_basis import (
+from slh.layers.descriptor.radial_basis import (
     SpeciesAwareRadialBasis,
 )
 

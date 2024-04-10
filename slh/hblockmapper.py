@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from functools import cache
 from itertools import product
-from surrogatelcaohamiltonians.utilities.mapmaker import get_mapping_spec
+from slh.utilities.mapmaker import get_mapping_spec
 
 import numpy as np
 

@@ -1,11 +1,11 @@
-from surrogatelcaohamiltonians.layers.descriptor import (
+from slh.layers.descriptor import (
     AtomCenteredTensorMomentDescriptor,
     BondCenteredTensorMomentDescriptor,
     SpeciesAwareRadialBasis,
 )
 
-from surrogatelcaohamiltonians.layers.residual_dense import DenseBlock
-from surrogatelcaohamiltonians.layers.readout import Readout
+from slh.layers.residual_dense import DenseBlock
+from slh.layers.readout import Readout
 
 
 def build_model(config, readout_config):

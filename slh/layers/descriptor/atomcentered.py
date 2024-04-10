@@ -4,7 +4,7 @@ import flax.linen as nn
 
 from jaxtyping import Float, Array, Int
 
-from surrogatelcaohamiltonians.layers.descriptor.radial_basis import (
+from slh.layers.descriptor.radial_basis import (
     SpeciesAwareRadialBasis,
 )
 
@@ -32,7 +32,6 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
         neighbour_indices: Int[Array, "... num_neighbours 2"],
         neighbour_displacements: Float[Array, "... num_neighbours 3"],
     ):
-
         idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
         Z_i, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
 
