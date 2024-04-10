@@ -77,26 +77,27 @@ def snapshot_tuple_from_directory(
     ) = pairwise_hamiltonian_from_file(
         directory, ijD_filename, hamiltonian_dataset_filename
     )
-    return atoms, orbital_spec, (bond_atom_indices, bond_vectors, hblocks)
+    return atoms, orbital_spec, bond_atom_indices, bond_vectors, hblocks
 
 
 def read_dataset_as_list(
-    directory: Path, marker_filename: str = "atoms.extxyz", nprocs=16
+    directory: Path, marker_filename: str = "atoms.extxyz", nprocs=1
 ) -> DatasetList:
     dataset_dirlist = [
         subdir for subdir in directory.iterdir() if (subdir / marker_filename).exists()
     ]
     log.info(f"Found {len(dataset_dirlist)} snapshots.")
-    dataset_as_list = []
+    dataset_dirlist = dataset_dirlist[:50]
+    dataset_as_list = [snapshot_tuple_from_directory(fd) for fd in tqdm(dataset_dirlist)]
+    # with Pool(nprocs) as pool:
+    #     with tqdm(total=len(dataset_dirlist)) as pbar:
+    #         # TODO We eventually want to partial this
+    #         for datatuple in pool.imap_unordered(
+    #             func=snapshot_tuple_from_directory, iterable=dataset_dirlist
+    #         ):
+    #             dataset_as_list.append(datatuple)
+    #             pbar.update()
 
-    with Pool(nprocs) as pool:
-        with tqdm(total=len(dataset_dirlist)) as pbar:
-            # TODO We eventually want to partial this
-            for datatuple in pool.imap_unordered(
-                func=snapshot_tuple_from_directory, iterable=dataset_dirlist
-            ):
-                dataset_as_list.append(datatuple)
-                pbar.update()
     return dataset_as_list
 
 
@@ -288,7 +289,7 @@ class InMemoryDataset:
         batch_size: int,
         n_epochs: int,
         is_inference: bool = False,
-        buffer_size=1000,
+        buffer_size=100,
         cache_path=".",
     ):
         self.n_data = len(dataset_as_list)
@@ -304,9 +305,12 @@ class InMemoryDataset:
         self.hmap = get_hamiltonian_mapper_from_dataset(dataset_as_list=dataset_as_list)
 
         self.max_ell, self.readout_nfeatures = get_max_ell_and_max_features(self.hmap)
+        logging.info(f"Readout direct sum max_ell: {self.max_ell}, n_features: {self.readout_nfeatures}")
+        
         self.max_natoms, self.max_nneighbours = get_max_natoms_and_nneighbours(
             dataset_as_list
         )
+        logging.info(f"Max natoms: {self.max_natoms}, nneighbours: {self.max_nneighbours}")
 
         self.dataset_mask_dict = get_mask_dict(
             self.max_ell, self.readout_nfeatures, self.hmap
@@ -358,14 +362,14 @@ class InMemoryDataset:
             (self.max_natoms,), dtype=tf.int16, name="numbers"
         )
         input_signature["positions"] = tf.TensorSpec(
-            (self.max_natoms, 3), dtype=tf.float64, name="positions"
+            (self.max_natoms, 3), dtype=tf.float32, name="positions"
         )
         # input_signature["box"] = tf.TensorSpec((3, 3), dtype=tf.float64, name="box")
         input_signature["idx_ij"] = tf.TensorSpec(
             (self.max_nneighbours, 2), dtype=tf.int16, name="idx_ij"
         )
         input_signature["idx_D"] = tf.TensorSpec(
-            (self.max_nneighbours, 3), dtype=tf.float64, name="idx_D"
+            (self.max_nneighbours, 3), dtype=tf.float32, name="idx_D"
         )
 
         if self.is_inference:
@@ -398,7 +402,7 @@ class InMemoryDataset:
         zeros_to_add = self.max_natoms - len(inputs["numbers"])
         inputs["positions"] = np.pad(
             inputs["positions"], ((0, zeros_to_add), (0, 0)), "constant"
-        )
+        ).astype(np.float32)
         inputs["numbers"] = np.pad(
             inputs["numbers"], (0, zeros_to_add), "constant"
         ).astype(np.int16)
@@ -409,7 +413,7 @@ class InMemoryDataset:
         ).astype(np.int16)
         inputs["idx_D"] = np.pad(
             inputs["idx_D"], ((0, zeros_to_add), (0, 0)), "constant"
-        )
+        ).astype(np.float32)
 
         if self.is_inference:
             return inputs
@@ -426,7 +430,7 @@ class InMemoryDataset:
                 (0, 0),
             ),  # Feature dim
             "constant",
-        )
+        ).astype(np.float32)
 
         labels["mask"] = np.pad(
             labels["mask"],
@@ -437,7 +441,7 @@ class InMemoryDataset:
                 (0, 0),
             ),  # Feature dim
             "constant",
-        )
+        ).astype(np.int16)
 
         inputs = {k: tf.constant(v) for k, v in inputs.items()}
         labels = {k: tf.constant(v) for k, v in labels.items()}
@@ -495,8 +499,8 @@ class PureInMemoryDataset(InMemoryDataset):
     #     return ds
     
     def cleanup(self):
-        for p in self.cache_file.parent.glob(f"{self.file.name}.data*"):
+        for p in self.cache_file.parent.glob(f"{self.cache_file.name}.data*"):
             p.unlink()
 
-        index_file = self.cache_file.parent / f"{self.file.name}.index"
+        index_file = self.cache_file.parent / f"{self.cache_file.name}.index"
         index_file.unlink()

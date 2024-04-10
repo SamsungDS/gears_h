@@ -8,7 +8,7 @@ import optax
 
 from tqdm import trange
 
-from surrogatelcaohamiltonians.data.input_pipeline import InMemoryDataset
+from surrogatelcaohamiltonians.data.input_pipeline import InMemoryDataset, PureInMemoryDataset
 from surrogatelcaohamiltonians.model.hmodel import HamiltonianModel
 
 
@@ -40,7 +40,7 @@ def train_step(params, model_apply, optimizer_update, batch_full, opt_state):
 
 def fit(
     model: HamiltonianModel,
-    train_dataset: InMemoryDataset,
+    train_dataset: PureInMemoryDataset,
     # loss_function,
     n_epochs: int,
 ):
@@ -54,6 +54,7 @@ def fit(
 
 
     _batch_inputs, _batch_labels = next(batch_train_dataset)
+    # print(len(_batch_inputs["idx_ij"][0]))
     params = model.init(
         jax.random.PRNGKey(2462),
         atomic_numbers=_batch_inputs["numbers"][0],
@@ -69,12 +70,12 @@ def fit(
         )
     )
 
-    # model_apply(
-    #     _params,
-    #     _batch_inputs["numbers"],
-    #     _batch_inputs["idx_ij"],
-    #     _batch_inputs["idx_D"],
-    # )
+    # # model_apply(
+    # #     _params,
+    # #     _batch_inputs["numbers"],
+    # #     _batch_inputs["idx_ij"],
+    # #     _batch_inputs["idx_D"],
+    # # )
     optimizer = optax.adam(learning_rate=1e-3)
     opt_state = optimizer.init(params)
 
@@ -85,7 +86,8 @@ def fit(
             params, opt_state, loss = train_step(
                 params, model_apply, optimizer.update, next(batch_train_dataset), opt_state
             )
-            jax.block_until_ready(loss)
+            # jax.block_until_ready(loss)
             # print("Batch:", ibatch, "in", time() - tstart, "seconds. Loss:", loss)
+        print("Loss:", loss)
 
-    train_dataset.cleanup()
+    # train_dataset.cleanup()

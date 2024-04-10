@@ -1,18 +1,20 @@
 from functools import partial
+from dataclasses import field
 
 import flax.linen as nn
 from typing import Union
 
 import e3x
+import jax.numpy as jnp
 
 
 class DenseBlock(nn.Module):
-    num_layers: int = 2
-    layer_width: int = 128
+    dense_layer: nn.Module
+    layer_widths: list[int] = field(default_factory=lambda: [128, 128])
 
     @nn.compact
     def __call__(self, x):
-        y = e3x.nn.Dense(features=self.layer_width)(x)
-        for _ in range(self.num_layers - 1):
-            y = e3x.nn.Dense(features=self.layer_width)(y)
+        y = self.dense_layer(features=self.layer_widths[0])(x)
+        for width in self.layer_widths[1:]:
+            y = self.dense_layer(features=width)(y)
         return y

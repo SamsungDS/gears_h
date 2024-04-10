@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "surrogatelcaohamiltonians"
-version = "0.0.0"
+version = "0.0.1"
 description = "Package to learn electronic structure hamiltonians in an LCAO basis"
 authors = ["Anubhab Haldar <a.haldar@samsung.com>"]
 keywords=["machine-learning", "hamiltonians", "electronic-structure"]
@@ -27,7 +27,8 @@ slh = 'surrogatelcaohamiltonians.cli.slh_app:app'
 [tool.poetry.group.docs.dependencies]
 sphinx = "^7.2.6"
 myst-parser = "^2.0.0"
-sphinx-rtd-theme = "^2.0.0"
+sphinx-autodoc2 = "^0.5.0"
+sphinx-book-theme = "^1.1.2"
 
 [build-system]
 requires = ["poetry-core"]
