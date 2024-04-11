@@ -15,7 +15,7 @@ release = "0.0.0"
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = ["myst_parser", "autodoc2"]
-autodoc2_packages = ["../../surrogatelcaohamiltonians"]
+autodoc2_packages = ["../../slh"]
 
 templates_path = ["_templates"]
 exclude_patterns = []
