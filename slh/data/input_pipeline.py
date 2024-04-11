@@ -21,6 +21,7 @@ from tqdm import tqdm, trange
 from slh.hblockmapper import (
     make_mapper_from_elements,
     MultiElementPairHBlockMapper,
+    get_mask_dict
 )
 from slh.data.preprocessing import prefetch_to_single_device
 from slh.data.utilities import split_idxs, split_dataset
@@ -111,19 +112,6 @@ def read_dataset_as_list(
     #             pbar.update()
 
     return dataset_as_list
-
-
-def get_mask_dict(
-    max_ell: int, max_nfeatures: int, pairwise_hmap: MultiElementPairHBlockMapper
-) -> dict[tuple[int, int], np.ndarray]:
-    mask_dict = {}
-    for element_pair, blockmapper in pairwise_hmap.mapper.items():
-        # This is e3x convention. 2 for parity, angular momentum channels, features
-        mask_array = np.zeros((2, (max_ell + 1) ** 2, max_nfeatures), dtype=np.int8)
-        for slice in blockmapper.irreps_slices:
-            mask_array[slice] = 1
-        mask_dict[element_pair] = mask_array
-    return mask_dict
 
 
 def get_max_natoms_and_nneighbours(dataset_as_list):
