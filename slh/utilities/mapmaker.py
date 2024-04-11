@@ -1,8 +1,7 @@
 import numpy as np
-import e3x
 
 
-def get_mapping_spec(ells1, ells2):
+def get_mapping_spec(ells1: list[int], ells2: list[int]):
     """I hate this function. It takes a general hamiltonian block with an
     arbitrary arragement of angular momentum blocks, and then spits out indices
     corresponding to those blocks, and the corresponding Clebsch-Gordan blocks

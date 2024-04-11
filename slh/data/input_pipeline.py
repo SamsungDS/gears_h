@@ -219,7 +219,7 @@ def get_h_irreps2(
             list(itertools.compress(hblocks, boolean_indices_of_pairs))
         )
         assert len(hblocks_of_pairs) == len(irreps_array[boolean_indices_of_pairs])
-        irreps_array[boolean_indices_of_pairs] = hmapper.hblocks_to_irrep(
+        irreps_array[boolean_indices_of_pairs] = hmapper.hblocks_to_irreps(
             hblocks_of_pairs,
             irreps_array[boolean_indices_of_pairs],
             pair[0],

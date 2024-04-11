@@ -43,7 +43,7 @@ class MultiElementPairHBlockMapper:
                 out=irreps_array[irreps_slice],
             )
 
-    def hblocks_to_irrep(self, hblocks, irreps_array, Z_i, Z_j):
+    def hblocks_to_irreps(self, hblocks, irreps_array, Z_i, Z_j):
         assert len(hblocks) == len(irreps_array)
         mapping_spec = self.mapper[(Z_i, Z_j)]
 
@@ -63,15 +63,15 @@ class MultiElementPairHBlockMapper:
             )
         return irreps_array
 
-    def irrep_to_hblock(self, hblock, irreps_array, Z_i, Z_j):
+    def irreps_to_hblocks(self, hblocks, irreps_array, Z_i, Z_j):
         mapping_spec = self.mapper[(Z_i, Z_j)]
 
         ms = mapping_spec
         for block_slice, cgc_slice, irreps_slice in zip(
             ms.block_slices, ms.cgc_slices, ms.irreps_slices, strict=True
         ):
-            hblock[block_slice] = np.einsum(
-                "l,mnl->mn", irreps_array[irreps_slice], ms.cgc[cgc_slice]
+            hblocks[block_slice] = np.einsum(
+                "...l,mnl->...mn", irreps_array[irreps_slice], ms.cgc[cgc_slice]
             )
 
 

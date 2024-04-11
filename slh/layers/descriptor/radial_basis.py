@@ -61,7 +61,7 @@ class SpeciesAwareRadialBasis(nn.Module):
         )(self.embedding(Z_j))
 
         y = self.tensor_module(
-            max_degree=self.max_degree, include_pseudotensors=False, name="emb x basis"
+            max_degree=self.max_degree, include_pseudotensors=False, name="radial emb x basis"
         )(transformed_embedding, basis_expansion)
 
         if self.embedding_residual_connection:

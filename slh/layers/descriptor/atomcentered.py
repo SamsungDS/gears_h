@@ -43,7 +43,7 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
         # y x yy = yy x y upto a difference in weights.
         # TODO: This WILL error out if your first y doesn't have a high enough degree
         # to tensor onto moment_max_degree.
-        for _ in range(self.max_moment - 1):
+        for _ in range(self.max_moment):
             y = e3x.nn.TensorDense(
                 features=self.num_moment_features,
                 max_degree=self.moment_max_degree,
@@ -55,7 +55,7 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
         transformed_embedding = self.embedding_transformation(self.embedding(Z_i))
 
         # This is currently num_pairs x 2 x (moment_max_degree + 1)^2 x basis
-        y = e3x.nn.Tensor(max_degree=self.moment_max_degree, name="emb x basis")(
+        y = e3x.nn.Tensor(max_degree=self.moment_max_degree, name="ac emb x basis")(
             transformed_embedding, y
         )
 
