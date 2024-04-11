@@ -1,4 +1,4 @@
-from surrogatelcaohamiltonians.layers.descriptor.radial_basis import (
+from slh.layers.descriptor.radial_basis import (
     SpeciesAwareRadialBasis,
 )
 

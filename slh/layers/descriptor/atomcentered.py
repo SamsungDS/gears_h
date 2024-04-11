@@ -61,7 +61,7 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
 
         # Contract over all neighbours of atoms indexed by idx_i
         # This is the ONLY "message-passing" step.
-        # This is now num_atoms x 2 x (moment_max_degree + 1)^2 x basis
+        # This is now num_atoms x 2 x (moment_max_degree + 1)^2 x nradial_features
         y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
 
         # Do less math by doing the residual connectins here.

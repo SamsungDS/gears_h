@@ -4,13 +4,10 @@ from functools import partial
 import e3x
 import jax
 import jax.numpy as jnp
-import jaxtyping
+from jaxtyping import Float, Array
 
 import flax.linen as nn
 
-Array = jaxtyping.Array
-Float = jaxtyping.Float
-e3x.Config.set_cartesian_order(False)
 
 
 class SpeciesAwareRadialBasis(nn.Module):
@@ -30,7 +27,7 @@ class SpeciesAwareRadialBasis(nn.Module):
 
     @nn.compact
     def __call__(
-        self, neighbour_displacements: Float[Array, "... 3"], Z_j: Float[Array, "..."]
+        self, neighbour_displacements: Float[Array, "... num_neighbours 3"], Z_j: Float[Array, "... num_neighbours"]
     ):
         """_summary_
 
@@ -57,7 +54,7 @@ class SpeciesAwareRadialBasis(nn.Module):
         # We transform the embedding dimension to the radial basis dimension
         # so we can product meaningfully
         transformed_embedding = e3x.nn.Dense(
-            self.num_radial, name="transform embedding"
+            self.num_radial, name="embedding transform"
         )(self.embedding(Z_j))
 
         y = self.tensor_module(
