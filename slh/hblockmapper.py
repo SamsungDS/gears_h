@@ -70,6 +70,8 @@ class MultiElementPairHBlockMapper:
         for block_slice, cgc_slice, irreps_slice in zip(
             ms.block_slices, ms.cgc_slices, ms.irreps_slices, strict=True
         ):
+            block_slice = (slice(0, len(hblocks)),) + block_slice
+            irreps_slice = (slice(0, len(hblocks)),) + irreps_slice
             hblocks[block_slice] = np.einsum(
                 "...l,mnl->...mn", irreps_array[irreps_slice], ms.cgc[cgc_slice]
             )
