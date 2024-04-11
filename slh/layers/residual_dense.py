@@ -14,7 +14,11 @@ class DenseBlock(nn.Module):
 
     @nn.compact
     def __call__(self, x):
+        
         y = self.dense_layer(features=self.layer_widths[0])(x)
+        
         for width in self.layer_widths[1:]:
+            y = e3x.nn.swish(y)
             y = self.dense_layer(features=width)(y)
+        
         return y

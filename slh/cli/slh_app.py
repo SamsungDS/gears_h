@@ -20,13 +20,13 @@ app = typer.Typer(
 #     context_settings={"help_option_names": ["-h", "--help"]},
 #     help="Validate training or inference files.",
 # )
-# template_app = typer.Typer(
-#     pretty_exceptions_show_locals=False,
-#     context_settings={"help_option_names": ["-h", "--help"]},
-#     help="Create configuration file templates.",
-# )
+template_app = typer.Typer(
+    pretty_exceptions_show_locals=False,
+    context_settings={"help_option_names": ["-h", "--help"]},
+    help="Create configuration file templates.",
+)
 # app.add_typer(validate_app, name="validate")
-# app.add_typer(template_app, name="template")
+app.add_typer(template_app, name="template")
 
 
 @app.command()
@@ -40,23 +40,6 @@ def train(
     Starts the training of a H/S model with parameters provided by a configuration file.
     """
     console.print("Eventually this will set up a training")
-
-
-# @app.command()
-# def md(
-#     train_config_path: Path = typer.Argument(
-#         ..., help="Configuration YAML file that was used to train a model."
-#     ),
-#     md_config_path: Path = typer.Argument(..., help="MD configuration YAML file."),
-#     log_level: str = typer.Option("info", help="Sets the training logging level."),
-# ):
-#     """
-#     Starts performing a molecular dynamics simulation (currently only NHC thermostat)
-#     with parameters provided by a configuration file.
-#     """
-#     from apax.md import run_md
-
-#     run_md(train_config_path, md_config_path, log_level)
 
 
 # @app.command()
@@ -148,21 +131,21 @@ def docs():
 #         console.print(f"{config_path} is a valid MD config.")
 
 
-@app.command("visualize")
-def visualize_model(
-    config_path: Path = typer.Argument(
-        ...,
-        help=("This ideally visualizes the model you've configured."),
-    )
-):
-    """
-    Visualizing models eventually.
+# @app.command("visualize")
+# def visualize_model(
+#     config_path: Path = typer.Argument(
+#         ...,
+#         help=("This ideally visualizes the model you've configured."),
+#     )
+# ):
+#     """
+#     Visualizing models eventually.
 
-    Parameters
-    ----------
-    config_path: Path to the training configuration file.
-    """
-    console.print("This will eventually print out the model")
+#     Parameters
+#     ----------
+#     config_path: Path to the training configuration file.
+#     """
+#     console.print("This will eventually print out the model")
     # import jax
 
     # from apax.config import Config
@@ -185,47 +168,28 @@ def visualize_model(
     # print(model.tabulate(jax.random.PRNGKey(0), R, Z, idx, box, offsets))
 
 
-# @template_app.command("train")
-# def template_train_config(
-#     full: bool = typer.Option(False, help="Use all input options."),
-# ):
-#     """
-#     Creates a training input template in the current working directory.
-#     """
-#     if full:
-#         template_file = "train_config_full.yaml"
-#         config_path = "config_full.yaml"
-#     else:
-#         template_file = "train_config_minimal.yaml"
-#         config_path = "config.yaml"
+@template_app.command("train")
+def template_train_config(
+    full: bool = typer.Option(False, help="Use all input options."),
+):
+    """
+    Creates a training input template in the current working directory.
+    """
+    if full:
+        template_file = "train_config_full.yaml"
+        config_path = "config_full.yaml"
+    else:
+        template_file = "train_config_minimal.yaml"
+        config_path = "config.yaml"
 
-#     template_content = pkg_resources.read_text(templates, template_file)
+    template_content = pkg_resources.read_text(templates, template_file)
 
-#     if Path(config_path).is_file():
-#         console.print("There is already a config file in the working directory.")
-#         sys.exit(1)
-#     else:
-#         with open(config_path, "w") as config:
-#             config.write(template_content)
-
-
-# @template_app.command("md")
-# def template_md_config():
-#     """
-#     Creates a training input template in the current working directory.
-#     """
-
-#     template_file = "md_config_minimal.yaml"
-#     config_path = "md_config.yaml"
-
-#     template_content = pkg_resources.read_text(templates, template_file)
-
-#     if Path(config_path).is_file():
-#         console.print("There is already a config file in the working directory.")
-#         sys.exit(1)
-#     else:
-#         with open(config_path, "w") as config:
-#             config.write(template_content)
+    if Path(config_path).is_file():
+        console.print("There is already a config file in the working directory.")
+        sys.exit(1)
+    else:
+        with open(config_path, "w") as config:
+            config.write(template_content)
 
 
 def version_callback(value: bool) -> None:
