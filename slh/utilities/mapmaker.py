@@ -22,7 +22,7 @@ def get_mapping_spec(ells1: list[int], ells2: list[int]):
     _type_
         _description_
     """
-    parity_dict = {0: 0, 1: 1, 2: 0, 3: 0, 4: 0, 5: 1, 6: 0}
+    parity_dict = dict(zip(np.arange(7), np.arange(7) % 2))
     # This is the maximum irrep angular momentum from Wigner-Eckhart
     # https://e3x.readthedocs.io/stable/overview.html#coupling-irreps
     max_ell = max(ells1) + max(ells2)
@@ -74,8 +74,12 @@ def get_mapping_spec(ells1: list[int], ells2: list[int]):
             # Find first feature which has all required irreps for this feature block
             # available
             for ifeature in range(mask_candidate.shape[-1]):
+                # if np.all(
+                #     mask_candidate[parity, ellmin**2 : (ellmax + 1) ** 2, ifeature]
+                #     == 0
+                # ):
                 if np.all(
-                    mask_candidate[parity, ellmin**2 : (ellmax + 1) ** 2, ifeature]
+                    mask_candidate[parity, :, ifeature]
                     == 0
                 ):
                     mask_candidate[

@@ -8,8 +8,6 @@ from slh.layers.descriptor.radial_basis import (
     SpeciesAwareRadialBasis,
 )
 
-e3x.Config.set_cartesian_order(False)
-
 
 class AtomCenteredTensorMomentDescriptor(nn.Module):
     radial_basis: SpeciesAwareRadialBasis

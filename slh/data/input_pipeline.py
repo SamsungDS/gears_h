@@ -21,7 +21,7 @@ from tqdm import tqdm, trange
 from slh.hblockmapper import (
     make_mapper_from_elements,
     MultiElementPairHBlockMapper,
-    get_mask_dict
+    get_mask_dict,
 )
 from slh.data.preprocessing import prefetch_to_single_device
 from slh.data.utilities import split_idxs, split_dataset
@@ -93,12 +93,16 @@ def snapshot_tuple_from_directory(
 
 
 def read_dataset_as_list(
-    directory: Path, marker_filename: str = "atoms.extxyz", nprocs=1
+    directory: Path, marker_filename: str = "atoms.extxyz", num_snapshots=-1,
 ) -> DatasetList:
     dataset_dirlist = [
         subdir for subdir in directory.iterdir() if (subdir / marker_filename).exists()
     ]
-    log.info(f"Found {len(dataset_dirlist)} snapshots.")
+    if num_snapshots > 0:
+        dataset_dirlist = dataset_dirlist[:num_snapshots]
+    
+    log.info(f"Using {len(dataset_dirlist)} snapshots.")
+    
     dataset_as_list = [
         snapshot_tuple_from_directory(fd) for fd in tqdm(dataset_dirlist)
     ]
@@ -205,7 +209,7 @@ def get_h_irreps2(
         boolean_indices_of_pairs = np.all(atomic_number_pairs == pair, axis=1)
         hblocks_of_pairs = np.stack(
             list(itertools.compress(hblocks, boolean_indices_of_pairs))
-        )
+        ).astype(np.float32)
         assert len(hblocks_of_pairs) == len(irreps_array[boolean_indices_of_pairs])
         irreps_array[boolean_indices_of_pairs] = hmapper.hblocks_to_irreps(
             hblocks_of_pairs,
@@ -414,7 +418,10 @@ class InMemoryDataset:
 
         zeros_to_add = self.max_nneighbours - len(inputs["idx_ij"])
         inputs["idx_ij"] = np.pad(
-            inputs["idx_ij"], ((0, zeros_to_add), (0, 0)), "constant"
+            inputs["idx_ij"],
+            ((0, zeros_to_add), (0, 0)),
+            "constant",
+            constant_values=-1,
         ).astype(np.int16)
         inputs["idx_D"] = np.pad(
             inputs["idx_D"], ((0, zeros_to_add), (0, 0)), "constant"
@@ -443,8 +450,8 @@ class InMemoryDataset:
                 (0, zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
-                (0, 0),
-            ),  # Feature dim
+                (0, 0),  # Feature dim
+            ),
             "constant",
         ).astype(np.int16)
 

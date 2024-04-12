@@ -146,26 +146,26 @@ def docs():
 #     config_path: Path to the training configuration file.
 #     """
 #     console.print("This will eventually print out the model")
-    # import jax
+# import jax
 
-    # from apax.config import Config
-    # from apax.model.builder import ModelBuilder
-    # from apax.utils.data import make_minimal_input
+# from apax.config import Config
+# from apax.model.builder import ModelBuilder
+# from apax.utils.data import make_minimal_input
 
-    # with open(config_path, "r") as stream:
-    #     user_config = yaml.safe_load(stream)
+# with open(config_path, "r") as stream:
+#     user_config = yaml.safe_load(stream)
 
-    # try:
-    #     config = Config.model_validate(user_config)
-    # except ValidationError as e:
-    #     print(e)
-    #     console.print("Configuration Invalid!", style="red3")
-    #     raise typer.Exit(code=1)
+# try:
+#     config = Config.model_validate(user_config)
+# except ValidationError as e:
+#     print(e)
+#     console.print("Configuration Invalid!", style="red3")
+#     raise typer.Exit(code=1)
 
-    # R, Z, idx, box, offsets = make_minimal_input()
-    # builder = ModelBuilder(config.model.get_dict(), n_species=10)
-    # model = builder.build_energy_model()
-    # print(model.tabulate(jax.random.PRNGKey(0), R, Z, idx, box, offsets))
+# R, Z, idx, box, offsets = make_minimal_input()
+# builder = ModelBuilder(config.model.get_dict(), n_species=10)
+# model = builder.build_energy_model()
+# print(model.tabulate(jax.random.PRNGKey(0), R, Z, idx, box, offsets))
 
 
 @template_app.command("train")
