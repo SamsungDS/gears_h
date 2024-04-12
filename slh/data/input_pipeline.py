@@ -121,6 +121,11 @@ def read_dataset_as_list(
 def get_max_natoms_and_nneighbours(dataset_as_list):
     max_natoms = max([len(x[0]) for x in dataset_as_list])
     max_nneighbours = max([len(x[2]) for x in dataset_as_list])
+
+    log.info(
+            f"Max natoms: {max_natoms}, nneighbours: {max_nneighbours}"
+        )
+    
     return max_natoms, max_nneighbours
 
 
@@ -129,6 +134,7 @@ def get_hamiltonian_mapper_from_dataset(dataset_as_list):
     orbital_ells_across_dataset = dict(
         (int(k), v) for d in orbital_ells_across_dataset for k, v in d.items()
     )
+    log.info(f"Orbital ells dictionary: {orbital_ells_across_dataset}")
 
     return make_mapper_from_elements(orbital_ells_across_dataset)
 
@@ -137,6 +143,9 @@ def get_max_ell_and_max_features(hmap: MultiElementPairHBlockMapper):
     # These entirely define the output feature layer
     max_ell_across_dataset = max([x.max_ell for x in hmap.mapper.values()])
     max_nfeatures_across_dataset = max([x.nfeatures for x in hmap.mapper.values()])
+
+    log.info(f"Max ell: {max_ell_across_dataset}, max nfeatures: {max_nfeatures_across_dataset}")
+    
     return max_ell_across_dataset, max_nfeatures_across_dataset
 
 
@@ -310,15 +319,9 @@ class InMemoryDataset:
         self.hmap = get_hamiltonian_mapper_from_dataset(dataset_as_list=dataset_as_list)
 
         self.max_ell, self.readout_nfeatures = get_max_ell_and_max_features(self.hmap)
-        logging.info(
-            f"Readout direct sum max_ell: {self.max_ell}, n_features: {self.readout_nfeatures}"
-        )
 
         self.max_natoms, self.max_nneighbours = get_max_natoms_and_nneighbours(
             dataset_as_list
-        )
-        logging.info(
-            f"Max natoms: {self.max_natoms}, nneighbours: {self.max_nneighbours}"
         )
 
         self.dataset_mask_dict = get_mask_dict(
