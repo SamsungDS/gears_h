@@ -17,4 +17,4 @@ class Readout(nn.Module):
 
     @nn.compact
     def __call__(self, y):
-        return e3x.nn.TensorDense(self.features, max_degree=self.max_ell)(y)
+        return e3x.nn.Dense(self.features)(y)

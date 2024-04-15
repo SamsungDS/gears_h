@@ -26,6 +26,7 @@ from slh.hblockmapper import (
 from slh.data.preprocessing import prefetch_to_single_device
 from slh.data.utilities import split_idxs, split_dataset
 
+# (Atoms, {Z: [0, 1, 2, ...]}, ij, D, hblocks)
 DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list]]
 
 log = logging.getLogger(__name__)
@@ -186,40 +187,23 @@ def get_h_irreps(
     irreps_array = np.zeros((len(hblocks), 2, (max_ell + 1) ** 2, readout_nfeatures))
 
     assert len(hblocks) == len(neighbour_indices)
-    for i, hblock in enumerate(hblocks):
-        # This is doing this inplace to the best of my understanding. - Anub
-        hmapper.hblock_to_irrep(
-            hblock,
-            irreps_array[i],
-            atomic_numbers[neighbour_indices[i, 0]],
-            atomic_numbers[neighbour_indices[i, 1]],
-        )
-    print("Irreps from old:", irreps_array[0])
-    return irreps_array
-
-
-def get_h_irreps2(
-    hblocks: list[np.ndarray],  # For one snapshot.
-    hmapper: MultiElementPairHBlockMapper,
-    atomic_numbers: np.ndarray,
-    neighbour_indices: np.ndarray,
-    max_ell,
-    readout_nfeatures,
-):
-    irreps_array = np.zeros((len(hblocks), 2, (max_ell + 1) ** 2, readout_nfeatures))
-
-    assert len(hblocks) == len(neighbour_indices)
 
     atomic_number_pairs = atomic_numbers[neighbour_indices]
     assert atomic_number_pairs.shape[-1] == 2
     unique_elementpairs = np.unique(atomic_number_pairs, axis=0)
 
     for pair in unique_elementpairs:
+
+        # Find all atom-pairs of this species-pair
         boolean_indices_of_pairs = np.all(atomic_number_pairs == pair, axis=1)
+
+        # Take all hblocks consisting of this specie-pair
         hblocks_of_pairs = np.stack(
             list(itertools.compress(hblocks, boolean_indices_of_pairs))
         ).astype(np.float32)
+
         assert len(hblocks_of_pairs) == len(irreps_array[boolean_indices_of_pairs])
+        
         irreps_array[boolean_indices_of_pairs] = hmapper.hblocks_to_irreps(
             hblocks_of_pairs,
             irreps_array[boolean_indices_of_pairs],
@@ -232,7 +216,7 @@ def get_h_irreps2(
 def get_irreps_mask(
     mask_dict, atomic_numbers, neighbour_indices, max_ell, readout_nfeatures
 ):
-    mask = np.zeros((len(neighbour_indices), 2, (max_ell + 1) ** 2, readout_nfeatures))
+    mask = np.zeros((len(neighbour_indices), 2, (max_ell + 1) ** 2, readout_nfeatures), dtype=np.int8)
     for i, idxpair in enumerate(neighbour_indices):
         mask[i] = mask_dict[(atomic_numbers[idxpair[0]], atomic_numbers[idxpair[1]])]
     return mask
@@ -258,26 +242,15 @@ def prepare_label_dict(
     readout_nfeatures,
 ):
     labels_dict = {}
-    # labels_dict["h_irreps"] = [
-    #     get_h_irreps(
-    #         datatuple[-1],
-    #         hmapper,
-    #         inputs_dict["numbers"][i],
-    #         datatuple[2],
-    #         max_ell,
-    #         readout_nfeatures,
-    #     )
-    #     for i, datatuple in tqdm(enumerate(dataset_as_list))
-    # ]
 
     labels_dict["h_irreps"] = [
-        get_h_irreps2(
-            datatuple[-1],
-            hmapper,
-            inputs_dict["numbers"][i],
-            datatuple[2],
-            max_ell,
-            readout_nfeatures,
+        get_h_irreps(
+            hblocks=datatuple[-1],
+            hmapper=hmapper,
+            atomic_numbers=inputs_dict["numbers"][i],
+            neighbour_indices=datatuple[2],
+            max_ell=max_ell,
+            readout_nfeatures=readout_nfeatures,
         )
         for i, datatuple in tqdm(enumerate(dataset_as_list))
     ]
@@ -303,7 +276,7 @@ class InMemoryDataset:
         batch_size: int,
         n_epochs: int,
         is_inference: bool = False,
-        buffer_size=100,
+        buffer_size=1000,
         cache_path=".",
     ):
         self.n_data = len(dataset_as_list)
@@ -424,7 +397,7 @@ class InMemoryDataset:
             inputs["idx_ij"],
             ((0, zeros_to_add), (0, 0)),
             "constant",
-            constant_values=-1,
+            constant_values=self.max_natoms + 1,
         ).astype(np.int16)
         inputs["idx_D"] = np.pad(
             inputs["idx_D"], ((0, zeros_to_add), (0, 0)), "constant"
@@ -456,7 +429,7 @@ class InMemoryDataset:
                 (0, 0),  # Feature dim
             ),
             "constant",
-        ).astype(np.int16)
+        ).astype(np.int8)
 
         inputs = {k: tf.constant(v) for k, v in inputs.items()}
         labels = {k: tf.constant(v) for k, v in labels.items()}

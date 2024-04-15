@@ -1,9 +1,12 @@
 from dataclasses import dataclass
-from functools import cache
-from itertools import product
 from slh.utilities.mapmaker import get_mapping_spec
 
 import numpy as np
+
+from itertools import product
+import logging
+
+log = logging.getLogger(__name__)
 
 import e3x
 
@@ -92,6 +95,9 @@ def make_mapper_from_elements(species_ells_dict: dict[int, list[int]]):
             max_ell_for_pair,
             num_features_for_pair,
         ) = get_mapping_spec(ells1, ells2)
+        
+        log.info(f"Pair: {Z_i}, {Z_j}, max_ell: {max_ell_for_pair}, num_features:{num_features_for_pair}")
+        
         element_pair_list.append((Z_i, Z_j))
         hblock_mapper_list.append(
             BlockIrrepMappingSpec(
@@ -114,7 +120,10 @@ def get_mask_dict(
     for element_pair, blockmapper in pairwise_hmap.mapper.items():
         # This is e3x convention. 2 for parity, angular momentum channels, features
         mask_array = np.zeros((2, (max_ell + 1) ** 2, nfeatures), dtype=np.int8)
-        for slice in blockmapper.irreps_slices:
-            mask_array[slice] = 1
+        for _slice in blockmapper.irreps_slices:
+            log.debug(f"Element pair: {element_pair}, mask:\n{_slice}")
+            mask_array[_slice] = 1
         mask_dict[element_pair] = mask_array
+
+        log.debug(f"Element pair: {element_pair}, mask:\n{mask_array}")
     return mask_dict

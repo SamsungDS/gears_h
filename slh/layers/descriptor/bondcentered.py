@@ -16,6 +16,7 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
     # num_moment_features: int = 64 # TODO this can in principle be a list of ints
     max_degree: int = 4
     tensor_module: Union[e3x.nn.Tensor, e3x.nn.FusedTensor] = e3x.nn.FusedTensor
+    # radial_function = e3x.nn.basic_fourier
 
     @nn.compact
     def __call__(self, atomic_descriptors, neighbour_indices, neighbour_displacements):
@@ -26,20 +27,22 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
             atomic_descriptors[neighbours_i],
             atomic_descriptors[neighbours_j],
         )
-        y = self.tensor_module(max_degree=self.max_degree)(atom1_desc, atom2_desc)
+        y = self.tensor_module(max_degree=self.max_degree)(atom1_desc, atom2_desc, name="atompair_td")
 
         # We put in information about the orientation/length of the bond vector here
         bond_expansion = e3x.nn.basis(
             neighbour_displacements,
             num=num_radial_features,
             max_degree=self.max_degree,
-            # TODO: Pickable radial basis etc
-            radial_fn=partial(e3x.nn.sinc, limit=self.cutoff),
+            radial_fn=partial(e3x.nn.basic_gaussian, limit=self.cutoff),
             cutoff_fn=partial(e3x.nn.cosine_cutoff, cutoff=self.cutoff),
         )
 
         # num_pairs x 2 x (max_degree + 1)^2 x num_radial_features
-        y = self.tensor_module(max_degree=self.max_degree)(y, bond_expansion)
+        y = e3x.nn.add(
+            y, bond_expansion
+        )  
+        # y = self.tensor_module(max_degree=self.max_degree)(y, bond_expansion)
 
         # TODO, in principle, we can put in the element-pair information here as a
         # residual connection, but I can't think why we would need to.

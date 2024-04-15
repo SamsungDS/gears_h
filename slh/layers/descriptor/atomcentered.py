@@ -34,18 +34,14 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
         Z_i, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
 
         y = self.radial_basis(neighbour_displacements=neighbour_displacements, Z_j=Z_j)
-        # The line above is our 'first moment' since we have directional information.
-        # Each subsequent moment happens down here.
-        # The moments down here are 'even' in that it's y x y = yy,
-        # then yy x yy = yyyy, and so on. We keep it this way until I can figure out if
-        # y x yy = yy x y upto a difference in weights.
-        # TODO: This WILL error out if your first y doesn't have a high enough degree
+        # This will error out if your first y doesn't have a high enough degree
         # to tensor onto moment_max_degree.
-        for _ in range(self.max_moment):
+        for i in range(self.max_moment):
             y = e3x.nn.TensorDense(
                 features=self.num_moment_features,
                 max_degree=self.moment_max_degree,
                 use_fused_tensor=self.use_fused_tensor,
+                name=f"ac_td_{i}"
             )(y)
 
         # y is currently n_neighbours x 2 x (basis_max_degree + 1)**2 x num_basis_features
@@ -53,9 +49,10 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
         transformed_embedding = self.embedding_transformation(self.embedding(Z_i))
 
         # This is currently num_pairs x 2 x (moment_max_degree + 1)^2 x basis
-        y = e3x.nn.Tensor(max_degree=self.moment_max_degree, name="ac emb x basis")(
-            transformed_embedding, y
-        )
+        # y = e3x.nn.Tensor(max_degree=self.moment_max_degree, name="ac emb x basis")(
+        #     transformed_embedding, y
+        # )
+        y = e3x.nn.add(y, transformed_embedding)
 
         # Contract over all neighbours of atoms indexed by idx_i
         # This is the ONLY "message-passing" step.

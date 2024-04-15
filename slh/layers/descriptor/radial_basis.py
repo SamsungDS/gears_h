@@ -9,7 +9,6 @@ from jaxtyping import Float, Array
 import flax.linen as nn
 
 
-
 class SpeciesAwareRadialBasis(nn.Module):
     cutoff: float
     num_radial: int = 8
@@ -19,15 +18,17 @@ class SpeciesAwareRadialBasis(nn.Module):
     embedding_residual_connection: int = True
 
     def setup(self):
-        self.radial_function = partial(e3x.nn.sinc, limit=self.cutoff)
+        self.radial_function = partial(e3x.nn.basic_gaussian, limit=self.cutoff)
         # TODO Do we really want anything more than Bismuth? No. No, we do not.
         self.embedding = e3x.nn.Embed(
-            83, self.num_elemental_embedding, name="elemental embedding"
+            83, self.num_elemental_embedding, name="elem_embed"
         )
 
     @nn.compact
     def __call__(
-        self, neighbour_displacements: Float[Array, "... num_neighbours 3"], Z_j: Float[Array, "... num_neighbours"]
+        self,
+        neighbour_displacements: Float[Array, "... num_neighbours 3"],
+        Z_j: Float[Array, "... num_neighbours"],
     ):
         """_summary_
 
@@ -54,18 +55,19 @@ class SpeciesAwareRadialBasis(nn.Module):
         # We transform the embedding dimension to the radial basis dimension
         # so we can product meaningfully
         transformed_embedding = e3x.nn.Dense(
-            self.num_radial, name="embedding transform"
+            self.num_radial, name="embed_transform"
         )(self.embedding(Z_j))
 
         y = self.tensor_module(
-            max_degree=self.max_degree, include_pseudotensors=False, name="radial emb x basis"
+            max_degree=self.max_degree,
+            include_pseudotensors=False,
+            name="tensor_embed_basis",
         )(transformed_embedding, basis_expansion)
 
         if self.embedding_residual_connection:
             y = e3x.nn.add(y, transformed_embedding)
 
-        # TODO This swish here is just for nonlinearity. I don't know if we actually need it.
-        return e3x.nn.swish(y)
+        return y
 
 
 def jinclike(x: Float[Array, "..."], num: int, limit: float = 1.0):
