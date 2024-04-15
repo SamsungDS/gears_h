@@ -30,12 +30,10 @@ def get_mapping_spec(ells1: list[int], ells2: list[int]):
     # very pessimistic estimate of the number of features required, but is
     # therefore always valid.
     mask_candidate = np.zeros(
-        (2, (max_ell + 1) ** 2, len(ells1) * len(ells2)), dtype=int
+        (2, (max_ell + 1) ** 2, len(ells1) * len(ells2)), dtype=np.int8
     )
 
-    ifeaturemax = 0
-    colstart = 0
-    rowstart = 0
+    
 
     # List of tuples, each of which is the indexing for the H blocks
     block_slices = []
@@ -44,10 +42,12 @@ def get_mapping_spec(ells1: list[int], ells2: list[int]):
     # As above but for final equivariant feature block
     irreps_array_slices = []
 
+    ifeaturemax = 0
+    rowstart = 0
     for ell1 in ells1:
+        colstart = 0
         for ell2 in ells2:
-            # Is this specific product odd or even? We are rigorous about the
-            # parity block mapping
+            # We are rigorous about the parity block index of a given product
             parity = int(np.logical_xor(parity_dict[ell1], parity_dict[ell2]))
 
             # Wigner-Eckhart irreps limits
@@ -74,14 +74,14 @@ def get_mapping_spec(ells1: list[int], ells2: list[int]):
             # Find first feature which has all required irreps for this feature block
             # available
             for ifeature in range(mask_candidate.shape[-1]):
-                # if np.all(
-                #     mask_candidate[parity, ellmin**2 : (ellmax + 1) ** 2, ifeature]
-                #     == 0
-                # ):
                 if np.all(
-                    mask_candidate[parity, :, ifeature]
+                    mask_candidate[parity, ellmin**2 : (ellmax + 1) ** 2, ifeature]
                     == 0
                 ):
+                # if np.all(
+                #     mask_candidate[parity, :, ifeature]
+                #     == 0
+                # ):
                     mask_candidate[
                         parity, ellmin**2 : (ellmax + 1) ** 2, ifeature
                     ] = 1
@@ -99,7 +99,6 @@ def get_mapping_spec(ells1: list[int], ells2: list[int]):
 
             colstart += 2 * ell2 + 1
         rowstart += 2 * ell1 + 1
-        colstart = 0
 
     assert len(block_slices) == len(irreps_array_slices) == len(cgc_slices)
     # Add one to features here because array sizes are exclusive of index=length.

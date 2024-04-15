@@ -50,6 +50,7 @@ class SpeciesAwareRadialBasis(nn.Module):
             max_degree=self.max_degree,
             radial_fn=self.radial_function,
             cutoff_fn=partial(e3x.nn.cosine_cutoff, cutoff=self.cutoff),
+            cartesian_order=False
         )
 
         # We transform the embedding dimension to the radial basis dimension
@@ -61,6 +62,7 @@ class SpeciesAwareRadialBasis(nn.Module):
         y = self.tensor_module(
             max_degree=self.max_degree,
             include_pseudotensors=False,
+            cartesian_order=False,
             name="tensor_embed_basis",
         )(transformed_embedding, basis_expansion)
 

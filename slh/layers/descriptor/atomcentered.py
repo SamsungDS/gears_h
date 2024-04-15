@@ -44,6 +44,7 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
                 features=self.num_moment_features,
                 max_degree=self.moment_max_degree,
                 use_fused_tensor=self.use_fused_tensor,
+                cartesian_order=False,
                 name=f"ac_td_{i}"
             )(y)
 

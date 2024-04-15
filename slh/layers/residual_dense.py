@@ -23,10 +23,10 @@ class DenseBlock(nn.Module):
         Float[Array, "... 1 (max_degree+1)**2 last_layer_width"],
         Float[Array, "... 2 (max_degree+1)**2 last_layer_width"],
     ]:
-        y = self.dense_layer(features=self.layer_widths[0], )(x)
+        y = self.dense_layer(features=self.layer_widths[0])(x)
 
         for width in self.layer_widths[1:]:
-            y = e3x.nn.swish(y)
+            y = e3x.nn.soft_sign(y)
             y = self.dense_layer(features=width)(y)
 
         return y
