@@ -27,7 +27,7 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
             atomic_descriptors[neighbours_i],
             atomic_descriptors[neighbours_j],
         )
-        y = self.tensor_module(max_degree=self.max_degree)(atom1_desc, atom2_desc, name="atompair_td")
+        y = self.tensor_module(max_degree=self.max_degree, name="atompair_td")(atom1_desc, atom2_desc)
 
         # We put in information about the orientation/length of the bond vector here
         bond_expansion = e3x.nn.basis(
