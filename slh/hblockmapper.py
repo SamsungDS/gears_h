@@ -95,9 +95,11 @@ def make_mapper_from_elements(species_ells_dict: dict[int, list[int]]):
             max_ell_for_pair,
             num_features_for_pair,
         ) = get_mapping_spec(ells1, ells2)
-        
-        log.info(f"Pair: {Z_i}, {Z_j}, max_ell: {max_ell_for_pair}, num_features:{num_features_for_pair}")
-        
+
+        log.info(
+            f"Pair: {Z_i}, {Z_j}, max_ell: {max_ell_for_pair}, num_features:{num_features_for_pair}"
+        )
+
         element_pair_list.append((Z_i, Z_j))
         hblock_mapper_list.append(
             BlockIrrepMappingSpec(

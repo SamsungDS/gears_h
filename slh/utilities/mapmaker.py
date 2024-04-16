@@ -33,8 +33,6 @@ def get_mapping_spec(ells1: list[int], ells2: list[int]):
         (2, (max_ell + 1) ** 2, len(ells1) * len(ells2)), dtype=np.int8
     )
 
-    
-
     # List of tuples, each of which is the indexing for the H blocks
     block_slices = []
     # As above but for CGC blocks
@@ -78,10 +76,10 @@ def get_mapping_spec(ells1: list[int], ells2: list[int]):
                     mask_candidate[parity, ellmin**2 : (ellmax + 1) ** 2, ifeature]
                     == 0
                 ):
-                # if np.all(
-                #     mask_candidate[parity, :, ifeature]
-                #     == 0
-                # ):
+                    # if np.all(
+                    #     mask_candidate[parity, :, ifeature]
+                    #     == 0
+                    # ):
                     mask_candidate[
                         parity, ellmin**2 : (ellmax + 1) ** 2, ifeature
                     ] = 1

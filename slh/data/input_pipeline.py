@@ -94,16 +94,18 @@ def snapshot_tuple_from_directory(
 
 
 def read_dataset_as_list(
-    directory: Path, marker_filename: str = "atoms.extxyz", num_snapshots=-1,
+    directory: Path,
+    marker_filename: str = "atoms.extxyz",
+    num_snapshots=-1,
 ) -> DatasetList:
     dataset_dirlist = [
         subdir for subdir in directory.iterdir() if (subdir / marker_filename).exists()
     ]
     if num_snapshots > 0:
         dataset_dirlist = dataset_dirlist[:num_snapshots]
-    
+
     log.info(f"Using {len(dataset_dirlist)} snapshots.")
-    
+
     dataset_as_list = [
         snapshot_tuple_from_directory(fd) for fd in tqdm(dataset_dirlist)
     ]
@@ -123,10 +125,8 @@ def get_max_natoms_and_nneighbours(dataset_as_list):
     max_natoms = max([len(x[0]) for x in dataset_as_list])
     max_nneighbours = max([len(x[2]) for x in dataset_as_list])
 
-    log.info(
-            f"Max natoms: {max_natoms}, nneighbours: {max_nneighbours}"
-        )
-    
+    log.info(f"Max natoms: {max_natoms}, nneighbours: {max_nneighbours}")
+
     return max_natoms, max_nneighbours
 
 
@@ -145,8 +145,10 @@ def get_max_ell_and_max_features(hmap: MultiElementPairHBlockMapper):
     max_ell_across_dataset = max([x.max_ell for x in hmap.mapper.values()])
     max_nfeatures_across_dataset = max([x.nfeatures for x in hmap.mapper.values()])
 
-    log.info(f"Max ell: {max_ell_across_dataset}, max nfeatures: {max_nfeatures_across_dataset}")
-    
+    log.info(
+        f"Max ell: {max_ell_across_dataset}, max nfeatures: {max_nfeatures_across_dataset}"
+    )
+
     return max_ell_across_dataset, max_nfeatures_across_dataset
 
 
@@ -193,7 +195,6 @@ def get_h_irreps(
     unique_elementpairs = np.unique(atomic_number_pairs, axis=0)
 
     for pair in unique_elementpairs:
-
         # Find all atom-pairs of this species-pair
         boolean_indices_of_pairs = np.all(atomic_number_pairs == pair, axis=1)
 
@@ -203,7 +204,7 @@ def get_h_irreps(
         ).astype(np.float32)
 
         assert len(hblocks_of_pairs) == len(irreps_array[boolean_indices_of_pairs])
-        
+
         irreps_array[boolean_indices_of_pairs] = hmapper.hblocks_to_irreps(
             hblocks_of_pairs,
             irreps_array[boolean_indices_of_pairs],
@@ -216,7 +217,10 @@ def get_h_irreps(
 def get_irreps_mask(
     mask_dict, atomic_numbers, neighbour_indices, max_ell, readout_nfeatures
 ):
-    mask = np.zeros((len(neighbour_indices), 2, (max_ell + 1) ** 2, readout_nfeatures), dtype=np.int8)
+    mask = np.zeros(
+        (len(neighbour_indices), 2, (max_ell + 1) ** 2, readout_nfeatures),
+        dtype=np.int8,
+    )
     for i, idxpair in enumerate(neighbour_indices):
         mask[i] = mask_dict[(atomic_numbers[idxpair[0]], atomic_numbers[idxpair[1]])]
     return mask

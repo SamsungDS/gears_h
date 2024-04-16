@@ -32,7 +32,11 @@ def train_step(params, model_apply, optimizer_update, batch_full, opt_state):
         #     where=batch_labels["mask"],
         # )
 
-        assert h_irreps_predicted.shape == batch_labels["h_irreps"].shape == batch_labels["mask"].shape, "This happens when your readout and your labels are not consistent."
+        assert (
+            h_irreps_predicted.shape
+            == batch_labels["h_irreps"].shape
+            == batch_labels["mask"].shape
+        ), "This happens when your readout and your labels are not consistent."
 
         loss = jnp.mean(
             optax.huber_loss(h_irreps_predicted, batch_labels["h_irreps"]),
@@ -98,7 +102,14 @@ def fit(
     params_list, grad_list = [], []
     try:
         for _ in epoch_pbar:
-            batch_pbar = trange(steps_per_epoch, desc="Batch", leave=False, ncols=75, smoothing=0.0, disable=False)
+            batch_pbar = trange(
+                steps_per_epoch,
+                desc="Batch",
+                leave=False,
+                ncols=75,
+                smoothing=0.0,
+                disable=False,
+            )
             epoch_mae_loss = 0.0
             for _ in batch_pbar:
                 batch_data = next(batch_train_dataset)
@@ -114,12 +125,16 @@ def fit(
                 # params_list.append(params)
                 # grad_list.append(grad)
 
-                batch_pbar.set_postfix(mae=f"{mae_loss / train_dataset.batch_size:0.3e}")
+                batch_pbar.set_postfix(
+                    mae=f"{mae_loss / train_dataset.batch_size:0.3e}"
+                )
                 batch_pbar.update()
-            
-            epoch_pbar.set_postfix(mae=f"{epoch_mae_loss / (steps_per_epoch  * train_dataset.batch_size):0.3e}")
+
+            epoch_pbar.set_postfix(
+                mae=f"{epoch_mae_loss / (steps_per_epoch  * train_dataset.batch_size):0.3e}"
+            )
             epoch_pbar.update()
     except StopIteration:
         print("Yes the stopiteration")
-    
+
     return params_list, grad_list

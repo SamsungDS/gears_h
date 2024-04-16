@@ -30,11 +30,14 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
         neighbour_indices: Int[Array, "... num_neighbours 2"],
         neighbour_displacements: Float[Array, "... num_neighbours 3"],
     ):
-        
         idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
         Z_i, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
 
-        num_neighbour_normalization = self.param("nnn", nn.initializers.constant(len(neighbour_indices) / len(atomic_numbers)), 1)
+        num_neighbour_normalization = self.param(
+            "nnn",
+            nn.initializers.constant(len(neighbour_indices) / len(atomic_numbers)),
+            1,
+        )
 
         y = self.radial_basis(neighbour_displacements=neighbour_displacements, Z_j=Z_j)
         # This will error out if your first y doesn't have a high enough degree
@@ -45,7 +48,7 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
                 max_degree=self.moment_max_degree,
                 use_fused_tensor=self.use_fused_tensor,
                 cartesian_order=False,
-                name=f"ac_td_{i}"
+                name=f"ac_td_{i}",
             )(y)
 
         # y is currently n_neighbours x 2 x (basis_max_degree + 1)**2 x num_basis_features
@@ -61,7 +64,10 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
         # Contract over all neighbours of atoms indexed by idx_i
         # This is the ONLY "message-passing" step.
         # This is now num_atoms x 2 x (moment_max_degree + 1)^2 x nradial_features
-        y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers)) / num_neighbour_normalization
+        y = (
+            e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
+            / num_neighbour_normalization
+        )
 
         # Do less math by doing the residual connectins here.
         if self.embedding_residual_connection:
