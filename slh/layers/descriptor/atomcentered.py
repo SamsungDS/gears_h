@@ -1,5 +1,6 @@
 import e3x
 import jax
+import jax.numpy as jnp
 import flax.linen as nn
 
 from jaxtyping import Float, Array, Int
@@ -65,9 +66,9 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
         # This is the ONLY "message-passing" step.
         # This is now num_atoms x 2 x (moment_max_degree + 1)^2 x nradial_features
         y = (
-            e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
+            e3x.ops.indexed_sum(y.astype(jnp.float64), dst_idx=idx_i, num_segments=len(atomic_numbers))
             / num_neighbour_normalization
-        )
+        ).astype(y.dtype)
 
         # Do less math by doing the residual connectins here.
         if self.embedding_residual_connection:
