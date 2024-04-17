@@ -21,7 +21,7 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
     def setup(self):
         self.embedding = self.radial_basis.embedding
         self.embedding_transformation = e3x.nn.Dense(
-            self.num_moment_features, name="transform embedding"
+            self.num_moment_features, name="embed_transform"
         )
 
     @nn.compact
@@ -66,9 +66,9 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
         # This is the ONLY "message-passing" step.
         # This is now num_atoms x 2 x (moment_max_degree + 1)^2 x nradial_features
         y = (
-            e3x.ops.indexed_sum(y.astype(jnp.float64), dst_idx=idx_i, num_segments=len(atomic_numbers))
+            e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
             / num_neighbour_normalization
-        ).astype(y.dtype)
+        )
 
         # Do less math by doing the residual connectins here.
         if self.embedding_residual_connection:
@@ -76,6 +76,4 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
                 y, self.embedding_transformation(self.embedding(atomic_numbers))
             )
 
-        # TODO In principle we might want a residual connection here of y for training
-        # stability reasons, but we can also do that later.
         return y

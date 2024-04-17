@@ -11,8 +11,8 @@ from jaxtyping import Float, Array
 class DenseBlock(nn.Module):
     dense_layer: e3x.nn.Dense
     layer_widths: list[int] = field(default_factory=lambda: [128, 128])
-    activation: Union[Callable, nn.Module] = e3x.nn.bent_identity
-
+    activation: Union[Callable, nn.Module] = e3x.nn.mish
+    name = "residual_dense"
     @nn.compact
     def __call__(
         self,
@@ -24,10 +24,10 @@ class DenseBlock(nn.Module):
         Float[Array, "... 1 (max_degree+1)**2 last_layer_width"],
         Float[Array, "... 2 (max_degree+1)**2 last_layer_width"],
     ]:
-        y = self.dense_layer(features=self.layer_widths[0])(x)
+        y = self.dense_layer(features=self.layer_widths[0], name="dense_0")(x)
 
-        for width in self.layer_widths[1:]:
+        for i, width in enumerate(self.layer_widths[1:]):
             y = self.activation(y)
-            y = y + self.dense_layer(features=width)(y)
+            y = self.dense_layer(features=width, name=f"dense_{i+1}")(y)
 
         return y

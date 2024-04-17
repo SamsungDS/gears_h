@@ -13,6 +13,7 @@ from tqdm import trange
 
 from slh.data.input_pipeline import InMemoryDataset, PureInMemoryDataset
 from slh.model.hmodel import HamiltonianModel
+from slh.optimize.get_optimizer import get_opt
 
 
 @partial(jax.jit, static_argnames=("model_apply", "optimizer_update"))
@@ -94,27 +95,44 @@ def fit(
     # #     _batch_inputs["idx_D"],
     # # )
     # optimizer = optax.adamaxw(learning_rate=optax.warmup_cosine_decay_schedule(1e-4, 5e-3, 5, 20, 1e-4))# , nesterov=True)
-    optimizer = optax.adam(learning_rate=1e-3)
+    # optimizer = optax.amsgrad(learning_rate=1e-3)
+
+    optimizer = get_opt(params, 100, 500,
+                        embedding_lr=0.02,
+                        ac_tensor_lr=0.01,
+                        bc_tensor_lr=0.01,
+                        dense_lr=0.001,
+                        exp_a_lr=0.01,
+                        exp_b_lr=0.001,
+                        exp_c_lr=0.01,
+                        default_lr=0.001,
+                        )
+
+
     opt_state = optimizer.init(params)
     mae_loss = jnp.nan
-    epoch_pbar = trange(n_epochs, desc="Epochs", ncols=75, disable=False)
+    epoch_pbar = trange(n_epochs, desc="Epochs", ncols=75, disable=False, leave=True)
 
     params_list, grad_list = [], []
     try:
-        for _ in epoch_pbar:
+        for epoch in range(n_epochs):
+            # epoch_start_time = time.time()
+
             batch_pbar = trange(
                 steps_per_epoch,
                 desc="Batch",
                 leave=False,
                 ncols=75,
                 smoothing=0.0,
+                mininterval=1.0,
                 disable=False,
             )
             epoch_mae_loss = 0.0
-            for _ in batch_pbar:
+            for batch in range(steps_per_epoch):
+
                 batch_data = next(batch_train_dataset)
                 # log.info(f"{batch_data[1]['h_irreps'].shape}")
-                params, opt_state, grad, mae_loss = train_step(
+                params, opt_state, _, mae_loss = train_step(
                     params,
                     model_apply,
                     optimizer.update,
@@ -126,12 +144,12 @@ def fit(
                 # grad_list.append(grad)
 
                 batch_pbar.set_postfix(
-                    mae=f"{mae_loss / train_dataset.batch_size:0.3e}"
+                    mae=f"{mae_loss / train_dataset.batch_size:0.1e}"
                 )
                 batch_pbar.update()
 
             epoch_pbar.set_postfix(
-                mae=f"{epoch_mae_loss / (steps_per_epoch  * train_dataset.batch_size):0.3e}"
+                mae=f"{epoch_mae_loss / (steps_per_epoch  * train_dataset.batch_size):0.1e}"
             )
             epoch_pbar.update()
     except StopIteration:
