@@ -107,7 +107,8 @@ def read_dataset_as_list(
     log.info(f"Using {len(dataset_dirlist)} snapshots.")
 
     dataset_as_list = [
-        snapshot_tuple_from_directory(fd) for fd in tqdm(dataset_dirlist)
+        snapshot_tuple_from_directory(fd)
+        for fd in tqdm(dataset_dirlist, desc="Reading dataset")
     ]
     # with Pool(nprocs) as pool:
     #     with tqdm(total=len(dataset_dirlist)) as pbar:
@@ -256,7 +257,11 @@ def prepare_label_dict(
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i, datatuple in tqdm(enumerate(dataset_as_list))
+        for i, datatuple in tqdm(
+            enumerate(dataset_as_list),
+            desc="Converting H blocks to irreps",
+            total=len(dataset_as_list),
+        )
     ]
 
     labels_dict["mask"] = [
@@ -267,7 +272,7 @@ def prepare_label_dict(
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i in trange(len(dataset_as_list))
+        for i in trange(len(dataset_as_list), desc="Making irreps masks")
     ]
 
     return labels_dict

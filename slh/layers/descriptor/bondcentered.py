@@ -3,8 +3,9 @@ import jax
 import jax.numpy as jnp
 
 from functools import partial
-import functools
 import flax.linen as nn
+
+from slh.layers.descriptor.radial_basis import jinclike
 
 from typing import Optional, Union
 
@@ -36,15 +37,15 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
             neighbour_displacements,
             num=num_radial_features,
             max_degree=self.max_degree,
-            radial_fn=partial(e3x.nn.basic_gaussian, limit=self.cutoff),
-            cutoff_fn=partial(e3x.nn.cosine_cutoff, cutoff=self.cutoff),
+            radial_fn=partial(jinclike, limit=self.cutoff),
+            cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.cutoff),
             damping_fn=partial(e3x.nn.smooth_damping, gamma=5.0),
             cartesian_order=False,
         )
 
         # num_pairs x 2 x (max_degree + 1)^2 x num_radial_features
-        y = e3x.nn.add(y, bond_expansion)
-        # y = self.tensor_module(max_degree=self.max_degree)(y, bond_expansion)
+        # y = e3x.nn.add(y, bond_expansion)
+        y = self.tensor_module(max_degree=self.max_degree)(y, bond_expansion)
 
         # TODO, in principle, we can put in the element-pair information here as a
         # residual connection, but I can't think why we would need to.

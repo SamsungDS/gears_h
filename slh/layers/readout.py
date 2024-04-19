@@ -6,9 +6,6 @@ import flax.linen as nn
 from jaxtyping import Float, Array, Int
 
 
-e3x.Config.set_cartesian_order(False)
-
-
 class Readout(nn.Module):
     nfeatures: int
     max_ell: int = 4

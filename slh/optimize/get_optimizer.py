@@ -71,12 +71,20 @@ def get_opt(
     log.info("Initializing Optimizer")
     opt = getattr(optax, opt_name)
 
-    embedding_opt = make_optimizer(opt, embedding_lr, transition_begin, transition_steps, opt_kwargs)
-    atomcentered_tensor_opt = make_optimizer(opt, ac_tensor_lr, transition_begin, transition_steps, opt_kwargs)
-    bondcentered_tensor_opt = make_optimizer(opt, bc_tensor_lr, transition_begin, transition_steps, opt_kwargs)
-    
-    dense_opt = make_optimizer(opt, dense_lr, transition_begin, transition_steps, opt_kwargs)
-    
+    embedding_opt = make_optimizer(
+        opt, embedding_lr, transition_begin, transition_steps, opt_kwargs
+    )
+    atomcentered_tensor_opt = make_optimizer(
+        opt, ac_tensor_lr, transition_begin, transition_steps, opt_kwargs
+    )
+    bondcentered_tensor_opt = make_optimizer(
+        opt, bc_tensor_lr, transition_begin, transition_steps, opt_kwargs
+    )
+
+    dense_opt = make_optimizer(
+        opt, dense_lr, transition_begin, transition_steps, opt_kwargs
+    )
+
     exp_a_opt = make_optimizer(
         opt, exp_a_lr, transition_begin, transition_steps, opt_kwargs
     )
@@ -106,7 +114,7 @@ def get_opt(
     }
 
     def subset_specialization(path: tuple[str], v):
-        this_partition = 'default'
+        this_partition = "default"
 
         for branch in path:
             if branch in partition_optimizers:

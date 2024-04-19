@@ -18,7 +18,7 @@ class SpeciesAwareRadialBasis(nn.Module):
     embedding_residual_connection: int = True
 
     def setup(self):
-        self.radial_function = partial(e3x.nn.basic_gaussian, limit=self.cutoff)
+        self.radial_function = partial(jinclike, limit=self.cutoff)
         # TODO Do we really want anything more than Bismuth? No. No, we do not.
         self.embedding = e3x.nn.Embed(
             83, self.num_elemental_embedding, name="elem_embed"
@@ -49,7 +49,8 @@ class SpeciesAwareRadialBasis(nn.Module):
             num=self.num_radial,
             max_degree=self.max_degree,
             radial_fn=self.radial_function,
-            cutoff_fn=partial(e3x.nn.cosine_cutoff, cutoff=self.cutoff),
+            cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.cutoff),
+            damping_fn=partial(e3x.nn.smooth_damping, gamma=5.0),
             cartesian_order=False,
         )
 

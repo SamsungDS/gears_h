@@ -17,6 +17,7 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
     moment_max_degree: int = 4
     use_fused_tensor: bool = False
     embedding_residual_connection: bool = True
+    # dtype = jnp.float64
 
     def setup(self):
         self.embedding = self.radial_basis.embedding
@@ -31,11 +32,13 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
         neighbour_indices: Int[Array, "... num_neighbours 2"],
         neighbour_displacements: Float[Array, "... num_neighbours 3"],
     ):
+        neighbour_displacements = neighbour_displacements
+
         idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
         Z_i, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
 
         num_neighbour_normalization = self.param(
-            "nnn",
+            "neighbour_normalization",
             nn.initializers.constant(len(neighbour_indices) / len(atomic_numbers)),
             1,
         )

@@ -97,17 +97,19 @@ def fit(
     # optimizer = optax.adamaxw(learning_rate=optax.warmup_cosine_decay_schedule(1e-4, 5e-3, 5, 20, 1e-4))# , nesterov=True)
     # optimizer = optax.amsgrad(learning_rate=1e-3)
 
-    optimizer = get_opt(params, 100, 500,
-                        embedding_lr=0.02,
-                        ac_tensor_lr=0.01,
-                        bc_tensor_lr=0.01,
-                        dense_lr=0.001,
-                        exp_a_lr=0.01,
-                        exp_b_lr=0.001,
-                        exp_c_lr=0.01,
-                        default_lr=0.001,
-                        )
-
+    optimizer = get_opt(
+        params,
+        10,
+        500,
+        embedding_lr=0.01,
+        ac_tensor_lr=0.005,
+        bc_tensor_lr=0.005,
+        dense_lr=0.001,
+        exp_a_lr=0.01,
+        exp_b_lr=0.001,
+        exp_c_lr=0.001,
+        default_lr=0.001,
+    )
 
     opt_state = optimizer.init(params)
     mae_loss = jnp.nan
@@ -129,7 +131,6 @@ def fit(
             )
             epoch_mae_loss = 0.0
             for batch in range(steps_per_epoch):
-
                 batch_data = next(batch_train_dataset)
                 # log.info(f"{batch_data[1]['h_irreps'].shape}")
                 params, opt_state, _, mae_loss = train_step(
