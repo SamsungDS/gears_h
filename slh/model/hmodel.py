@@ -23,26 +23,26 @@ class HamiltonianModel(nn.Module):
         AtomCenteredTensorMomentDescriptor(
             SpeciesAwareRadialBasis(
                 cutoff=6.8,
-                max_degree=2,
+                max_degree=1,
                 num_elemental_embedding=32,
-                num_radial=16,
+                num_radial=32,
                 tensor_module=partial(e3x.nn.Tensor, param_dtype=jnp.float32),
             ),
-            moment_max_degree=4,
+            moment_max_degree=2,
             max_moment=2,
-            num_moment_features=16,
-            use_fused_tensor=False,
+            num_moment_features=32,
+            use_fused_tensor=True,
         )
     )
     bond_centered: BondCenteredTensorMomentDescriptor = (
         BondCenteredTensorMomentDescriptor(
             cutoff=6.8,
             max_degree=4,
-            tensor_module=partial(e3x.nn.FusedTensor, param_dtype=jnp.bfloat16),
+            tensor_module=partial(e3x.nn.FusedTensor, param_dtype=jnp.float32),
         )
     )
     dense: DenseBlock = DenseBlock(
-        dense_layer=partial(e3x.nn.Dense, param_dtype=jnp.bfloat16),
+        dense_layer=partial(e3x.nn.Dense, param_dtype=jnp.float32),
         layer_widths=[128, 128],
     )
 

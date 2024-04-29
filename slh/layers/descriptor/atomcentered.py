@@ -1,5 +1,6 @@
+from functools import partial
+
 import e3x
-import jax
 import jax.numpy as jnp
 import flax.linen as nn
 
@@ -57,6 +58,7 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
                 max_degree=self.moment_max_degree,
                 use_fused_tensor=self.use_fused_tensor,
                 cartesian_order=False,
+                # tensor_kernel_init=partial(e3x.nn.initializers.fused_tensor_normal, scale=1e-2),
                 name=f"ac_td_{i}",
             )(ylist[-1])
 

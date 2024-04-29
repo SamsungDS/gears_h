@@ -19,6 +19,7 @@ pydantic = "^2.6.4"
 tqdm = "^4.66.2"
 matscipy = "^1.0.0"
 tensorflow = "^2.16.1"
+clu = "^0.0.12"
 
 [tool.poetry.scripts]
 slh = 'slh.cli.slh_app:app'

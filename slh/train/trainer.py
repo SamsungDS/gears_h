@@ -16,6 +16,7 @@ from slh.model.hmodel import HamiltonianModel
 from slh.optimize.get_optimizer import get_opt
 
 
+
 @partial(jax.jit, static_argnames=("model_apply", "optimizer_update"))
 def train_step(params, model_apply, optimizer_update, batch_full, opt_state):
     batch, batch_labels = batch_full
@@ -87,7 +88,32 @@ def fit(
             _batch_inputs["idx_D"][0],
         )
     )
-    optimizer = optax.adam(1e-3)
+    # optimizer = optax.adam(1e-3)
+
+    cosine_lr = [dict(
+        init_value=1e-3,
+        peak_value=1e-2,
+        warmup_steps=int(5 * tscale ** 0.5),
+        decay_steps=int(10 * tscale ** 0.5),
+        end_value=1e-3,
+        exponent=2.0,
+    ) for tscale in jnp.linspace(1, 1000)]
+
+    optimizer = optax.chain(
+        optax.scale_by_adam(),
+        # optax.scale_by_learning_rate(learning_rate=optax.warmup_cosine_decay_schedule(
+        # init_value=1e-4,
+        # peak_value=1e-3,
+        # warmup_steps=10,
+        # decay_steps=50,
+        # end_value=1e-4,
+        # exponent=2.0
+        # )),
+        optax.scale_by_learning_rate(
+            learning_rate=optax.sgdr_schedule(cosine_lr)
+            ),
+            optax.clip(1.0)
+        )
 
     # optimizer = get_opt(
     #     params,
