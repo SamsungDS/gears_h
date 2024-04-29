@@ -22,7 +22,8 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
     def setup(self):
         self.embedding = self.radial_basis.embedding
         self.embedding_transformation = e3x.nn.Dense(
-            self.num_moment_features, name="embed_transform"
+            self.num_moment_features * self.max_moment + self.radial_basis.num_radial,
+            name="embed_transform",
         )
 
     @nn.compact
@@ -44,16 +45,30 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
         )
 
         y = self.radial_basis(neighbour_displacements=neighbour_displacements, Z_j=Z_j)
+        y = e3x.nn.features.change_max_degree_or_type(
+            y, max_degree=self.moment_max_degree, include_pseudotensors=True
+        )
         # This will error out if your first y doesn't have a high enough degree
         # to tensor onto moment_max_degree.
+        ylist = [y]
         for i in range(self.max_moment):
-            y = e3x.nn.TensorDense(
+            tmp = e3x.nn.TensorDense(
                 features=self.num_moment_features,
                 max_degree=self.moment_max_degree,
                 use_fused_tensor=self.use_fused_tensor,
                 cartesian_order=False,
                 name=f"ac_td_{i}",
-            )(y)
+            )(ylist[-1])
+
+            # tmp = e3x.nn.FusedTensor(
+            #     max_degree=self.moment_max_degree,
+            #     cartesian_order=False,
+            #     name=f"ac_td_{i}",
+            # )(y, ylist[-1])
+
+            ylist.append(tmp)
+
+        y = jnp.concat(ylist, axis=-1)
 
         # y is currently n_neighbours x 2 x (basis_max_degree + 1)**2 x num_basis_features
 

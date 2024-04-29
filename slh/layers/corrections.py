@@ -10,7 +10,7 @@ class ExponentialScaleCorrection(nn.Module):
     def setup(self):
         self.prefactors = self.param(
             "prefactors",
-            nn.initializers.constant(27.0),
+            nn.initializers.constant(3.0),
             shape=(1, 2, self.max_ell + 1, self.nfeatures),
         )
         self.exponents = self.param(

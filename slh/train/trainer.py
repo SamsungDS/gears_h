@@ -87,29 +87,21 @@ def fit(
             _batch_inputs["idx_D"][0],
         )
     )
+    optimizer = optax.adam(1e-3)
 
-    # # model_apply(
-    # #     _params,
-    # #     _batch_inputs["numbers"],
-    # #     _batch_inputs["idx_ij"],
-    # #     _batch_inputs["idx_D"],
-    # # )
-    # optimizer = optax.adamaxw(learning_rate=optax.warmup_cosine_decay_schedule(1e-4, 5e-3, 5, 20, 1e-4))# , nesterov=True)
-    # optimizer = optax.amsgrad(learning_rate=1e-3)
-
-    optimizer = get_opt(
-        params,
-        10,
-        500,
-        embedding_lr=0.01,
-        ac_tensor_lr=0.005,
-        bc_tensor_lr=0.005,
-        dense_lr=0.001,
-        exp_a_lr=0.01,
-        exp_b_lr=0.001,
-        exp_c_lr=0.001,
-        default_lr=0.001,
-    )
+    # optimizer = get_opt(
+    #     params,
+    #     10,
+    #     500,
+    #     embedding_lr=0.01,
+    #     ac_tensor_lr=0.005,
+    #     bc_tensor_lr=0.005,
+    #     dense_lr=0.001,
+    #     exp_a_lr=0.01,
+    #     exp_b_lr=0.001,
+    #     exp_c_lr=0.001,
+    #     default_lr=0.001,
+    # )
 
     opt_state = optimizer.init(params)
     mae_loss = jnp.nan

@@ -45,9 +45,9 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
 
         # num_pairs x 2 x (max_degree + 1)^2 x num_radial_features
         # y = e3x.nn.add(y, bond_expansion)
-        y = self.tensor_module(max_degree=self.max_degree)(y, bond_expansion)
-
-        # TODO, in principle, we can put in the element-pair information here as a
-        # residual connection, but I can't think why we would need to.
+        y = self.tensor_module(max_degree=self.max_degree, cartesian_order=False)(
+            y, bond_expansion
+        )
+        # y = jnp.concat([y, e3x.nn.change_max_degree_or_type(bond_expansion, include_pseudotensors=True)], axis=-1)
 
         return y

@@ -6,6 +6,7 @@ from slh.layers import (
     SpeciesAwareRadialBasis,
     DenseBlock,
     Readout,
+    TensorDenseBlock,
 )
 
 from slh.layers.corrections import ExponentialScaleCorrection
@@ -22,28 +23,31 @@ class HamiltonianModel(nn.Module):
         AtomCenteredTensorMomentDescriptor(
             SpeciesAwareRadialBasis(
                 cutoff=6.8,
-                max_degree=1,
-                num_elemental_embedding=64,
-                num_radial=64,
-                tensor_module=partial(e3x.nn.FusedTensor, param_dtype=jnp.float32),
+                max_degree=2,
+                num_elemental_embedding=32,
+                num_radial=16,
+                tensor_module=partial(e3x.nn.Tensor, param_dtype=jnp.float32),
             ),
-            moment_max_degree=2,
+            moment_max_degree=4,
             max_moment=2,
-            num_moment_features=64,
-            use_fused_tensor=True,
+            num_moment_features=16,
+            use_fused_tensor=False,
         )
     )
     bond_centered: BondCenteredTensorMomentDescriptor = (
         BondCenteredTensorMomentDescriptor(
             cutoff=6.8,
-            max_degree=2,
+            max_degree=4,
             tensor_module=partial(e3x.nn.FusedTensor, param_dtype=jnp.bfloat16),
         )
     )
     dense: DenseBlock = DenseBlock(
         dense_layer=partial(e3x.nn.Dense, param_dtype=jnp.bfloat16),
-        layer_widths=[128, 128, 128],
+        layer_widths=[128, 128],
     )
+
+    # dense: TensorDenseBlock = TensorDenseBlock()
+
     readout: Readout = Readout(2, max_ell=2)
 
     @nn.compact
@@ -54,7 +58,7 @@ class HamiltonianModel(nn.Module):
 
         # atom_centered_descriptors = e3x.nn.MessagePass(max_degree=2, cartesian_order=False)(
         #     inputs=atom_centered_descriptors,
-        #     basis=e3x.nn.basis(neighbour_displacements, 1, 32, e3x.nn.smooth_window),
+        #     basis=e3x.nn.basis(neighbour_displacements, 1, 32, e3x.nn.smooth_window, cartesian_order=False),
         #     src_idx=neighbour_indices[:, 1],
         #     dst_idx=neighbour_indices[:, 0],
         #     num_segments=len(atom_centered_descriptors))
@@ -76,7 +80,8 @@ class HamiltonianModel(nn.Module):
 
         off_diagonal_denseout = self.dense(bc_features)
         off_diagonal_irreps = self.readout(off_diagonal_denseout)
-        return ExponentialScaleCorrection(self.readout.nfeatures, self.readout.max_ell)(
-            jnp.linalg.norm(neighbour_displacements, axis=-1, keepdims=True),
-            off_diagonal_irreps,
-        )
+        return off_diagonal_irreps
+
+    # ExponentialScaleCorrection(self.readout.nfeatures, self.readout.max_ell)(
+    #         jnp.linalg.norm(neighbour_displacements, axis=-1, keepdims=True),
+    #         off_diagonal_irreps)

@@ -29,13 +29,10 @@ class DenseBlock(nn.Module):
     ]:
         y0 = self.dense_layer(features=self.layer_widths[0], name="dense_0")(x)
 
-        for i, width in enumerate(self.layer_widths[1:-1]):
+        for i, width in enumerate(self.layer_widths[1:]):
             y = self.activation(y0 if i == 0 else y)
             y = self.dense_layer(features=width, name=f"dense_{i+1}")(
                 y0 if i == 0 else y
             )
-
-        y = self.activation(y)
-        y = self.dense_layer(features=width, name=f"dense_{i+2}")(y)
 
         return y
