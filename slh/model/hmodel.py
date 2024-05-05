@@ -46,8 +46,6 @@ class HamiltonianModel(nn.Module):
         layer_widths=[128, 128],
     )
 
-    # dense: TensorDenseBlock = TensorDenseBlock()
-
     readout: Readout = Readout(2, max_ell=2)
 
     @nn.compact
@@ -56,14 +54,17 @@ class HamiltonianModel(nn.Module):
             atomic_numbers, neighbour_indices, neighbour_displacements
         )
 
+        atom_centered_descriptors = atom_centered_descriptors.astype(jnp.float32)
+        assert atom_centered_descriptors.dtype == jnp.float32
+
         # atom_centered_descriptors = e3x.nn.MessagePass(max_degree=2, cartesian_order=False)(
         #     inputs=atom_centered_descriptors,
-        #     basis=e3x.nn.basis(neighbour_displacements, 1, 32, e3x.nn.smooth_window, cartesian_order=False),
+        #     basis=e3x.nn.basis(neighbour_displacements, max_degree=1, num=8, radial_fn=e3x.nn.smooth_window, cartesian_order=False),
         #     src_idx=neighbour_indices[:, 1],
         #     dst_idx=neighbour_indices[:, 0],
         #     num_segments=len(atom_centered_descriptors))
-
         # atom_centered_descriptors = atom_centered_descriptors / 45.0
+
         # atom_centered_descriptors = e3x.nn.soft_sign(atom_centered_descriptors)
 
         # atom_centered_descriptors = e3x.nn.MessagePass(max_degree=2)(
@@ -78,10 +79,11 @@ class HamiltonianModel(nn.Module):
             atom_centered_descriptors, neighbour_indices, neighbour_displacements
         )
 
+        bc_features = bc_features.astype(jnp.float32)
+
         off_diagonal_denseout = self.dense(bc_features)
         off_diagonal_irreps = self.readout(off_diagonal_denseout)
+        # scaling_correction = ExponentialScaleCorrection(self.readout.nfeatures, self.readout.max_ell)(
+        # jnp.linalg.norm(neighbour_displacements, axis=-1, keepdims=True),
+        # off_diagonal_irreps)
         return off_diagonal_irreps
-
-    # ExponentialScaleCorrection(self.readout.nfeatures, self.readout.max_ell)(
-    #         jnp.linalg.norm(neighbour_displacements, axis=-1, keepdims=True),
-    #         off_diagonal_irreps)

@@ -21,7 +21,11 @@ class SpeciesAwareRadialBasis(nn.Module):
         self.radial_function = partial(jinclike, limit=self.cutoff)
         # TODO Do we really want anything more than Bismuth? No. No, we do not.
         self.embedding = e3x.nn.Embed(
-            83, self.num_elemental_embedding, name="elem_embed"
+            83,
+            self.num_elemental_embedding,
+            name="elem_embed",
+            dtype=jnp.float32,
+            param_dtype=jnp.float32,
         )
 
     @nn.compact
@@ -44,21 +48,31 @@ class SpeciesAwareRadialBasis(nn.Module):
         _type_
             _description_
         """
+        assert neighbour_displacements.dtype == jnp.float32
+
         basis_expansion = e3x.nn.basis(
             neighbour_displacements,
             num=self.num_radial,
             max_degree=self.max_degree,
             radial_fn=self.radial_function,
-            cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.cutoff),
-            damping_fn=partial(e3x.nn.smooth_damping, gamma=5.0),
+            # cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.cutoff),
+            damping_fn=partial(e3x.nn.smooth_damping, gamma=2.0),
             cartesian_order=False,
-        )
+        ).astype(jnp.float32)
+
+        assert basis_expansion.dtype == jnp.float32
+
+        # ez_j = e3x.nn.features.change_max_degree_or_type(
+        #     self.embedding(Z_j), max_degree=self.max_degree, include_pseudotensors=False
+        # )
+
+        # y = jnp.concat([ez_j, basis_expansion], axis=-1)
 
         # We transform the embedding dimension to the radial basis dimension
         # so we can product meaningfully
-        transformed_embedding = e3x.nn.Dense(self.num_radial, name="embed_transform")(
-            self.embedding(Z_j)
-        )
+        transformed_embedding = e3x.nn.Dense(
+            self.num_radial, dtype=jnp.float32, name="embed_transform"
+        )(self.embedding(Z_j))
 
         y = self.tensor_module(
             max_degree=self.max_degree,
@@ -70,7 +84,7 @@ class SpeciesAwareRadialBasis(nn.Module):
         if self.embedding_residual_connection:
             y = e3x.nn.add(y, transformed_embedding)
 
-        return y
+        return y.astype(jnp.float32)
 
 
 def jinclike(x: Float[Array, "..."], num: int, limit: float = 1.0):

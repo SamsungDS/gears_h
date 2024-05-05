@@ -18,13 +18,14 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
     moment_max_degree: int = 4
     use_fused_tensor: bool = False
     embedding_residual_connection: bool = True
-    # dtype = jnp.float64
 
     def setup(self):
         self.embedding = self.radial_basis.embedding
         self.embedding_transformation = e3x.nn.Dense(
             self.num_moment_features * self.max_moment + self.radial_basis.num_radial,
             name="embed_transform",
+            dtype=jnp.float32,
+            param_dtype=jnp.float32,
         )
 
     @nn.compact
@@ -43,14 +44,23 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
             "neighbour_normalization",
             nn.initializers.constant(len(neighbour_indices) / len(atomic_numbers)),
             1,
+            dtype=jnp.float32,
         )
 
-        y = self.radial_basis(neighbour_displacements=neighbour_displacements, Z_j=Z_j)
-        y = e3x.nn.features.change_max_degree_or_type(
-            y, max_degree=self.moment_max_degree, include_pseudotensors=True
+        # This is aware of the Z_j's
+        y = self.radial_basis(
+            neighbour_displacements=neighbour_displacements, Z_j=Z_j
+        ).astype(jnp.float32)
+
+        # Do the 2-body summation of things first
+        y = (
+            e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
+            / num_neighbour_normalization
         )
+
         # This will error out if your first y doesn't have a high enough degree
         # to tensor onto moment_max_degree.
+        assert y.dtype == jnp.float32
         ylist = [y]
         for i in range(self.max_moment):
             tmp = e3x.nn.TensorDense(
@@ -58,37 +68,41 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
                 max_degree=self.moment_max_degree,
                 use_fused_tensor=self.use_fused_tensor,
                 cartesian_order=False,
-                # tensor_kernel_init=partial(e3x.nn.initializers.fused_tensor_normal, scale=1e-2),
+                dtype=jnp.float32,
                 name=f"ac_td_{i}",
             )(ylist[-1])
 
             # tmp = e3x.nn.FusedTensor(
             #     max_degree=self.moment_max_degree,
             #     cartesian_order=False,
-            #     name=f"ac_td_{i}",
+            #     name=f"ac_ft_{i}",
             # )(y, ylist[-1])
 
-            ylist.append(tmp)
+            ylist.append(tmp.astype(jnp.float32))
+
+        ylist = [
+            e3x.nn.features.change_max_degree_or_type(
+                y, max_degree=self.moment_max_degree, include_pseudotensors=True
+            )
+            for y in ylist
+        ]
 
         y = jnp.concat(ylist, axis=-1)
 
-        # y is currently n_neighbours x 2 x (basis_max_degree + 1)**2 x num_basis_features
-
-        transformed_embedding = self.embedding_transformation(self.embedding(Z_i))
+        # transformed_embedding = self.embedding_transformation(self.embedding(Z_i))
+        transformed_embedding = self.embedding_transformation(
+            self.embedding(atomic_numbers)
+        )
 
         # This is currently num_pairs x 2 x (moment_max_degree + 1)^2 x basis
-        # y = e3x.nn.Tensor(max_degree=self.moment_max_degree, name="ac emb x basis")(
-        #     transformed_embedding, y
-        # )
-        y = e3x.nn.add(y, transformed_embedding)
+        y = e3x.nn.FusedTensor(
+            max_degree=self.moment_max_degree,
+            name="ac emb x basis",
+            cartesian_order=False,
+        )(transformed_embedding, y)
 
-        # Contract over all neighbours of atoms indexed by idx_i
-        # This is the ONLY "message-passing" step.
-        # This is now num_atoms x 2 x (moment_max_degree + 1)^2 x nradial_features
-        y = (
-            e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
-            / num_neighbour_normalization
-        )
+        # y = e3x.nn.add(y.astype(jnp.float32), transformed_embedding.astype(jnp.float32))
+        assert y.dtype == jnp.float32
 
         # Do less math by doing the residual connectins here.
         if self.embedding_residual_connection:
@@ -96,4 +110,4 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
                 y, self.embedding_transformation(self.embedding(atomic_numbers))
             )
 
-        return y
+        return y + e3x.nn.mish(y)

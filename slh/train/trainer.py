@@ -16,54 +16,58 @@ from slh.model.hmodel import HamiltonianModel
 from slh.optimize.get_optimizer import get_opt
 
 
+@partial(jax.jit, static_argnames=("model_apply", "optimizer"))
+def train_step(
+    params, model_apply, optimizer, batch_full_list, opt_state
+):
+    
+    for batch_full in batch_full_list:
+        batch, batch_labels = batch_full
 
-@partial(jax.jit, static_argnames=("model_apply", "optimizer_update"))
-def train_step(params, model_apply, optimizer_update, batch_full, opt_state):
-    batch, batch_labels = batch_full
+        def loss_function(params):
+            h_irreps_predicted = model_apply(
+                params,
+                batch["numbers"],
+                batch["idx_ij"],
+                batch["idx_D"],
+            )
 
-    def loss_function(params):
-        h_irreps_predicted = model_apply(
-            params,
-            batch["numbers"],
-            batch["idx_ij"],
-            batch["idx_D"],
-        )
+            # loss = jnp.mean(
+            #     (h_irreps_predicted - batch_labels["h_irreps"]) ** 2,
+            #     where=batch_labels["mask"],
+            # )
 
-        # loss = jnp.mean(
-        #     (h_irreps_predicted - batch_labels["h_irreps"]) ** 2,
-        #     where=batch_labels["mask"],
-        # )
+            assert (
+                h_irreps_predicted.shape
+                == batch_labels["h_irreps"].shape
+                == batch_labels["mask"].shape
+            ), "This happens when your readout and your labels are not consistent."
 
-        assert (
-            h_irreps_predicted.shape
-            == batch_labels["h_irreps"].shape
-            == batch_labels["mask"].shape
-        ), "This happens when your readout and your labels are not consistent."
+            loss = jnp.mean(
+                optax.huber_loss(h_irreps_predicted, batch_labels["h_irreps"]),
+                where=batch_labels["mask"],
+            )
 
-        loss = jnp.mean(
-            optax.huber_loss(h_irreps_predicted, batch_labels["h_irreps"]),
-            where=batch_labels["mask"],
-        )
+            return loss, jnp.mean(
+                jnp.abs(h_irreps_predicted - batch_labels["h_irreps"]),
+                where=batch_labels["mask"],
+            )
 
-        return loss, jnp.mean(
-            jnp.abs(h_irreps_predicted - batch_labels["h_irreps"]),
-            where=batch_labels["mask"],
-        )
+        (loss, mae_loss), grad = jax.value_and_grad(loss_function, has_aux=True)(params)
+        updates, opt_state = optimizer.update(grad, opt_state)
 
-    (loss, mae_loss), grad = jax.value_and_grad(loss_function, has_aux=True)(params)
-    # grad = optax.adaptive_grad_clip(0.1)
-    updates, opt_state = optimizer_update(grad, opt_state, params)
-    # updates, opt_state = optax.chain()
-    params = optax.apply_updates(params, updates)
+        params = optax.apply_updates(params, updates)
+
     return params, opt_state, grad, mae_loss
 
 
 def fit(
     model: HamiltonianModel,
     train_dataset: PureInMemoryDataset,
-    # loss_function,
+    n_grad_acc: int,
     n_epochs: int,
 ):
+
     # TODO: The val step
     steps_per_epoch = train_dataset.steps_per_epoch()
     # train_dataset = iter(train_dataset)
@@ -88,32 +92,47 @@ def fit(
             _batch_inputs["idx_D"][0],
         )
     )
-    # optimizer = optax.adam(1e-3)
 
-    cosine_lr = [dict(
-        init_value=1e-3,
-        peak_value=1e-2,
-        warmup_steps=int(5 * tscale ** 0.5),
-        decay_steps=int(10 * tscale ** 0.5),
-        end_value=1e-3,
-        exponent=2.0,
-    ) for tscale in jnp.linspace(1, 1000)]
-
-    optimizer = optax.chain(
-        optax.scale_by_adam(),
-        # optax.scale_by_learning_rate(learning_rate=optax.warmup_cosine_decay_schedule(
-        # init_value=1e-4,
-        # peak_value=1e-3,
-        # warmup_steps=10,
-        # decay_steps=50,
-        # end_value=1e-4,
-        # exponent=2.0
-        # )),
-        optax.scale_by_learning_rate(
-            learning_rate=optax.sgdr_schedule(cosine_lr)
-            ),
-            optax.clip(1.0)
+    cosine_lr = [
+        dict(
+            init_value=1e-2,
+            peak_value=1e-1,
+            warmup_steps=int(5 * tscale),
+            decay_steps=int(30 * tscale),
+            end_value=1e-3,
         )
+        for tscale in jnp.linspace(1, 10, 10)
+    ]
+
+    # optimizer = optax.adamax(learning_rate=1e-2)
+    optimizer = optax.adamax(
+        learning_rate=optax.exponential_decay(
+            init_value=1e-2,
+            transition_steps=10,
+            decay_rate=0.9,
+            transition_begin=30,
+            staircase=False,
+            end_value=1e-4,
+        )
+    )
+
+    optimizer = optax.MultiSteps(optimizer, every_k_schedule=n_grad_acc)
+
+    # optimizer = optax.chain(
+    #     optax.scale_by_adamax(),
+    #     # optax.scale_by_learning_rate(learning_rate=optax.warmup_cosine_decay_schedule(
+    #     # init_value=1e-4,
+    #     # peak_value=1e-3,
+    #     # warmup_steps=10,
+    #     # decay_steps=50,
+    #     # end_value=1e-4,
+    #     # exponent=2.0
+    #     # )),
+    #     optax.scale_by_learning_rate(
+    #         learning_rate=optax.sgdr_schedule(cosine_lr)
+    #         ),
+    #     # optax.clip(1.0)
+    #     )
 
     # optimizer = get_opt(
     #     params,
@@ -136,10 +155,10 @@ def fit(
     params_list, grad_list = [], []
     try:
         for epoch in range(n_epochs):
-            # epoch_start_time = time.time()
+            effective_batch_size = n_grad_acc * train_dataset.batch_size
 
-            batch_pbar = trange(
-                steps_per_epoch,
+            batch_pbar = trange(0,
+                steps_per_epoch, n_grad_acc,
                 desc="Batch",
                 leave=False,
                 ncols=75,
@@ -148,14 +167,13 @@ def fit(
                 disable=False,
             )
             epoch_mae_loss = 0.0
-            for batch in range(steps_per_epoch):
-                batch_data = next(batch_train_dataset)
-                # log.info(f"{batch_data[1]['h_irreps'].shape}")
+            for batch in range(0, steps_per_epoch, n_grad_acc):
+                batch_data_list = [next(batch_train_dataset) for i in range(n_grad_acc)]
                 params, opt_state, _, mae_loss = train_step(
                     params,
                     model_apply,
-                    optimizer.update,
-                    batch_data,
+                    optimizer,
+                    batch_data_list,
                     opt_state,
                 )
                 epoch_mae_loss += mae_loss
@@ -163,12 +181,12 @@ def fit(
                 # grad_list.append(grad)
 
                 batch_pbar.set_postfix(
-                    mae=f"{mae_loss / train_dataset.batch_size:0.1e}"
+                    mae=f"{mae_loss / effective_batch_size:0.1e}"
                 )
                 batch_pbar.update()
 
             epoch_pbar.set_postfix(
-                mae=f"{epoch_mae_loss / (steps_per_epoch  * train_dataset.batch_size):0.1e}"
+                mae=f"{epoch_mae_loss / (steps_per_epoch  * n_grad_acc):0.1e}"
             )
             epoch_pbar.update()
     except StopIteration:

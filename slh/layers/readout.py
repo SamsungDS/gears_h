@@ -14,6 +14,6 @@ class Readout(nn.Module):
     def __call__(
         self, y: Float[Array, "... num_atompairs 2 (in_ell + 1)**2 in_features"]
     ):
-        return e3x.nn.TensorDense(self.nfeatures, self.max_ell, cartesian_order=False)(
-            y
-        )
+        return e3x.nn.TensorDense(
+            self.nfeatures, self.max_ell, cartesian_order=False, dtype=jnp.float32
+        )(y)
