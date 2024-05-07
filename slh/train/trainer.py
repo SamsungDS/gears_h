@@ -20,7 +20,7 @@ from slh.optimize.get_optimizer import get_opt
 def train_step(
     params, model_apply, optimizer, batch_full_list, opt_state
 ):
-    
+    step_mae_loss = 0.0
     for batch_full in batch_full_list:
         batch, batch_labels = batch_full
 
@@ -57,8 +57,9 @@ def train_step(
         updates, opt_state = optimizer.update(grad, opt_state)
 
         params = optax.apply_updates(params, updates)
+        step_mae_loss += mae_loss
 
-    return params, opt_state, grad, mae_loss
+    return params, opt_state, grad, step_mae_loss
 
 
 def fit(
@@ -69,7 +70,7 @@ def fit(
 ):
 
     # TODO: The val step
-    steps_per_epoch = train_dataset.steps_per_epoch()
+    batches_per_epoch = train_dataset.steps_per_epoch()
     # train_dataset = iter(train_dataset)
     batch_train_dataset = train_dataset.shuffle_and_batch()
 
@@ -158,8 +159,8 @@ def fit(
             effective_batch_size = n_grad_acc * train_dataset.batch_size
 
             batch_pbar = trange(0,
-                steps_per_epoch, n_grad_acc,
-                desc="Batch",
+                batches_per_epoch // n_grad_acc,
+                desc="Eff. batch",
                 leave=False,
                 ncols=75,
                 smoothing=0.0,
@@ -167,8 +168,8 @@ def fit(
                 disable=False,
             )
             epoch_mae_loss = 0.0
-            for batch in range(0, steps_per_epoch, n_grad_acc):
-                batch_data_list = [next(batch_train_dataset) for i in range(n_grad_acc)]
+            for batch in range(0, batches_per_epoch // n_grad_acc):
+                batch_data_list = [next(batch_train_dataset) for _ in range(n_grad_acc)]
                 params, opt_state, _, mae_loss = train_step(
                     params,
                     model_apply,
@@ -177,8 +178,6 @@ def fit(
                     opt_state,
                 )
                 epoch_mae_loss += mae_loss
-                # params_list.append(params)
-                # grad_list.append(grad)
 
                 batch_pbar.set_postfix(
                     mae=f"{mae_loss / effective_batch_size:0.1e}"
@@ -186,7 +185,7 @@ def fit(
                 batch_pbar.update()
 
             epoch_pbar.set_postfix(
-                mae=f"{epoch_mae_loss / (steps_per_epoch  * n_grad_acc):0.1e}"
+                mae=f"{epoch_mae_loss / (batches_per_epoch):0.1e}"
             )
             epoch_pbar.update()
     except StopIteration:
