@@ -1,6 +1,7 @@
 from time import time
 from functools import partial
 import logging
+from typing import Union
 
 log = logging.getLogger(__name__)
 
@@ -16,9 +17,17 @@ from slh.model.hmodel import HamiltonianModel
 from slh.optimize.get_optimizer import get_opt
 
 
+OptaxGradientTransformation = Union[optax.GradientTransformation]
+OptimizerState = Union[optax.OptState, optax.MultiStepsState]
+
+
+
+# def make_loss_function(params, batch)
+
+
 @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
 def train_step(
-    params, model_apply, optimizer, batch_full_list, opt_state
+    params: optax.Params, model_apply: callable, optimizer, batch_full_list: list, opt_state: OptimizerState
 ):
     step_mae_loss = 0.0
     for batch_full in batch_full_list:
@@ -32,10 +41,45 @@ def train_step(
                 batch["idx_D"],
             )
 
-            # loss = jnp.mean(
-            #     (h_irreps_predicted - batch_labels["h_irreps"]) ** 2,
-            #     where=batch_labels["mask"],
-            # )
+            assert (
+                h_irreps_predicted.shape
+                == batch_labels["h_irreps"].shape
+                == batch_labels["mask"].shape
+            ), "This happens when your readout and your labels are not consistent."
+
+            loss = jnp.mean(
+                optax.huber_loss(h_irreps_predicted, batch_labels["h_irreps"]),
+                where=batch_labels["mask"]
+            )
+
+            return loss, jnp.mean(
+                jnp.abs(h_irreps_predicted - batch_labels["h_irreps"]),
+                where=batch_labels["mask"],
+            )
+
+        (loss, mae_loss), grad = jax.value_and_grad(loss_function, has_aux=True)(params)
+        updates, opt_state = optimizer.update(grad, opt_state)
+
+        params = optax.apply_updates(params, updates)
+        step_mae_loss += mae_loss
+
+    return params, opt_state, grad, loss, step_mae_loss
+
+@partial(jax.jit, static_argnames=("model_apply",))
+def val_step(
+    params, model_apply, batch_full_list
+):
+    step_mae_loss = 0.0
+    for batch_full in batch_full_list:
+        batch, batch_labels = batch_full
+
+        def loss_function(params):
+            h_irreps_predicted = model_apply(
+                params,
+                batch["numbers"],
+                batch["idx_ij"],
+                batch["idx_D"],
+            )
 
             assert (
                 h_irreps_predicted.shape
@@ -53,26 +97,26 @@ def train_step(
                 where=batch_labels["mask"],
             )
 
-        (loss, mae_loss), grad = jax.value_and_grad(loss_function, has_aux=True)(params)
-        updates, opt_state = optimizer.update(grad, opt_state)
-
-        params = optax.apply_updates(params, updates)
+        loss, mae_loss = loss_function(params)
         step_mae_loss += mae_loss
 
-    return params, opt_state, grad, step_mae_loss
+    return loss, step_mae_loss
 
 
 def fit(
     model: HamiltonianModel,
     train_dataset: PureInMemoryDataset,
+    val_dataset: PureInMemoryDataset,
     n_grad_acc: int,
     n_epochs: int,
 ):
 
     # TODO: The val step
-    batches_per_epoch = train_dataset.steps_per_epoch()
+    train_batches_per_epoch = train_dataset.steps_per_epoch()
+    val_batches_per_epoch = val_dataset.steps_per_epoch()
     # train_dataset = iter(train_dataset)
     batch_train_dataset = train_dataset.shuffle_and_batch()
+    batch_val_dataset = val_dataset.shuffle_and_batch()
 
     # We want to batch this over all inputs, but not the parameters of the model
     model_apply = jax.vmap(model.apply, in_axes=(None, 0, 0, 0))
@@ -109,9 +153,9 @@ def fit(
     optimizer = optax.adamax(
         learning_rate=optax.exponential_decay(
             init_value=1e-2,
-            transition_steps=10,
+            transition_steps=5,
             decay_rate=0.9,
-            transition_begin=30,
+            transition_begin=50,
             staircase=False,
             end_value=1e-4,
         )
@@ -150,45 +194,73 @@ def fit(
     # )
 
     opt_state = optimizer.init(params)
-    mae_loss = jnp.nan
+    train_mae_loss = jnp.inf
+    val_mae_loss = jnp.inf
     epoch_pbar = trange(n_epochs, desc="Epochs", ncols=75, disable=False, leave=True)
 
-    params_list, grad_list = [], []
     try:
         for epoch in range(n_epochs):
             effective_batch_size = n_grad_acc * train_dataset.batch_size
 
-            batch_pbar = trange(0,
-                batches_per_epoch // n_grad_acc,
-                desc="Eff. batch",
+            train_batch_pbar = trange(0,
+                train_batches_per_epoch // n_grad_acc,
+                desc="Train batch",
                 leave=False,
                 ncols=75,
                 smoothing=0.0,
                 mininterval=1.0,
-                disable=False,
+                disable=True,
             )
+
             epoch_mae_loss = 0.0
-            for batch in range(0, batches_per_epoch // n_grad_acc):
+            for train_batch in range(0, train_batches_per_epoch // n_grad_acc):
                 batch_data_list = [next(batch_train_dataset) for _ in range(n_grad_acc)]
-                params, opt_state, _, mae_loss = train_step(
+                params, opt_state, _, loss, train_mae_loss = train_step(
                     params,
                     model_apply,
                     optimizer,
                     batch_data_list,
                     opt_state,
                 )
-                epoch_mae_loss += mae_loss
+                epoch_mae_loss += train_mae_loss
 
-                batch_pbar.set_postfix(
-                    mae=f"{mae_loss / effective_batch_size:0.1e}"
+                train_batch_pbar.set_postfix(
+                    mae=f"{train_mae_loss / effective_batch_size:0.1e}"
                 )
-                batch_pbar.update()
+                train_batch_pbar.update()
+
+            val_batch_pbar = trange(0,
+                val_batches_per_epoch // n_grad_acc,
+                desc="Val batch",
+                leave=False,
+                ncols=75,
+                smoothing=0.0,
+                mininterval=1.0,
+                disable=True,
+            )
+
+            epoch_mae_val_loss = 0.0
+            for val_batch in range(0, val_batches_per_epoch // n_grad_acc):
+                batch_data_list = [next(batch_val_dataset) for _ in range(n_grad_acc)]
+                loss, val_mae_loss = val_step(
+                    params,
+                    model_apply,
+                    batch_data_list,
+                )
+                epoch_mae_val_loss += val_mae_loss
+
+                val_batch_pbar.set_postfix(
+                    mae=f"{val_mae_loss / effective_batch_size:0.1e}"
+                )
+                val_batch_pbar.update()
 
             epoch_pbar.set_postfix(
-                mae=f"{epoch_mae_loss / (batches_per_epoch):0.1e}"
+                mae=f"{epoch_mae_val_loss / val_batches_per_epoch:0.1e}"
             )
+            
             epoch_pbar.update()
+    
     except StopIteration:
         print("Yes the stopiteration")
 
-    return params_list, grad_list
+    return model, params

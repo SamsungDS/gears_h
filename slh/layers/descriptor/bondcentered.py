@@ -12,9 +12,6 @@ from typing import Optional, Union
 
 class BondCenteredTensorMomentDescriptor(nn.Module):
     cutoff: float
-    # num_basis_features: int = 8
-    # basis_max_degree: int = 3
-    # num_moment_features: int = 64 # TODO this can in principle be a list of ints
     max_actp_degree: int = 4
     max_basis_degree: int = 2
     max_degree: int = 4

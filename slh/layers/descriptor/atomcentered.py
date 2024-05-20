@@ -89,22 +89,19 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
 
         y = jnp.concat(ylist, axis=-1)
 
-        # transformed_embedding = self.embedding_transformation(self.embedding(Z_i))
         transformed_embedding = self.embedding_transformation(
             self.embedding(atomic_numbers)
         )
 
-        # This is currently num_pairs x 2 x (moment_max_degree + 1)^2 x basis
+        # This is currently num_padded_atoms x 2 x (moment_max_degree + 1)^2 x basis
         y = e3x.nn.FusedTensor(
             max_degree=self.moment_max_degree,
             name="ac emb x basis",
             cartesian_order=False,
         )(transformed_embedding, y)
 
-        # y = e3x.nn.add(y.astype(jnp.float32), transformed_embedding.astype(jnp.float32))
         assert y.dtype == jnp.float32
 
-        # Do less math by doing the residual connectins here.
         if self.embedding_residual_connection:
             y = e3x.nn.add(
                 y, self.embedding_transformation(self.embedding(atomic_numbers))

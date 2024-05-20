@@ -6,6 +6,7 @@ import json
 from collections import deque
 import itertools
 import uuid
+from random import shuffle
 
 
 from ase.io import read
@@ -298,6 +299,8 @@ class InMemoryDataset:
         self.buffer_size = buffer_size
         self.cache_file = Path(cache_path) / str(uuid.uuid4())
 
+        self.sample_data = dataset_as_list[0]
+
         self.hmap = get_hamiltonian_mapper_from_dataset(dataset_as_list=dataset_as_list)
 
         self.max_ell, self.readout_nfeatures = get_max_ell_and_max_features(self.hmap)
@@ -341,6 +344,9 @@ class InMemoryDataset:
         # )
 
         self.enqueue(min(self.buffer_size, self.n_data))
+
+    def init_input(self):
+        pass
 
     def steps_per_epoch(self):
         # This throws away a bit of the training data, but at most 1 batch worth.

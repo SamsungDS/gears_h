@@ -62,12 +62,6 @@ class SpeciesAwareRadialBasis(nn.Module):
 
         assert basis_expansion.dtype == jnp.float32
 
-        # ez_j = e3x.nn.features.change_max_degree_or_type(
-        #     self.embedding(Z_j), max_degree=self.max_degree, include_pseudotensors=False
-        # )
-
-        # y = jnp.concat([ez_j, basis_expansion], axis=-1)
-
         # We transform the embedding dimension to the radial basis dimension
         # so we can product meaningfully
         transformed_embedding = e3x.nn.Dense(

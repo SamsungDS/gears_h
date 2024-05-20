@@ -24,7 +24,7 @@ class ExponentialScaleCorrection(nn.Module):
             shape=(1, 2, self.max_ell + 1, self.nfeatures),
         )
 
-    def __call__(self, neighbour_distances, irreps):
+    def __call__(self, neighbour_distances):
         with jax.ensure_compile_time_eval():
             repeats = 2 * jnp.arange(self.max_ell + 1) + 1
 
@@ -56,7 +56,7 @@ class ExponentialScaleCorrection(nn.Module):
         assert correctly_shaped_offsets.shape[-1] == self.nfeatures
         assert correctly_shaped_offsets.shape[-2] == (self.max_ell + 1) ** 2
 
-        return irreps * (
+        return (
             correctly_shaped_prefactors
             * jnp.exp(
                 -jnp.einsum(
