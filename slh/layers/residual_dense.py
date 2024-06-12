@@ -7,7 +7,7 @@ from typing import Union, Callable
 import e3x
 from jaxtyping import Float, Array
 
-from slh.layers.activation import stl
+# from slh.layers.activation import stl
 
 
 class DenseBlock(nn.Module):

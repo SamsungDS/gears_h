@@ -6,7 +6,6 @@ from slh.layers import (
     SpeciesAwareRadialBasis,
     DenseBlock,
     Readout,
-    TensorDenseBlock,
 )
 
 from slh.layers.corrections import ExponentialScaleCorrection

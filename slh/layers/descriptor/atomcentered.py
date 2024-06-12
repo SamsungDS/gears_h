@@ -7,7 +7,7 @@ import flax.linen as nn
 from jaxtyping import Float, Array, Int
 
 from slh.layers.descriptor.radial_basis import (
-    SpeciesAwareRadialBasis,
+    SpeciesAwareRadialBasis, jinclike
 )
 
 
@@ -72,12 +72,6 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
                 name=f"ac_td_{i}",
             )(ylist[-1])
 
-            # tmp = e3x.nn.FusedTensor(
-            #     max_degree=self.moment_max_degree,
-            #     cartesian_order=False,
-            #     name=f"ac_ft_{i}",
-            # )(y, ylist[-1])
-
             ylist.append(tmp.astype(jnp.float32))
 
         ylist = [
@@ -108,3 +102,132 @@ class AtomCenteredTensorMomentDescriptor(nn.Module):
             )
 
         return y + e3x.nn.mish(y)
+
+class MPAtomCenteredDescriptor(nn.Module):
+    radial_basis: SpeciesAwareRadialBasis
+    use_fused_tensor: bool = False
+    embedding_residual_connection: bool = True
+
+    def setup(self):
+        self.embedding = self.radial_basis.embedding
+        self.embedding_transformation = e3x.nn.Dense(
+            self.radial_basis.num_radial,
+            name="embed_transform",
+            dtype=jnp.float32,
+            param_dtype=jnp.float32,
+        )
+
+    @nn.compact
+    def __call__(
+        self,
+        atomic_numbers: Int[Array, "num_atoms"],
+        neighbour_indices: Int[Array, "... num_neighbours 2"],
+        neighbour_displacements: Float[Array, "... num_neighbours 3"],
+    ):
+        neighbour_displacements = neighbour_displacements
+
+        idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
+        Z_i, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
+
+        num_neighbour_normalization = self.param(
+            "neighbour_normalization",
+            nn.initializers.constant((len(neighbour_indices) / len(atomic_numbers)) ** 0.5),
+            1,
+            dtype=jnp.float32,
+        )
+
+        # This is aware of the Z_j's
+        y = self.radial_basis(
+            neighbour_displacements=neighbour_displacements, Z_j=Z_j
+        ).astype(jnp.float32)
+
+        for _ in range(2):
+            y = e3x.nn.MessagePass(
+                max_degree=4,
+                use_basis_bias=True,
+                cartesian_order=False,
+                use_fused_tensor=self.use_fused_tensor
+            )(y, e3x.nn.basis(
+                neighbour_displacements,
+                max_degree=1,
+                num=8,
+                radial_fn=partial(e3x.nn.sinc, limit=self.radial_basis.cutoff),
+                cartesian_order=False),
+                src_idx=neighbour_indices[:, 1],
+                dst_idx=neighbour_indices[:, 0],
+                num_segments=len(atomic_numbers)
+                ) / num_neighbour_normalization
+            
+            y = e3x.nn.Dense(features=y.shape[-1])(y) + y
+
+        if self.embedding_residual_connection:
+            y = e3x.nn.add(
+                y, self.embedding_transformation(self.embedding(atomic_numbers))
+            )
+
+        return y # + e3x.nn.mish(y)
+
+
+class SAAtomCenteredDescriptor(nn.Module):
+    radial_basis: SpeciesAwareRadialBasis
+    use_fused_tensor: bool = False
+    embedding_residual_connection: bool = True
+
+    def setup(self):
+        self.embedding = self.radial_basis.embedding
+        self.embedding_transformation = e3x.nn.Dense(
+            self.radial_basis.num_radial,
+            name="embed_transform",
+            dtype=jnp.float32,
+            param_dtype=jnp.float32,
+        )
+
+    @nn.compact
+    def __call__(
+        self,
+        atomic_numbers: Int[Array, "num_atoms"],
+        neighbour_indices: Int[Array, "... num_neighbours 2"],
+        neighbour_displacements: Float[Array, "... num_neighbours 3"],
+    ):
+        neighbour_displacements = neighbour_displacements
+
+        idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
+        Z_i, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
+
+        # num_neighbour_normalization = self.param(
+        #     "neighbour_normalization",
+        #     nn.initializers.constant((len(neighbour_indices) / len(atomic_numbers)) ** 0.5),
+        #     1,
+        #     dtype=jnp.float32,
+        # )
+
+        # This is aware of the Z_j's
+        y = self.radial_basis(
+            neighbour_displacements=neighbour_displacements, Z_j=Z_j
+        ).astype(jnp.float32)
+
+        for _ in range(2):
+            y = e3x.nn.SelfAttention (
+                max_degree=4,
+                use_basis_bias=True,
+                cartesian_order=False,
+                use_fused_tensor=self.use_fused_tensor
+            )(y, e3x.nn.basis(
+                neighbour_displacements,
+                max_degree=2,
+                num=16,
+                radial_fn=partial(e3x.nn.sinc, limit=self.radial_basis.cutoff),
+                cartesian_order=False),
+                src_idx=neighbour_indices[:, 1],
+                dst_idx=neighbour_indices[:, 0],
+                num_segments=len(atomic_numbers)
+                )
+            
+            # y = e3x.nn.Dense(features=y.shape[-1])(y) + y
+
+        if self.embedding_residual_connection:
+            y = e3x.nn.add(
+                y, self.embedding_transformation(self.embedding(atomic_numbers))
+            )
+
+        return y # + e3x.nn.mish(y)

@@ -18,11 +18,11 @@ class ExponentialScaleCorrection(nn.Module):
             nn.initializers.constant(0.7),
             shape=(1, 2, self.max_ell + 1, self.nfeatures),
         )
-        self.offsets = self.param(
-            "offsets",
-            nn.initializers.constant(0.1),
-            shape=(1, 2, self.max_ell + 1, self.nfeatures),
-        )
+        # self.offsets = self.param(
+        #     "offsets",
+        #     nn.initializers.constant(0.1),
+        #     shape=(1, 2, self.max_ell + 1, self.nfeatures),
+        # )
 
     def __call__(self, neighbour_distances):
         with jax.ensure_compile_time_eval():
@@ -40,12 +40,12 @@ class ExponentialScaleCorrection(nn.Module):
             axis=-2,
             total_repeat_length=(self.max_ell + 1) ** 2,
         )
-        correctly_shaped_offsets = jnp.repeat(
-            nn.softplus(self.offsets),
-            repeats=repeats,
-            axis=-2,
-            total_repeat_length=(self.max_ell + 1) ** 2,
-        )
+        # correctly_shaped_offsets = jnp.repeat(
+        #     nn.softplus(self.offsets),
+        #     repeats=repeats,
+        #     axis=-2,
+        #     total_repeat_length=(self.max_ell + 1) ** 2,
+        # )
 
         assert correctly_shaped_exponents.shape[-1] == self.nfeatures
         assert correctly_shaped_exponents.shape[-2] == (self.max_ell + 1) ** 2
@@ -53,8 +53,8 @@ class ExponentialScaleCorrection(nn.Module):
         assert correctly_shaped_prefactors.shape[-1] == self.nfeatures
         assert correctly_shaped_prefactors.shape[-2] == (self.max_ell + 1) ** 2
 
-        assert correctly_shaped_offsets.shape[-1] == self.nfeatures
-        assert correctly_shaped_offsets.shape[-2] == (self.max_ell + 1) ** 2
+        # assert correctly_shaped_offsets.shape[-1] == self.nfeatures
+        # assert correctly_shaped_offsets.shape[-2] == (self.max_ell + 1) ** 2
 
         return (
             correctly_shaped_prefactors
@@ -63,5 +63,5 @@ class ExponentialScaleCorrection(nn.Module):
                     "l..., pl -> p...", correctly_shaped_exponents, neighbour_distances
                 )
             )
-            + correctly_shaped_offsets
+            # + correctly_shaped_offsets
         )
