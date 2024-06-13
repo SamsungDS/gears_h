@@ -42,8 +42,6 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
             num=num_radial_features,
             max_degree=self.max_basis_degree,
             radial_fn=partial(jinclike, limit=self.cutoff),
-            # cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.cutoff),
-            damping_fn=partial(e3x.nn.smooth_damping, gamma=2.0),
             cartesian_order=False,
         ).astype(jnp.float32)
 

@@ -56,7 +56,6 @@ class SpeciesAwareRadialBasis(nn.Module):
             max_degree=self.max_degree,
             radial_fn=self.radial_function,
             # cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.cutoff),
-            damping_fn=partial(e3x.nn.smooth_damping, gamma=2.0),
             cartesian_order=False,
         ).astype(jnp.float32)
 
