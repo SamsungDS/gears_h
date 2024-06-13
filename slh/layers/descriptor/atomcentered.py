@@ -143,14 +143,14 @@ class MPAtomCenteredDescriptor(nn.Module):
 
         for _ in range(2):
             y = e3x.nn.MessagePass(
-                max_degree=4,
+                max_degree=3,
                 use_basis_bias=True,
                 cartesian_order=False,
                 use_fused_tensor=self.use_fused_tensor
             )(y, e3x.nn.basis(
                 neighbour_displacements,
-                max_degree=1,
-                num=8,
+                max_degree=2,
+                num=16,
                 radial_fn=partial(e3x.nn.sinc, limit=self.radial_basis.cutoff),
                 cartesian_order=False),
                 src_idx=neighbour_indices[:, 1],
@@ -211,6 +211,7 @@ class SAAtomCenteredDescriptor(nn.Module):
                 max_degree=4,
                 use_basis_bias=True,
                 cartesian_order=False,
+                # num_heads=2,
                 use_fused_tensor=self.use_fused_tensor
             )(y, e3x.nn.basis(
                 neighbour_displacements,
