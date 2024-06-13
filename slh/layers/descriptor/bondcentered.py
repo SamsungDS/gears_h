@@ -27,12 +27,14 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
             atomic_descriptors[neighbours_i],
             atomic_descriptors[neighbours_j],
         )
-        y = self.tensor_module(
-            max_degree=self.max_actp_degree,
-            name="atompair_tp",
-            cartesian_order=False,
-            dtype=jnp.float32,
-        )(atom1_desc, atom2_desc)
+        # y = self.tensor_module(
+        #     max_degree=self.max_actp_degree,
+        #     name="atompair_tp",
+        #     cartesian_order=False,
+        #     dtype=jnp.float32,
+        # )(atom1_desc, atom2_desc)
+
+        y = e3x.nn.add(atom1_desc, atom2_desc)
 
         # We put in information about the orientation/length of the bond vector here
         bond_expansion = e3x.nn.basis(
@@ -50,6 +52,5 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
         y = self.tensor_module(
             max_degree=self.max_degree, cartesian_order=False, dtype=jnp.float32
         )(y, bond_expansion)
-        # y = jnp.concat([y, e3x.nn.change_max_degree_or_type(bond_expansion, max_degree=self.max_actp_degree, include_pseudotensors=True)], axis=-1)
 
         return y
