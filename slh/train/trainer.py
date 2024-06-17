@@ -10,10 +10,12 @@ from flax.training.train_state import TrainState
 import jax.numpy as jnp
 import jax
 import optax
+from clu import metrics
+from tensorflow.keras.callbacks import CallbackList
 
 from tqdm import trange
 
-from slh.data.input_pipeline import InMemoryDataset, PureInMemoryDataset
+from slh.data.input_pipeline import PureInMemoryDataset
 from slh.model.hmodel import HamiltonianModel
 from slh.optimize.get_optimizer import get_opt
 from slh.train.checkpoints import CheckpointManager
@@ -24,12 +26,17 @@ OptimizerState = Union[optax.OptState, optax.MultiStepsState]
 
 
 def fit(
-    model: HamiltonianModel,
+    state: TrainState,
     train_dataset: PureInMemoryDataset,
     val_dataset: PureInMemoryDataset,
+    logging_metrics: metrics.Collection,
+    callbacks: CallbackList,
     n_grad_acc: int,
     n_epochs: int,
     ckpt_dir: Path,
+    ckpt_interval: int = 1,
+    is_ensemble: bool = False,
+    data_parallel: bool = False,
 ):
     
     latest_dir = ckpt_dir / "latest"
@@ -43,63 +50,72 @@ def fit(
     batch_val_dataset = val_dataset.shuffle_and_batch()
 
     # We want to batch this over all inputs, but not the parameters of the model
-    model_apply = jax.vmap(model.apply, in_axes=(None, 0, 0, 0))
+    model_apply = jax.vmap(state.apply_fn, in_axes=(None, 0, 0, 0))
 
     _batch_inputs, _batch_labels = next(batch_train_dataset)
-    # print(len(_batch_inputs["idx_ij"][0]))
-    params = model.init(
-        jax.random.PRNGKey(2462),
-        atomic_numbers=_batch_inputs["numbers"][0],
-        neighbour_indices=_batch_inputs["idx_ij"][0],
-        neighbour_displacements=_batch_inputs["idx_D"][0],
-    )
-    print(
-        model.tabulate(
-            jax.random.PRNGKey(2462),
-            _batch_inputs["numbers"][0],
-            _batch_inputs["idx_ij"][0],
-            _batch_inputs["idx_D"][0],
-        )
-    )
 
-    cosine_lr = [
-        dict(
-            init_value=1e-4,
-            peak_value=1e-3,
-            warmup_steps=int(5 * tscale),
-            decay_steps=int(30 * tscale),
-            end_value=1e-5,
-        )
-        for tscale in jnp.linspace(1, 10, 10)
-    ]
+    # params = model.init(
+    #     jax.random.PRNGKey(2462),
+    #     atomic_numbers=_batch_inputs["numbers"][0],
+    #     neighbour_indices=_batch_inputs["idx_ij"][0],
+    #     neighbour_displacements=_batch_inputs["idx_D"][0],
+    # )
+    # print(
+    #     model.tabulate(
+    #         jax.random.PRNGKey(2462),
+    #         _batch_inputs["numbers"][0],
+    #         _batch_inputs["idx_ij"][0],
+    #         _batch_inputs["idx_D"][0],
+    #     )
+    # )
 
-    optimizer = optax.radam(
-        learning_rate=optax.exponential_decay(
-        init_value=1e-3,
-        transition_steps=1,
-        decay_rate=0.9977,
-        transition_begin=20,
-        staircase=False,
-        end_value=1e-5),
-        # learning_rate=optax.sgdr_schedule(cosine_lr),
-        nesterov=True
-        )
+    # cosine_lr = [
+    #     dict(
+    #         init_value=1e-4,
+    #         peak_value=1e-3,
+    #         warmup_steps=int(5 * tscale),
+    #         decay_steps=int(30 * tscale),
+    #         end_value=1e-5,
+    #     )
+    #     for tscale in jnp.linspace(1, 10, 10)
+    # ]
 
-    optimizer = optax.MultiSteps(optimizer, every_k_schedule=n_grad_acc)
+    # optimizer = optax.radam(
+    #     learning_rate=optax.exponential_decay(
+    #     init_value=1e-3,
+    #     transition_steps=1,
+    #     decay_rate=0.9977,
+    #     transition_begin=20,
+    #     staircase=False,
+    #     end_value=1e-5),
+    #     nesterov=True
+    #     )
+
+    # optimizer = optax.MultiSteps(optimizer, every_k_schedule=n_grad_acc)
 
     opt_state = optimizer.init(params)
-    train_mae_loss = jnp.inf
-    val_mae_loss = jnp.inf
-    epoch_pbar = trange(n_epochs, desc="Epochs", ncols=75, disable=False, leave=True)
 
-    best_params = {}
-    best_mae_loss = jnp.inf
     try:
+        
+        train_mae_loss = jnp.inf
+        val_mae_loss = jnp.inf
+        epoch_pbar = trange(n_epochs, desc="Epochs", ncols=75, disable=False, leave=True)
+        
+        best_params = {}
+        best_mae_loss = jnp.inf
+        epoch_loss = {}
+
         for epoch in range(n_epochs):
+            epoch_start_time = time.time()
+            callbacks.on_epoch_begin(epoch=epoch + 1)
+
             effective_batch_size = n_grad_acc * train_dataset.batch_size
 
+            epoch_loss.update({"train_loss": 0.0})
+            train_batch_metrics = logging_metrics.empty()
+
             train_batch_pbar = trange(0,
-                train_batches_per_epoch // n_grad_acc,
+                train_batches_per_epoch // n_grad_acc, # TODO this is a big fragile if train_batches_per_epoch isn't a multiple
                 desc="Train batch",
                 leave=False,
                 ncols=75,
@@ -135,30 +151,33 @@ def fit(
                 disable=True,
             )
 
-            epoch_mae_val_loss = 0.0
+            epoch_val_mae_accumulator = 0.0
+            
+            val_batch_metrics = logging_metrics.empty()
+
             for val_batch in range(0, val_batches_per_epoch // n_grad_acc):
                 batch_data_list = [next(batch_val_dataset) for _ in range(n_grad_acc)]
-                loss, val_mae_loss = val_step(
+                loss, val_mae = val_step(
                     params,
                     model_apply,
                     batch_data_list,
                 )
-                epoch_mae_val_loss += val_mae_loss
+                epoch_val_mae_accumulator += val_mae
 
                 val_batch_pbar.set_postfix(
-                    mae=f"{val_mae_loss / effective_batch_size:0.1e}"
+                    mae=f"{val_mae / effective_batch_size:0.1e}"
                 )
                 val_batch_pbar.update()
 
 
             epoch_pbar.set_postfix(
-                mae=f"{epoch_mae_val_loss / val_batches_per_epoch:0.1e}"
+                mae=f"{epoch_val_mae_accumulator / val_batches_per_epoch:0.1e}"
             )
             
             epoch_pbar.update()
 
-            if (epoch_mae_val_loss / val_batches_per_epoch) < best_mae_loss:
-                best_mae_loss = epoch_mae_val_loss / val_batches_per_epoch
+            if (epoch_val_mae_accumulator / val_batches_per_epoch) < best_mae_loss:
+                best_mae_loss = epoch_val_mae_accumulator / val_batches_per_epoch
                 best_params = params
     
     except StopIteration:
