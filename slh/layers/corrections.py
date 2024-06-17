@@ -15,7 +15,7 @@ class ExponentialScaleCorrection(nn.Module):
         )
         self.exponents = self.param(
             "exponents",
-            nn.initializers.constant(2),
+            nn.initializers.constant(1.4),
             shape=(1, 2, self.max_ell + 1, self.nfeatures),
         )
 
@@ -30,7 +30,7 @@ class ExponentialScaleCorrection(nn.Module):
             total_repeat_length=(self.max_ell + 1) ** 2,
         )
         correctly_shaped_exponents = jnp.repeat(
-            nn.softplus(jnp.log2(self.exponents)),
+            jnp.log(nn.softplus(self.exponents)),
             repeats=repeats,
             axis=-2,
             total_repeat_length=(self.max_ell + 1) ** 2,
