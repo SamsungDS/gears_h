@@ -73,7 +73,7 @@ def fit(
         for tscale in jnp.linspace(1, 10, 10)
     ]
 
-    optimizer = optax.adam(
+    optimizer = optax.radam(
         learning_rate=optax.exponential_decay(
         init_value=1e-3,
         transition_steps=1,
@@ -84,16 +84,6 @@ def fit(
         # learning_rate=optax.sgdr_schedule(cosine_lr),
         nesterov=True
         )
-    # optimizer = optax.adamax(
-    #     learning_rate=optax.exponential_decay(
-    #         init_value=1e-2,
-    #         transition_steps=5,
-    #         decay_rate=0.9,
-    #         transition_begin=50,
-    #         staircase=False,
-    #         end_value=1e-4,
-    #     )
-    # )
 
     optimizer = optax.MultiSteps(optimizer, every_k_schedule=n_grad_acc)
 
