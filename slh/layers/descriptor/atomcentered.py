@@ -221,7 +221,8 @@ class SAAtomCenteredDescriptor(nn.Module):
                 max_degree=self.mp_degree,
                 use_basis_bias=True,
                 cartesian_order=False,
-                use_fused_tensor=self.use_fused_tensor
+                use_fused_tensor=self.use_fused_tensor,
+                num_heads=4,
             )(y, e3x.nn.basis(
                 neighbour_displacements,
                 max_degree=2,
