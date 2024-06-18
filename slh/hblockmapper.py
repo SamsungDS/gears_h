@@ -1,10 +1,10 @@
+import logging
 from dataclasses import dataclass
-from slh.utilities.mapmaker import get_mapping_spec
+from itertools import product
 
 import numpy as np
 
-from itertools import product
-import logging
+from slh.utilities.mapmaker import get_mapping_spec
 
 log = logging.getLogger(__name__)
 

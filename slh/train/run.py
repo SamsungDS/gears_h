@@ -4,17 +4,12 @@ import sys
 import jax
 
 from slh.config import Config, parse_config
-from slh.data.input_pipeline import (
-    read_dataset_as_list,
-    initialize_dataset_from_list,
-)
-
+from slh.data.input_pipeline import (initialize_dataset_from_list,
+                                     read_dataset_as_list)
 from slh.train.callbacks import initialize_callbacks
 from slh.train.metrics import initialize_metrics
 from slh.train.trainer import fit
-
 from slh.utilities.random import seed_py_np_tf
-
 
 log = logging.getLogger(__name__)
 

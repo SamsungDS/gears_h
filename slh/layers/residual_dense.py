@@ -1,11 +1,10 @@
-from functools import partial
 from dataclasses import field
-
-import flax.linen as nn
-from typing import Union, Callable
+from functools import partial
+from typing import Callable, Union
 
 import e3x
-from jaxtyping import Float, Array
+import flax.linen as nn
+from jaxtyping import Array, Float
 
 # from slh.layers.activation import stl
 

@@ -1,14 +1,13 @@
+from dataclasses import field
 from functools import partial
 
 import e3x
-import jax.numpy as jnp
 import flax.linen as nn
+import jax.numpy as jnp
+from jaxtyping import Array, Float, Int
 
-from jaxtyping import Float, Array, Int
-
-from slh.layers.descriptor.radial_basis import SpeciesAwareRadialBasis, jinclike
-
-from dataclasses import field
+from slh.layers.descriptor.radial_basis import (SpeciesAwareRadialBasis,
+                                                jinclike)
 
 
 class AtomCenteredTensorMomentDescriptor(nn.Module):

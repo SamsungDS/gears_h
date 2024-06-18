@@ -1,10 +1,8 @@
-from slh.layers.descriptor import (
-    AtomCenteredTensorMomentDescriptor,
-    MPAtomCenteredDescriptor,
-    SAAtomCenteredDescriptor,
-    BondCenteredTensorMomentDescriptor,
-    SpeciesAwareRadialBasis,
-)
+from slh.layers.descriptor import (AtomCenteredTensorMomentDescriptor,
+                                   BondCenteredTensorMomentDescriptor,
+                                   MPAtomCenteredDescriptor,
+                                   SAAtomCenteredDescriptor,
+                                   SpeciesAwareRadialBasis)
 from slh.layers.readout import Readout
 from slh.layers.residual_dense import DenseBlock
 

@@ -8,7 +8,6 @@ import yaml
 from pydantic import ValidationError
 from rich.console import Console
 
-
 console = Console(highlight=False)
 
 app = typer.Typer(

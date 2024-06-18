@@ -1,12 +1,11 @@
-from typing import Any, Union
 from functools import partial
+from typing import Any, Union
 
 import e3x
+import flax.linen as nn
 import jax
 import jax.numpy as jnp
-from jaxtyping import Float, Array
-
-import flax.linen as nn
+from jaxtyping import Array, Float
 
 
 class SpeciesAwareRadialBasis(nn.Module):

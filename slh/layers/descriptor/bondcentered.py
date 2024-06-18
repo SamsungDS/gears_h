@@ -1,13 +1,12 @@
+from functools import partial
+from typing import Optional, Union
+
 import e3x
+import flax.linen as nn
 import jax
 import jax.numpy as jnp
 
-from functools import partial
-import flax.linen as nn
-
 from slh.layers.descriptor.radial_basis import jinclike
-
-from typing import Optional, Union
 
 
 class BondCenteredTensorMomentDescriptor(nn.Module):

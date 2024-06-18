@@ -1,25 +1,23 @@
-from time import time
-from functools import partial
 import logging
-from typing import Union
+from functools import partial
 from pathlib import Path
+from time import time
+from typing import Union
 
 log = logging.getLogger(__name__)
 
-from flax.training.train_state import TrainState
-import jax.numpy as jnp
 import jax
+import jax.numpy as jnp
 import optax
 from clu import metrics
+from flax.training.train_state import TrainState
 from tensorflow.keras.callbacks import CallbackList
-
 from tqdm import trange
 
 from slh.data.input_pipeline import PureInMemoryDataset
 from slh.model.hmodel import HamiltonianModel
 from slh.optimize.get_optimizer import get_opt
 from slh.train.checkpoints import CheckpointManager
-
 
 OptaxGradientTransformation = Union[optax.GradientTransformation]
 OptimizerState = Union[optax.OptState, optax.MultiStepsState]

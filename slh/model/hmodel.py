@@ -1,20 +1,14 @@
-import flax.linen as nn
-
-from slh.layers import (
-    AtomCenteredTensorMomentDescriptor,
-    BondCenteredTensorMomentDescriptor,
-    SpeciesAwareRadialBasis,
-    DenseBlock,
-    Readout,
-)
-
-from slh.layers.corrections import ExponentialScaleCorrection
+from functools import partial
 
 import e3x
+import flax.linen as nn
 import jax
 import jax.numpy as jnp
 
-from functools import partial
+from slh.layers import (AtomCenteredTensorMomentDescriptor,
+                        BondCenteredTensorMomentDescriptor, DenseBlock,
+                        Readout, SpeciesAwareRadialBasis)
+from slh.layers.corrections import ExponentialScaleCorrection
 
 
 class HamiltonianModel(nn.Module):

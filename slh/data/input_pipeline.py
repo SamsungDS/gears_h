@@ -1,31 +1,25 @@
-import logging
-from multiprocessing import Pool
-from typing import Dict, Iterator
-from pathlib import Path
-import json
-from collections import deque
 import itertools
+import json
+import logging
 import uuid
+from collections import deque
+from multiprocessing import Pool
+from pathlib import Path
 from random import shuffle
-
-
-from ase.io import read
-from ase import Atoms
+from typing import Dict, Iterator
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 import tensorflow as tf
-
+from ase import Atoms
+from ase.io import read
 from tqdm import tqdm, trange
 
-from slh.hblockmapper import (
-    make_mapper_from_elements,
-    MultiElementPairHBlockMapper,
-    get_mask_dict,
-)
 from slh.data.preprocessing import prefetch_to_single_device
-from slh.data.utilities import split_idxs, split_dataset
+from slh.data.utilities import split_dataset, split_idxs
+from slh.hblockmapper import (MultiElementPairHBlockMapper, get_mask_dict,
+                              make_mapper_from_elements)
 
 # (Atoms, {Z: [0, 1, 2, ...]}, ij, D, hblocks)
 DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list]]

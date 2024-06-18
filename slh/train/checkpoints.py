@@ -1,13 +1,12 @@
 # Taken almost entirely from https://github.com/apax-hub/apax/blob/dev/apax/train/checkpoints.py
 import logging
+from pathlib import Path
 
 import jax
 import jax.numpy as jnp
-from flax.training import checkpoints, train_state
 from flax.core.frozen_dict import FrozenDict, freeze, unfreeze
+from flax.training import checkpoints, train_state
 from flax.traverse_util import flatten_dict, unflatten_dict
-
-from pathlib import Path
 
 log = logging.getLogger(__name__)
 

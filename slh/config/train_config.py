@@ -1,15 +1,8 @@
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    NonNegativeFloat,
-    PositiveFloat,
-    PositiveInt,
-    create_model,
-    model_validator,
-    StrictBool,
-)
 from typing import List, Literal
+
+from pydantic import (BaseModel, ConfigDict, Field, NonNegativeFloat,
+                      PositiveFloat, PositiveInt, StrictBool, create_model,
+                      model_validator)
 
 
 class ModelConfig(BaseModel, extra="forbid"):
