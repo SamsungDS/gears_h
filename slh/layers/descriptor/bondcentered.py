@@ -44,7 +44,9 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
             radial_fn=partial(jinclike, limit=self.cutoff),
             cartesian_order=False,
         ).astype(jnp.float32)
-        bond_expanded_dense = bond_expansion # e3x.nn.Dense(num_radial_features)(bond_expansion)
+        bond_expanded_dense = (
+            bond_expansion  # e3x.nn.Dense(num_radial_features)(bond_expansion)
+        )
 
         # num_pairs x 2 x (max_degree + 1)^2 x num_radial_features
         # y = e3x.nn.add(y, bond_expansion)
