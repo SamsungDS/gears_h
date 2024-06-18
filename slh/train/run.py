@@ -3,16 +3,17 @@ import sys
 
 import jax
 
+from slh.config import Config, parse_config
 from slh.data.input_pipeline import (
     read_dataset_as_list,
     initialize_dataset_from_list,
 )
 
-from slh.layers.descriptor import (
-    AtomCenteredTensorMomentDescriptor,
-    BondCenteredTensorMomentDescriptor,
-    SpeciesAwareRadialBasis,
-)
+from slh.train.callbacks import initialize_callbacks
+from slh.train.metrics import initialize_metrics
+from slh.train.trainer import fit
+
+from slh.utilities.random import seed_py_np_tf
 
 
 log = logging.getLogger(__name__)
@@ -40,25 +41,28 @@ def setup_logging(log_file, log_level):
     )
 
 
-def run(config, log_level="error"):
-    # seed_py_np_tf(config.seed)
-    # TODO Real seed
-    rng_key = jax.random.PRNGKey(3254)
+def run(user_config, log_level="error"):
+    config = parse_config(user_config)
+    seed_py_np_tf(config.seed)
+    rng_key = jax.random.PRNGKey(config.seed)
 
     log.info("Initializing directories")
-    # config.data.model_version_path.mkdir(parents=True, exist_ok=True)
-    # setup_logging(config.data.model_version_path / "train.log", log_level)
-    # config.dump_config(config.data.model_version_path)
+    config.data.model_version_path.mkdir(parents=True, exist_ok=True)
+    setup_logging(config.data.model_version_path / "train.log", log_level)
+    config.dump_config(config.data.model_version_path)
+    log.info(f"Running on {jax.devices()}")
 
-    # callbacks = initialize_callbacks(config.callbacks, config.data.model_version_path)
-    # loss_fn = initialize_loss_fn(config.loss)
-    # Metrics = initialize_metrics(config.metrics)
-    # config = user_config
+
+    callbacks = initialize_callbacks(config.callbacks, config.data.model_version_path)
+    loss_fn = initialize_loss_fn(config.loss)
+    logging_metrics = initialize_metrics(config.metrics)
+
     ds_list = read_dataset_as_list(
         config.data_directory, nprocs=config.nprocs_dataset_read
     )
-    # TODO an assert here to make sure the fractions are equal
-    num_train, num_val = int(0.8 * len(ds_list)), int(0.2 * len(ds_list))
+
+    num_train = int(0.8 * len(ds_list))
+    num_val = len(ds_list) - num_train
     train_ds, ds_stats, val_ds = initialize_dataset_from_list(
         ds_list, num_train, num_val
     )
@@ -78,3 +82,6 @@ def run(config, log_level="error"):
         # init_box=init_box,
     )
     batched_model = jax.vmap(model.apply, in_axes=(None, 0, 0, 0, 0, 0))
+    
+    params, rng_key = create_params(model, rng_key, sample_input, config.n_models)
+
