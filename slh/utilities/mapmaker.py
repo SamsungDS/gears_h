@@ -73,16 +73,13 @@ def get_mapping_spec(ells1: list[int], ells2: list[int]):
             # available
             for ifeature in range(mask_candidate.shape[-1]):
                 if np.all(
-                    mask_candidate[parity, ellmin**2 : (ellmax + 1) ** 2, ifeature]
-                    == 0
+                    mask_candidate[parity, ellmin**2 : (ellmax + 1) ** 2, ifeature] == 0
                 ):
                     # if np.all(
                     #     mask_candidate[parity, :, ifeature]
                     #     == 0
                     # ):
-                    mask_candidate[
-                        parity, ellmin**2 : (ellmax + 1) ** 2, ifeature
-                    ] = 1
+                    mask_candidate[parity, ellmin**2 : (ellmax + 1) ** 2, ifeature] = 1
 
                     # Keep track of the maximum feature size we are at
                     # We prune the mask in the feature dimension to this
