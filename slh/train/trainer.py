@@ -38,7 +38,7 @@ def fit(
     is_ensemble: bool = False,
     data_parallel: bool = False,
 ):
-    
+
     latest_dir = ckpt_dir / "latest"
     best_dir = ckpt_dir / "best"
     ckpt_manager = CheckpointManager()
@@ -96,11 +96,13 @@ def fit(
     opt_state = optimizer.init(params)
 
     try:
-        
+
         train_mae_loss = jnp.inf
         val_mae_loss = jnp.inf
-        epoch_pbar = trange(n_epochs, desc="Epochs", ncols=75, disable=False, leave=True)
-        
+        epoch_pbar = trange(
+            n_epochs, desc="Epochs", ncols=75, disable=False, leave=True
+        )
+
         best_params = {}
         best_mae_loss = jnp.inf
         epoch_loss = {}
@@ -114,8 +116,10 @@ def fit(
             epoch_loss.update({"train_loss": 0.0})
             train_batch_metrics = logging_metrics.empty()
 
-            train_batch_pbar = trange(0,
-                train_batches_per_epoch // n_grad_acc, # TODO this is a big fragile if train_batches_per_epoch isn't a multiple
+            train_batch_pbar = trange(
+                0,
+                train_batches_per_epoch
+                // n_grad_acc,  # TODO this is a big fragile if train_batches_per_epoch isn't a multiple
                 desc="Train batch",
                 leave=False,
                 ncols=75,
@@ -141,7 +145,8 @@ def fit(
                 )
                 train_batch_pbar.update()
 
-            val_batch_pbar = trange(0,
+            val_batch_pbar = trange(
+                0,
                 val_batches_per_epoch // n_grad_acc,
                 desc="Val batch",
                 leave=False,
@@ -152,7 +157,7 @@ def fit(
             )
 
             epoch_val_mae_accumulator = 0.0
-            
+
             val_batch_metrics = logging_metrics.empty()
 
             for val_batch in range(0, val_batches_per_epoch // n_grad_acc):
@@ -164,22 +169,19 @@ def fit(
                 )
                 epoch_val_mae_accumulator += val_mae
 
-                val_batch_pbar.set_postfix(
-                    mae=f"{val_mae / effective_batch_size:0.1e}"
-                )
+                val_batch_pbar.set_postfix(mae=f"{val_mae / effective_batch_size:0.1e}")
                 val_batch_pbar.update()
-
 
             epoch_pbar.set_postfix(
                 mae=f"{epoch_val_mae_accumulator / val_batches_per_epoch:0.1e}"
             )
-            
+
             epoch_pbar.update()
 
             if (epoch_val_mae_accumulator / val_batches_per_epoch) < best_mae_loss:
                 best_mae_loss = epoch_val_mae_accumulator / val_batches_per_epoch
                 best_params = params
-    
+
     except StopIteration:
         print("Yes the stopiteration")
 
@@ -188,7 +190,11 @@ def fit(
 
 @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
 def train_step(
-    params: optax.Params, model_apply: callable, optimizer, batch_full_list: list, opt_state: OptimizerState
+    params: optax.Params,
+    model_apply: callable,
+    optimizer,
+    batch_full_list: list,
+    opt_state: OptimizerState,
 ):
     step_mae_loss = 0.0
     for batch_full in batch_full_list:
@@ -210,7 +216,7 @@ def train_step(
 
             loss = jnp.mean(
                 optax.huber_loss(h_irreps_predicted, batch_labels["h_irreps"]),
-                where=batch_labels["mask"]
+                where=batch_labels["mask"],
             )
 
             return loss, jnp.mean(
@@ -226,10 +232,9 @@ def train_step(
 
     return params, opt_state, grad, loss, step_mae_loss
 
+
 @partial(jax.jit, static_argnames=("model_apply",))
-def val_step(
-    params, model_apply, batch_full_list
-):
+def val_step(params, model_apply, batch_full_list):
     step_mae_loss = 0.0
     for batch_full in batch_full_list:
         batch, batch_labels = batch_full
