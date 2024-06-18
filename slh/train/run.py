@@ -1,13 +1,15 @@
 import logging
+from pathlib import Path
 import sys
 
 import jax
 
-from slh.config import Config, parse_config
+from slh.config.train_config import TrainConfig
+from slh.config.common import parse_config
 from slh.data.input_pipeline import (initialize_dataset_from_list,
                                      read_dataset_as_list)
-from slh.train.callbacks import initialize_callbacks
-from slh.train.metrics import initialize_metrics
+# from slh.train.callbacks import initialize_callbacks
+# from slh.train.metrics import initialize_metrics
 from slh.train.trainer import fit
 from slh.utilities.random import seed_py_np_tf
 
@@ -48,16 +50,18 @@ def run(user_config, log_level="error"):
     log.info(f"Running on {jax.devices()}")
 
 
-    callbacks = initialize_callbacks(config.callbacks, config.data.model_version_path)
-    loss_fn = initialize_loss_fn(config.loss)
-    logging_metrics = initialize_metrics(config.metrics)
+    # callbacks = initialize_callbacks(config.callbacks, config.data.model_version_path)
+    # loss_fn = initialize_loss_fn(config.loss)
+    # logging_metrics = initialize_metrics(config.metrics)
 
     ds_list = read_dataset_as_list(
-        config.data_directory, nprocs=config.nprocs_dataset_read
+        Path(config.data.data_path),
     )
+    if len(ds_list) == 0:
+        raise FileNotFoundError(f"Did not find any snapshots at {Path(config.data.directory)}")
 
-    num_train = int(0.8 * len(ds_list))
-    num_val = len(ds_list) - num_train
+    num_train = config.data.n_train
+    num_val = config.data.n_valid
     train_ds, ds_stats, val_ds = initialize_dataset_from_list(
         ds_list, num_train, num_val
     )

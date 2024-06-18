@@ -15,9 +15,9 @@ from tensorflow.keras.callbacks import CallbackList
 from tqdm import trange
 
 from slh.data.input_pipeline import PureInMemoryDataset
-from slh.model.hmodel import HamiltonianModel
-from slh.optimize.get_optimizer import get_opt
-from slh.train.checkpoints import CheckpointManager
+# from slh.model.hmodel import HamiltonianModel
+# from slh.optimize.get_optimizer import get_opt
+# from slh.train.checkpoints import CheckpointManager
 
 OptaxGradientTransformation = Union[optax.GradientTransformation]
 OptimizerState = Union[optax.OptState, optax.MultiStepsState]
@@ -39,7 +39,7 @@ def fit(
 
     latest_dir = ckpt_dir / "latest"
     best_dir = ckpt_dir / "best"
-    ckpt_manager = CheckpointManager()
+    # ckpt_manager = CheckpointManager()
 
     train_batches_per_epoch = train_dataset.steps_per_epoch()
     val_batches_per_epoch = val_dataset.steps_per_epoch()
