@@ -42,11 +42,8 @@ class ExponentialScaleCorrection(nn.Module):
         assert correctly_shaped_prefactors.shape[-1] == self.nfeatures
         assert correctly_shaped_prefactors.shape[-2] == (self.max_ell + 1) ** 2
 
-        return (
-            correctly_shaped_prefactors
-            * jnp.exp(
-                -jnp.einsum(
-                    "l..., pl -> p...", correctly_shaped_exponents, neighbour_distances
-                )
+        return correctly_shaped_prefactors * jnp.exp(
+            -jnp.einsum(
+                "l..., pl -> p...", correctly_shaped_exponents, neighbour_distances
             )
         )
