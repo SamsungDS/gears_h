@@ -12,6 +12,7 @@ from slh.data.input_pipeline import (initialize_dataset_from_list,
 # from slh.train.metrics import initialize_metrics
 from slh.train.trainer import fit
 from slh.utilities.random import seed_py_np_tf
+from slh.model.builder import build_lcao_hamiltonian_model
 
 log = logging.getLogger(__name__)
 
@@ -54,23 +55,28 @@ def run(user_config, log_level="error"):
     # loss_fn = initialize_loss_fn(config.loss)
     # logging_metrics = initialize_metrics(config.metrics)
 
+    num_train = config.data.n_train
+    num_val = config.data.n_valid
     ds_list = read_dataset_as_list(
-        Path(config.data.data_path),
+        Path(config.data.data_path), num_snapshots=num_train+num_val,
     )
     if len(ds_list) == 0:
         raise FileNotFoundError(f"Did not find any snapshots at {Path(config.data.directory)}")
 
-    num_train = config.data.n_train
-    num_val = config.data.n_valid
-    train_ds, ds_stats, val_ds = initialize_dataset_from_list(
-        ds_list, num_train, num_val
+    train_ds, val_ds = initialize_dataset_from_list(
+        dataset_as_list=ds_list,
+        num_train=num_train,
+        num_val=num_val,
+        batch_size=config.data.batch_size,
+        val_batch_size=config.data.valid_batch_size,
+        n_epochs=config.n_epochs
     )
 
     # train_ds.set_batch_size(config.data.batch_size)
     # val_ds.set_batch_size(config.data.valid_batch_size)
 
     log.info("Initializing Model")
-    sample_input, init_box = train_ds.init_input()
+    sample_input = train_ds.init_input()
 
     # builder = ModelBuilder(config.model.get_dict())
     model = build_lcao_hamiltonian_model(
@@ -80,7 +86,7 @@ def run(user_config, log_level="error"):
         # apply_mask=True,
         # init_box=init_box,
     )
-    batched_model = jax.vmap(model.apply, in_axes=(None, 0, 0, 0, 0, 0))
+    batched_model = jax.vmap(model.apply, in_axes=(None, 0, 0, 0, 0, 0), axis_name="batch")
     
     params, rng_key = create_params(model, rng_key, sample_input, config.n_models)
 
