@@ -122,7 +122,7 @@ class ModelConfig(BaseModel, extra="forbid"):
 
 
 class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
-    opt_name: str = "adam"
+    name: str = "adam"
     lr: NonNegativeFloat = 0.001
     opt_kwargs: dict = {}
     sam_rho: NonNegativeFloat = 0.0
