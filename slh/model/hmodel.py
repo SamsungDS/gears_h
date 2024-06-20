@@ -5,9 +5,13 @@ import flax.linen as nn
 import jax
 import jax.numpy as jnp
 
-from slh.layers import (AtomCenteredTensorMomentDescriptor,
-                        BondCenteredTensorMomentDescriptor, DenseBlock,
-                        Readout, SpeciesAwareRadialBasis)
+from slh.layers import (
+    AtomCenteredTensorMomentDescriptor,
+    BondCenteredTensorMomentDescriptor,
+    DenseBlock,
+    Readout,
+    SpeciesAwareRadialBasis,
+)
 from slh.layers.corrections import ExponentialScaleCorrection
 
 

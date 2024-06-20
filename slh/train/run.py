@@ -1,18 +1,18 @@
 import logging
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import jax
 
-from slh.config.train_config import TrainConfig
 from slh.config.common import parse_config
-from slh.data.input_pipeline import (initialize_dataset_from_list,
-                                     read_dataset_as_list)
+from slh.config.train_config import TrainConfig
+from slh.data.input_pipeline import initialize_dataset_from_list, read_dataset_as_list
+from slh.model.builder import build_lcao_hamiltonian_model
+
 # from slh.train.callbacks import initialize_callbacks
 # from slh.train.metrics import initialize_metrics
 from slh.train.trainer import fit
 from slh.utilities.random import seed_py_np_tf
-from slh.model.builder import build_lcao_hamiltonian_model
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +50,6 @@ def run(user_config, log_level="error"):
     config.dump_config(config.data.model_version_path)
     log.info(f"Running on {jax.devices()}")
 
-
     # callbacks = initialize_callbacks(config.callbacks, config.data.model_version_path)
     # loss_fn = initialize_loss_fn(config.loss)
     # logging_metrics = initialize_metrics(config.metrics)
@@ -58,10 +57,13 @@ def run(user_config, log_level="error"):
     num_train = config.data.n_train
     num_val = config.data.n_valid
     ds_list = read_dataset_as_list(
-        Path(config.data.data_path), num_snapshots=num_train+num_val,
+        Path(config.data.data_path),
+        num_snapshots=num_train + num_val,
     )
     if len(ds_list) == 0:
-        raise FileNotFoundError(f"Did not find any snapshots at {Path(config.data.directory)}")
+        raise FileNotFoundError(
+            f"Did not find any snapshots at {Path(config.data.directory)}"
+        )
 
     train_ds, val_ds = initialize_dataset_from_list(
         dataset_as_list=ds_list,
@@ -69,7 +71,7 @@ def run(user_config, log_level="error"):
         num_val=num_val,
         batch_size=config.data.batch_size,
         val_batch_size=config.data.valid_batch_size,
-        n_epochs=config.n_epochs
+        n_epochs=config.n_epochs,
     )
 
     # train_ds.set_batch_size(config.data.batch_size)
@@ -86,7 +88,8 @@ def run(user_config, log_level="error"):
         # apply_mask=True,
         # init_box=init_box,
     )
-    batched_model = jax.vmap(model.apply, in_axes=(None, 0, 0, 0, 0, 0), axis_name="batch")
-    
-    params, rng_key = create_params(model, rng_key, sample_input, config.n_models)
+    batched_model = jax.vmap(
+        model.apply, in_axes=(None, 0, 0, 0, 0, 0), axis_name="batch"
+    )
 
+    params, rng_key = create_params(model, rng_key, sample_input, config.n_models)

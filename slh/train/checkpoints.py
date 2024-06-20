@@ -98,6 +98,7 @@ class CheckpointManager:
             async_manager=self.async_manager,
         )
 
+
 def stack_parameters(param_list: List[FrozenDict]) -> FrozenDict:
     """Combine a list of parameter sets into a stacked version.
     Used for model ensembles.

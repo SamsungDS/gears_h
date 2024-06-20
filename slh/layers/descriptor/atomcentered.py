@@ -6,8 +6,7 @@ import flax.linen as nn
 import jax.numpy as jnp
 from jaxtyping import Array, Float, Int
 
-from slh.layers.descriptor.radial_basis import (SpeciesAwareRadialBasis,
-                                                jinclike)
+from slh.layers.descriptor.radial_basis import SpeciesAwareRadialBasis, jinclike
 
 
 class AtomCenteredTensorMomentDescriptor(nn.Module):

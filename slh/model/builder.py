@@ -1,15 +1,19 @@
 from functools import partial
-from slh.layers.descriptor import (AtomCenteredTensorMomentDescriptor,
-                                   SAAtomCenteredDescriptor,
-                                   BondCenteredTensorMomentDescriptor,
-                                   SpeciesAwareRadialBasis)
+
+import e3x
+import jax
+import jax.numpy as jnp
+
+from slh.layers.descriptor import (
+    AtomCenteredTensorMomentDescriptor,
+    BondCenteredTensorMomentDescriptor,
+    SAAtomCenteredDescriptor,
+    SpeciesAwareRadialBasis,
+)
 from slh.layers.readout import Readout
 from slh.layers.residual_dense import DenseBlock
 from slh.model.hmodel import HamiltonianModel
 
-import jax.numpy as jnp
-import jax
-import e3x
 
 def build_model(config, readout_config):
     radial_descriptor = SpeciesAwareRadialBasis(
@@ -18,7 +22,6 @@ def build_model(config, readout_config):
 
     atom_centered_descriptor = SAAtomCenteredDescriptor(
         radial_basis=radial_descriptor,
-        
     )
 
     bond_descriptor = BondCenteredTensorMomentDescriptor(

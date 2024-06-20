@@ -1,11 +1,19 @@
-from typing import List, Literal, Optional
 from pathlib import Path
-
-from pydantic import (BaseModel, ConfigDict, Field, NonNegativeFloat,
-                      PositiveFloat, NonNegativeInt, PositiveInt, StrictBool, create_model,
-                      model_validator)
+from typing import List, Literal, Optional
 
 import yaml
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    NonNegativeFloat,
+    NonNegativeInt,
+    PositiveFloat,
+    PositiveInt,
+    StrictBool,
+    create_model,
+    model_validator,
+)
 
 
 class DataConfig(BaseModel, extra="forbid"):

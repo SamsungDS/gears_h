@@ -40,7 +40,7 @@ def train(
     """
 
     from slh.train.run import run
-    
+
     run(train_config_path, log_level)
 
 
