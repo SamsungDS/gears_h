@@ -28,13 +28,19 @@ log = logging.getLogger(__name__)
 
 
 def initialize_dataset_from_list(
-    dataset_as_list: DatasetList, num_train: int, num_val: int
+    dataset_as_list: DatasetList,
+    num_train: int,
+    num_val: int,
+    batch_size: int,
+    val_batch_size: int,
+    n_epochs: int,
 ):
     train_idx, val_idx = split_idxs(len(dataset_as_list), num_train, num_val)
     train_ds_list, val_ds_list = split_dataset(dataset_as_list, train_idx, val_idx)
-    train_ds, val_ds = PureInMemoryDataset(train_ds_list, 1, 10), PureInMemoryDataset(
-        val_ds_list, 10, 10
+    train_ds, val_ds = PureInMemoryDataset(train_ds_list, batch_size=batch_size, n_epochs=n_epochs), PureInMemoryDataset(
+        val_ds_list, batch_size=val_batch_size, n_epochs=n_epochs
     )
+    return train_ds, val_ds
 
 
 def pairwise_hamiltonian_from_file(filename: Path):
@@ -340,7 +346,8 @@ class InMemoryDataset:
         self.enqueue(min(self.buffer_size, self.n_data))
 
     def init_input(self):
-        pass
+        """Returns first batch of inputs and labels to init the model."""
+        return self.prepare_single_snapshot(0)
 
     def steps_per_epoch(self):
         # This throws away a bit of the training data, but at most 1 batch worth.
