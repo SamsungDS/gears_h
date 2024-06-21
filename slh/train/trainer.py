@@ -1,7 +1,7 @@
 import logging
 from functools import partial
 from pathlib import Path
-from time import time
+import time
 from typing import Union
 
 log = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ def fit(
     # We want to batch this over all inputs, but not the parameters of the model
     model_apply = jax.vmap(state.apply_fn, in_axes=(None, 0, 0, 0))
 
-    _batch_inputs, _batch_labels = next(batch_train_dataset)
+    # _batch_inputs, _batch_labels = next(batch_train_dataset)
 
     # params = model.init(
     #     jax.random.PRNGKey(2462),
@@ -79,20 +79,20 @@ def fit(
     #     for tscale in jnp.linspace(1, 10, 10)
     # ]
 
-    # optimizer = optax.radam(
-    #     learning_rate=optax.exponential_decay(
-    #     init_value=1e-3,
-    #     transition_steps=1,
-    #     decay_rate=0.9977,
-    #     transition_begin=20,
-    #     staircase=False,
-    #     end_value=1e-5),
-    #     nesterov=True
-    #     )
+    optimizer = optax.radam(
+        learning_rate=optax.exponential_decay(
+        init_value=1e-3,
+        transition_steps=1,
+        decay_rate=0.9977,
+        transition_begin=20,
+        staircase=False,
+        end_value=1e-5),
+        nesterov=True
+        )
 
-    # optimizer = optax.MultiSteps(optimizer, every_k_schedule=n_grad_acc)
+    optimizer = optax.MultiSteps(optimizer, every_k_schedule=n_grad_acc)
 
-    opt_state = optimizer.init(params)
+    opt_state = state.opt_state# optimizer.init(state.params)
 
     try:
 
@@ -108,12 +108,12 @@ def fit(
 
         for epoch in range(n_epochs):
             epoch_start_time = time.time()
-            callbacks.on_epoch_begin(epoch=epoch + 1)
+            # callbacks.on_epoch_begin(epoch=epoch + 1)
 
             effective_batch_size = n_grad_acc * train_dataset.batch_size
 
             epoch_loss.update({"train_loss": 0.0})
-            train_batch_metrics = logging_metrics.empty()
+            # train_batch_metrics = logging_metrics.empty()
 
             train_batch_pbar = trange(
                 0,
@@ -157,7 +157,7 @@ def fit(
 
             epoch_val_mae_accumulator = 0.0
 
-            val_batch_metrics = logging_metrics.empty()
+            # val_batch_metrics = logging_metrics.empty()
 
             for val_batch in range(0, val_batches_per_epoch // n_grad_acc):
                 batch_data_list = [next(batch_val_dataset) for _ in range(n_grad_acc)]
@@ -184,7 +184,7 @@ def fit(
     except StopIteration:
         print("Yes the stopiteration")
 
-    return model, params if len(best_params) == 0 else best_params
+    return state, params if len(best_params) == 0 else best_params
 
 
 @partial(jax.jit, static_argnames=("model_apply", "optimizer"))

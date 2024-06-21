@@ -45,19 +45,26 @@ def create_train_state(model, params: FrozenDict, tx):
     return train_state_fn(params)
 
 
-def create_params(model, rng_key, sample_input: tuple, n_models: int):
+def create_params(model, rng_key, sample_input: dict, n_models: int):
     keys = jax.random.split(rng_key, num=n_models + 1)
     rng_key, model_rng = keys[0], keys[1:]
 
     log.info(f"initializing {n_models} models")
 
     if n_models == 1:
-        params = model.init(model_rng[0], *sample_input)
+        params = model.init(
+            model_rng[0],
+            jnp.array(sample_input["numbers"]),
+            jnp.array(sample_input["idx_ij"]),
+            jnp.array(sample_input["idx_D"]),
+        )
+        # params = model.init(jax.random.PRNGKey(245), *sample_input)
     elif n_models > 1:
-        num_args = len(sample_input)
-        # vmap only over parameters, not over any data from the input
-        in_axes = (0, *[None] * num_args)
-        params = jax.vmap(model.init, in_axes=in_axes)(model_rng, *sample_input)
+        raise NotImplementedError
+        # num_args = len(sample_input)
+        # # vmap only over parameters, not over any data from the input
+        # in_axes = (0, *[None] * num_args)
+        # params = jax.vmap(model.init, in_axes=in_axes)(model_rng, *sample_input)
     else:
         raise ValueError(f"n_models should be a positive integer, found {n_models}")
 
@@ -139,15 +146,15 @@ def load_params(model_version_path: Path, best=True) -> FrozenDict:
     return params
 
 
-def restore_single_parameters(model_dir: Path) -> Tuple[Config, FrozenDict]:
-    """Load the config and parameters of a single model"""
-    model_dir = Path(model_dir)
-    model_config = parse_config(model_dir / "config.yaml")
+# def restore_single_parameters(model_dir: Path) -> Tuple[Config, FrozenDict]:
+#     """Load the config and parameters of a single model"""
+#     model_dir = Path(model_dir)
+#     model_config = parse_config(model_dir / "config.yaml")
 
-    if model_config.data.experiment == "":
-        model_config.data.directory = model_dir.resolve().as_posix()
-    else:
-        model_config.data.directory = model_dir.parent.resolve().as_posix()
+#     if model_config.data.experiment == "":
+#         model_config.data.directory = model_dir.resolve().as_posix()
+#     else:
+#         model_config.data.directory = model_dir.parent.resolve().as_posix()
 
-    ckpt_dir = model_config.data.model_version_path
-    return model_config, load_params(ckpt_dir)
+#     ckpt_dir = model_config.data.model_version_path
+#     return model_config, load_params(ckpt_dir)

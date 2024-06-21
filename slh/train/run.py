@@ -11,6 +11,7 @@ from slh.model.builder import build_lcao_hamiltonian_model
 
 # from slh.train.callbacks import initialize_callbacks
 # from slh.train.metrics import initialize_metrics
+from slh.train.checkpoints import create_params, create_train_state
 from slh.train.trainer import fit
 from slh.utilities.random import seed_py_np_tf
 
@@ -74,22 +75,28 @@ def run(user_config, log_level="error"):
         n_epochs=config.n_epochs,
     )
 
-    # train_ds.set_batch_size(config.data.batch_size)
-    # val_ds.set_batch_size(config.data.valid_batch_size)
-
     log.info("Initializing Model")
     sample_input = train_ds.init_input()
 
-    # builder = ModelBuilder(config.model.get_dict())
     model = build_lcao_hamiltonian_model(
         config.model.get_dict(),
-        # scale=ds_stats.elemental_scale,
-        # shift=ds_stats.elemental_shift,
-        # apply_mask=True,
-        # init_box=init_box,
     )
     batched_model = jax.vmap(
         model.apply, in_axes=(None, 0, 0, 0, 0, 0), axis_name="batch"
     )
 
-    params, rng_key = create_params(model, rng_key, sample_input, config.n_models)
+    params, rng_key = create_params(model, rng_key, sample_input, 1)
+
+    import optax
+    state = create_train_state(batched_model, params, optax.adam(1e-3))
+
+    fit(
+        state,
+        train_dataset=train_ds,
+        val_dataset=val_ds, logging_metrics=None,
+        callbacks=None,
+        n_grad_acc=1,
+        n_epochs=config.n_epochs,
+        ckpt_dir=config.data.model_version_path,
+        ckpt_interval=1,
+    )

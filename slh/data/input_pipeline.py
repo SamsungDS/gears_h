@@ -350,7 +350,8 @@ class InMemoryDataset:
 
     def init_input(self):
         """Returns first batch of inputs and labels to init the model."""
-        return self.prepare_single_snapshot(0)
+        inputs, _ = self.prepare_single_snapshot(0)
+        return inputs
 
     def steps_per_epoch(self):
         # This throws away a bit of the training data, but at most 1 batch worth.
