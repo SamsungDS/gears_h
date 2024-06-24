@@ -268,7 +268,7 @@ def fit(
             
             epoch_pbar.update()
     
-    except StopIteration:
-        print("Yes the stopiteration")
+    except StopIteration or KeyboardInterrupt:
+        print("Yes the stopiteration or the keyboard interrupt")
 
     return model, params
