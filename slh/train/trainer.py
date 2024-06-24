@@ -233,7 +233,7 @@ def fit(
                 epoch_mae_loss += train_mae_loss
 
                 train_batch_pbar.set_postfix(
-                    mae=f"{train_mae_loss / effective_batch_size:0.1e}"
+                    mae=f"{train_mae_loss / effective_batch_size:0.3e}"
                 )
                 train_batch_pbar.update()
 
@@ -258,12 +258,12 @@ def fit(
                 epoch_mae_val_loss += val_mae_loss
 
                 val_batch_pbar.set_postfix(
-                    mae=f"{val_mae_loss / effective_batch_size:0.1e}"
+                    mae=f"{val_mae_loss / effective_batch_size:0.3e}"
                 )
                 val_batch_pbar.update()
 
             epoch_pbar.set_postfix(
-                mae=f"{epoch_mae_val_loss / val_batches_per_epoch:0.1e}"
+                mae=f"{epoch_mae_val_loss / val_batches_per_epoch:0.3e}"
             )
             
             epoch_pbar.update()
