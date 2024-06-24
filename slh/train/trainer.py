@@ -270,5 +270,7 @@ def fit(
     
     except StopIteration or KeyboardInterrupt:
         print("Yes the stopiteration or the keyboard interrupt")
+        return model, params
+
 
     return model, params
