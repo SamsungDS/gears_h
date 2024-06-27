@@ -207,6 +207,8 @@ def fit(
     epoch_pbar = trange(n_epochs, desc="Epochs", ncols=75, disable=False, leave=True)
 
     try:
+        mae_hist = []
+        # lr_hist = []
         for epoch in range(n_epochs):
             effective_batch_size = n_grad_acc * train_dataset.batch_size
 
@@ -265,12 +267,15 @@ def fit(
             epoch_pbar.set_postfix(
                 mae=f"{epoch_mae_val_loss / val_batches_per_epoch:0.3e}"
             )
-            
+            mae_hist.append(epoch_mae_val_loss / val_batches_per_epoch)
             epoch_pbar.update()
     
     except StopIteration or KeyboardInterrupt:
         print("Yes the stopiteration or the keyboard interrupt")
         return model, params
-
+    
+    import numpy as np
+    mae_hist = np.array(mae_hist)
+    np.savetxt("mae.log",mae_hist)
 
     return model, params
