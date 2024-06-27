@@ -44,40 +44,11 @@ def fit(
 
     train_batches_per_epoch = train_dataset.steps_per_epoch()
     val_batches_per_epoch = val_dataset.steps_per_epoch()
-    # train_dataset = iter(train_dataset)
     batch_train_dataset = train_dataset.shuffle_and_batch()
     batch_val_dataset = val_dataset.shuffle_and_batch()
 
-    # We want to batch this over all inputs, but not the parameters of the model
+    # TODO This is now invalid
     model_apply = jax.vmap(state.apply_fn, in_axes=(None, 0, 0, 0))
-
-    # _batch_inputs, _batch_labels = next(batch_train_dataset)
-
-    # params = model.init(
-    #     jax.random.PRNGKey(2462),
-    #     atomic_numbers=_batch_inputs["numbers"][0],
-    #     neighbour_indices=_batch_inputs["idx_ij"][0],
-    #     neighbour_displacements=_batch_inputs["idx_D"][0],
-    # )
-    # print(
-    #     model.tabulate(
-    #         jax.random.PRNGKey(2462),
-    #         _batch_inputs["numbers"][0],
-    #         _batch_inputs["idx_ij"][0],
-    #         _batch_inputs["idx_D"][0],
-    #     )
-    # )
-
-    # cosine_lr = [
-    #     dict(
-    #         init_value=1e-4,
-    #         peak_value=1e-3,
-    #         warmup_steps=int(5 * tscale),
-    #         decay_steps=int(30 * tscale),
-    #         end_value=1e-5,
-    #     )
-    #     for tscale in jnp.linspace(1, 10, 10)
-    # ]
 
     optimizer = optax.radam(
         learning_rate=optax.exponential_decay(
@@ -187,51 +158,6 @@ def fit(
     return state, params if len(best_params) == 0 else best_params
 
 
-@partial(jax.jit, static_argnames=("model_apply", "optimizer"))
-def train_step(
-    params: optax.Params,
-    model_apply: callable,
-    optimizer,
-    batch_full_list: list,
-    opt_state: OptimizerState,
-):
-    step_mae_loss = 0.0
-    for batch_full in batch_full_list:
-        batch, batch_labels = batch_full
-
-        def loss_function(params):
-            h_irreps_predicted = model_apply(
-                params,
-                batch["numbers"],
-                batch["idx_ij"],
-                batch["idx_D"],
-            )
-
-            assert (
-                h_irreps_predicted.shape
-                == batch_labels["h_irreps"].shape
-                == batch_labels["mask"].shape
-            ), "This happens when your readout and your labels are not consistent."
-
-            loss = jnp.mean(
-                optax.huber_loss(h_irreps_predicted, batch_labels["h_irreps"]),
-                where=batch_labels["mask"],
-            )
-
-            return loss, jnp.mean(
-                jnp.abs(h_irreps_predicted - batch_labels["h_irreps"]),
-                where=batch_labels["mask"],
-            )
-
-        (loss, mae_loss), grad = jax.value_and_grad(loss_function, has_aux=True)(params)
-        updates, opt_state = optimizer.update(grad, opt_state, params)
-
-        params = optax.apply_updates(params, updates)
-        step_mae_loss += mae_loss
-
-    return params, opt_state, grad, loss, step_mae_loss
-
-
 @partial(jax.jit, static_argnames=("model_apply",))
 def val_step(params, model_apply, batch_full_list):
     step_mae_loss = 0.0
@@ -266,3 +192,74 @@ def val_step(params, model_apply, batch_full_list):
         step_mae_loss += mae_loss
 
     return loss, step_mae_loss
+
+
+def make_step_functions(loss_function, logging_metrics, model):
+    
+    @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
+    def train_step(
+        params: optax.Params,
+        model_apply: callable,
+        optimizer,
+        batch_full_list: list,
+        opt_state: OptimizerState,
+    ):
+        step_mae_loss = 0.0
+        for batch_full in batch_full_list:
+            inputs, labels = batch_full
+            offsite_h_irreps_prediction, onsite_h_irreps_prediction = model_apply(
+                    params,
+                    inputs["numbers"],
+                    inputs["idx_ij"],
+                    inputs["idx_D"],
+                )
+            
+            predictions = {
+                'onsite_h_irreps': onsite_h_irreps_prediction,
+                'offsite_h_irreps': offsite_h_irreps_prediction}
+            
+            assert (
+                    onsite_h_irreps_prediction.shape
+                    == labels["onsite_h_irreps"].shape
+                    == labels["onsite_irreps_mask"].shape
+                ), "This happens when your readout and your labels are not consistent."
+
+            assert (
+                    offsite_h_irreps_prediction.shape
+                    == labels["offsite_h_irreps"].shape
+                    == labels["offsite_irreps_mask"].shape
+                ), "This happens when your readout and your labels are not consistent."
+
+            # TODO This gets factored out
+            def loss_function(inputs, labels, predictions):
+
+                onsite_loss = jnp.mean(
+                    optax.huber_loss(predictions['onsite_h_irreps'],
+                                     labels["onsite_h_irreps"]),
+                    where=labels["onsite_irreps_mask"],
+                )
+                
+                offsite_loss = jnp.mean(
+                    optax.huber_loss(predictions['offsite_h_irreps'],
+                                     labels['offsite_h_irreps'],
+                                     ),
+                    where=labels["offsite_irreps_mask"],
+                )
+
+                loss = onsite_loss + offsite_loss
+
+                return loss, -1.0 
+
+            # TODO: Metrics like MAE etc
+            # jnp.mean(
+            #         jnp.abs(h_irreps_predicted - batch_labels["h_irreps"]),
+            #         where=batch_labels["mask"],
+            #     )
+
+            (loss, mae_loss), grad = jax.value_and_grad(loss_function, has_aux=True)(params)
+            updates, opt_state = optimizer.update(grad, opt_state, params)
+
+            params = optax.apply_updates(params, updates)
+            step_mae_loss += mae_loss
+
+        return params, opt_state, grad, loss, step_mae_loss
