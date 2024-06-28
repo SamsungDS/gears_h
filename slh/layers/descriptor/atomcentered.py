@@ -244,7 +244,7 @@ class TDSAAtomCenteredDescriptor(nn.Module):
     def setup(self):
         self.embedding = self.radial_basis.embedding
         self.embedding_transformation = e3x.nn.Dense(
-            self.radial_basis.num_radial,
+            self.num_tensordense_features,
             name="embed_transform",
             dtype=jnp.float32,
             param_dtype=jnp.float32,
