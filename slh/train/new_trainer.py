@@ -33,6 +33,30 @@ def fit(state: TrainState,
     
     return
 
+def loss_function(params):
+    h_irreps_predicted = model_apply(
+        params,
+        batch["numbers"],
+        batch["idx_ij"],
+        batch["idx_D"],
+    )
+
+    assert (
+        h_irreps_predicted.shape
+        == batch_labels["h_irreps"].shape
+        == batch_labels["mask"].shape
+    ), "This happens when your readout and your labels are not consistent."
+
+    loss = jnp.mean(
+        optax.huber_loss(h_irreps_predicted, batch_labels["h_irreps"]),
+        where=batch_labels["mask"]
+    )
+
+    return loss, jnp.mean(
+        jnp.abs(h_irreps_predicted - batch_labels["h_irreps"]),
+        where=batch_labels["mask"],
+    )
+
 def make_step_functions(loss_function, logging_metrics, model):
 
     @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
