@@ -63,7 +63,7 @@ def calculate_loss(params, batch_full, loss_function, model):
 
     return loss, mae_loss
 
-def make_step_functions(loss_function = huber_loss, logging_metrics, model):
+def make_step_functions(logging_metrics, model, loss_function = huber_loss):
     loss_calculator = partial(calculate_loss, loss_function=loss_function, model=model)
     grad_fn = jax.value_and_grad(loss_calculator, 0, has_aux=True)
 
@@ -77,9 +77,8 @@ def make_step_functions(loss_function = huber_loss, logging_metrics, model):
     @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
     def train_step(state, batch):
 
-        loss, mae_loss, state = update_step()
-        
-        return params, opt_state, grad, loss, step_mae_loss
+        loss, mae_loss, state = update_step(state, batch)
+        return loss, mae_loss, state
     
     # TODO OLD KEPT JUST IN CASE. Remove when no longer needed.
     # @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
@@ -93,10 +92,10 @@ def make_step_functions(loss_function = huber_loss, logging_metrics, model):
     
     
     @partial(jax.jit, static_argnames=("model_apply",))
-    def val_step(params, 
-                 model_apply, 
-                 batch_full_list):
+    def val_step(state, batch):
 
-        return loss, step_mae_loss
+        loss, mae_loss = loss_calculator(state, batch)
+
+        return loss, mae_loss
     
     return train_step, val_step
