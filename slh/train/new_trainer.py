@@ -33,7 +33,8 @@ def fit(state: TrainState,
     
     return
 
-def loss_function(params):
+def calculate_loss(params):
+    # TODO Make loss function an argument and allow user input.
     h_irreps_predicted = model_apply(
         params,
         batch["numbers"],
@@ -52,12 +53,19 @@ def loss_function(params):
         where=batch_labels["mask"]
     )
 
-    return loss, jnp.mean(
-        jnp.abs(h_irreps_predicted - batch_labels["h_irreps"]),
-        where=batch_labels["mask"],
-    )
+    mae_loss = jnp.mean(jnp.abs(h_irreps_predicted - batch_labels["h_irreps"]),
+                        where=batch_labels["mask"])
+
+    return loss, mae_loss
 
 def make_step_functions(loss_function, logging_metrics, model):
+
+    grad_fn = jax.value_and_grad(loss_function, 0, has_aux=True)
+
+    def update_step(state, inputs, labels):
+        (loss, mae_loss), grads = grad_fn(state.params)
+        state = state.apply_gradients(grads=grads)
+        return loss, mae_loss, state
 
     @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
     def train_step(params: optax.Params,
