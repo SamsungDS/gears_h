@@ -11,11 +11,12 @@ import jax.numpy as jnp
 import optax
 from clu import metrics
 from flax.training.train_state import TrainState
+# from orbax.checkpointing import CheckpointManager, CheckpointManagerOptions # for potential orbax migration
 from tensorflow.keras.callbacks import CallbackList
 from tqdm import trange
 
 from slh.data.input_pipeline import PureInMemoryDataset
-from slh.train.checkpoints import load_state
+from slh.train.checkpoints import CheckpointManager, load_state
 from slh.train.loss import huber_loss
 
 OptaxGradientTransformation = Union[optax.GradientTransformation]
@@ -35,13 +36,22 @@ def fit(state: TrainState,
         loss_function = huber_loss):
     
     # Error handling here
+    # TODO implement these functionalities.
     if data_parallel:
+        raise NotImplementedError
+    if is_ensemble:
         raise NotImplementedError
     
     # Checkpointing directories and manager
     latest_dir = ckpt_dir / "latest"
     best_dir = ckpt_dir / "best"
+    # TODO Migrate to orbax checkpointing (?). Currently uses the legacy flax checkpointing API.
     ckpt_manager = CheckpointManager()
+    # For potential orbax migration. inelegant but currently the easiest way to handle both best and latest.
+    # latest_ckpt_manager_options = CheckpointManagerOptions(max_to_keep=100, save_interval_steps=1)
+    # latest_ckpt_manager = CheckpointManager(path = latest_dir, options = latest_ckpt_manager_options)
+    # best_ckpt_manager_options = CheckpointManagerOptions(max_to_keep=5, save_interval_steps=1)
+    # best_ckpt_manager = CheckpointManager(path = best_dir, options = best_ckpt_manager_options)
 
     # Dataset batching and shuffling
     train_batches_per_epoch = train_dataset.steps_per_epoch()
@@ -63,6 +73,7 @@ def fit(state: TrainState,
 
     best_params = {} # TODO do we need this if we're saving the state?
     best_mae_loss = jnp.inf
+    best_loss = float(jnp.inf)
     epoch_loss = {}
 
     for epoch in range(start_epoch, n_epochs):
@@ -131,6 +142,16 @@ def fit(state: TrainState,
                 best_params['params'] = state.params
 
         epoch_end_time = time.time()
+        # TODO store this elsewhere?
+        epoch_loss['epoch_time'] = epoch_end_time - epoch_start_time
+
+        ckpt = {"model": state, "epoch": epoch}
+        if epoch % ckpt_interval == 0:
+            ckpt_manager.save_checkpoint(ckpt, epoch, latest_dir)
+
+        if epoch_loss["val_loss"] < best_loss:
+            best_loss = epoch_loss["val_loss"]
+            ckpt_manager.save_checkpoint(ckpt, epoch, best_dir)
 
 
     return
