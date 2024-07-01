@@ -15,6 +15,7 @@ from tensorflow.keras.callbacks import CallbackList
 from tqdm import trange
 
 from slh.data.input_pipeline import PureInMemoryDataset
+from slh.train.checkpoints import load_state
 from slh.train.loss import huber_loss
 
 OptaxGradientTransformation = Union[optax.GradientTransformation]
@@ -33,6 +34,33 @@ def fit(state: TrainState,
         data_parallel: bool = False,
         loss_function = huber_loss):
     
+    # Error handling here
+    if data_parallel:
+        raise NotImplementedError
+    
+    # Checkpointing directories and manager
+    latest_dir = ckpt_dir / "latest"
+    best_dir = ckpt_dir / "best"
+    ckpt_manager = CheckpointManager()
+
+    # Dataset batching and shuffling
+    train_batches_per_epoch = train_dataset.steps_per_epoch()
+    val_batches_per_epoch = val_dataset.steps_per_epoch()
+    batch_train_dataset = train_dataset.shuffle_and_batch()
+    batch_val_dataset = val_dataset.shuffle_and_batch()
+
+    # Create train_step and val_step functions
+    train_step, val_step = make_step_functions(logging_metrics,
+                                               model = state.apply_fn,
+                                               loss_function = loss_function
+                                               )
+    
+    state, start_epoch = load_state(state, latest_dir)
+    if start_epoch >= n_epochs:
+        raise ValueError(
+            f"n_epochs <= current epoch from checkpoint ({n_epochs} <= {start_epoch})"
+        )
+
     return
 
 def calculate_loss(params, batch_full, loss_function, model):
