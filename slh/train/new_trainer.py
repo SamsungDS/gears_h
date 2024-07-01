@@ -8,7 +8,6 @@ log = logging.getLogger(__name__)
 
 import jax
 import jax.numpy as jnp
-import optax
 from clu import metrics
 from flax.training.train_state import TrainState
 # from orbax.checkpointing import CheckpointManager, CheckpointManagerOptions # for potential orbax migration
@@ -18,9 +17,6 @@ from tqdm import trange
 from slh.data.input_pipeline import PureInMemoryDataset
 from slh.train.checkpoints import CheckpointManager, load_state
 from slh.train.loss import huber_loss
-
-OptaxGradientTransformation = Union[optax.GradientTransformation]
-OptimizerState = Union[optax.OptState, optax.MultiStepsState]
 
 def fit(state: TrainState,
         train_dataset: PureInMemoryDataset,

@@ -87,6 +87,7 @@ def run(user_config, log_level="error"):
 
     params, rng_key = create_params(model, rng_key, sample_input, 1)
 
+    # TODO Make this controllable from the input file.
     import optax
     state = create_train_state(batched_model, params, optax.adam(1e-3))
 
