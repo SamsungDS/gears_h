@@ -15,6 +15,7 @@ from tensorflow.keras.callbacks import CallbackList
 from tqdm import trange
 
 from slh.data.input_pipeline import PureInMemoryDataset
+from slh.train.loss import huber_loss
 
 OptaxGradientTransformation = Union[optax.GradientTransformation]
 OptimizerState = Union[optax.OptState, optax.MultiStepsState]
@@ -29,17 +30,10 @@ def fit(state: TrainState,
         ckpt_dir: Path,
         ckpt_interval: int = 1,
         is_ensemble: bool = False,
-        data_parallel: bool = False,):
+        data_parallel: bool = False,
+        loss_function = huber_loss):
     
     return
-
-def huber_loss(h_irreps_predicted, batch_labels):
-    loss = jnp.mean(optax.huber_loss(h_irreps_predicted, batch_labels["h_irreps"]),
-                    where=batch_labels["mask"])
-
-    mae_loss = jnp.mean(jnp.abs(h_irreps_predicted - batch_labels["h_irreps"]),
-                        where=batch_labels["mask"])
-    return loss, mae_loss
 
 def calculate_loss(params, batch_full, loss_function, model):
     batch, batch_labels = batch_full
