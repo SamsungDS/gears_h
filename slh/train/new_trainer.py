@@ -60,6 +60,42 @@ def fit(state: TrainState,
         raise ValueError(
             f"n_epochs <= current epoch from checkpoint ({n_epochs} <= {start_epoch})"
         )
+    
+    best_params = {} # TODO do we need this if we're saving the state?
+    best_mae_loss = jnp.inf
+    epoch_loss = {}
+
+    for epoch in range(start_epoch, n_epochs):
+        epoch_start_time = time.time()
+
+        effective_batch_size = n_grad_acc * train_dataset.batch_size
+
+        # Training set loop
+        epoch_loss.update({"train_loss": 0.0})
+        train_mae_loss = jnp.inf
+
+        train_batch_pbar = trange(
+            0,
+            train_batches_per_epoch
+            // n_grad_acc,  # TODO this is a big fragile if train_batches_per_epoch isn't a multiple
+            desc="Train batch",
+            leave=False,
+            ncols=75,
+            smoothing=0.0,
+            mininterval=1.0,
+            disable=True,
+        )
+        for train_batch in range(train_batches_per_epoch // n_grad_acc):
+            batch_data_list = [next(batch_train_dataset) for _ in range(n_grad_acc)]
+            loss, mae_loss, state = train_step(state, batch_data_list)
+            
+            train_mae_loss += mae_loss
+            epoch_loss["train_loss"] += loss
+
+            train_batch_pbar.set_postfix(
+                mae=f"{train_mae_loss / effective_batch_size:0.3e}"
+            )
+            train_batch_pbar.update()
 
     return
 
