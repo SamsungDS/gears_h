@@ -33,7 +33,9 @@ def fit(state: TrainState,
         ckpt_interval: int = 1,
         is_ensemble: bool = False,
         data_parallel: bool = False,
-        loss_function = huber_loss):
+        loss_function = huber_loss,
+        disable_pbar: bool = False,
+        disable_batch_pbar: bool = True):
     
     # Error handling here
     # TODO implement these functionalities.
@@ -76,6 +78,9 @@ def fit(state: TrainState,
     best_loss = float(jnp.inf)
     epoch_loss = {}
 
+    epoch_pbar = trange(
+        start_epoch, n_epochs, desc="Epochs", ncols=100, disable=disable_pbar, leave=True
+    )
     for epoch in range(start_epoch, n_epochs):
         epoch_start_time = time.time()
 
@@ -94,7 +99,7 @@ def fit(state: TrainState,
             ncols=75,
             smoothing=0.0,
             mininterval=1.0,
-            disable=True,
+            disable=disable_batch_pbar,
         )
         # Training set loop - actual training
         for train_batch in range(train_batches_per_epoch // n_grad_acc):
@@ -123,7 +128,7 @@ def fit(state: TrainState,
             ncols=75,
             smoothing=0.0,
             mininterval=1.0,
-            disable=True,
+            disable=disable_batch_pbar,
         )
         # Validation set loop - actual training
         for val_batch in range(val_batches_per_epoch // n_grad_acc):
@@ -134,7 +139,7 @@ def fit(state: TrainState,
             epoch_loss["val_loss"] += loss
 
             val_batch_pbar.set_postfix(
-                mae=f"{epoch_val_mae_accumulator / val_batches_per_epoch:0.1e}"
+                mae=f"{epoch_val_mae_accumulator / val_batches_per_epoch:0.3e}"
             )
 
         if (epoch_val_mae_accumulator / val_batches_per_epoch) < best_mae_loss:
@@ -152,6 +157,9 @@ def fit(state: TrainState,
         if epoch_loss["val_loss"] < best_loss:
             best_loss = epoch_loss["val_loss"]
             ckpt_manager.save_checkpoint(ckpt, epoch, best_dir)
+
+        epoch_pbar.set_postfix(mae=f"{epoch_val_mae_accumulator / val_batches_per_epoch:0.3e}")
+        epoch_pbar.update()
 
 
     return
