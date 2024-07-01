@@ -60,7 +60,7 @@ def fit(state: TrainState,
         raise ValueError(
             f"n_epochs <= current epoch from checkpoint ({n_epochs} <= {start_epoch})"
         )
-    
+
     best_params = {} # TODO do we need this if we're saving the state?
     best_mae_loss = jnp.inf
     epoch_loss = {}
@@ -70,7 +70,7 @@ def fit(state: TrainState,
 
         effective_batch_size = n_grad_acc * train_dataset.batch_size
 
-        # Training set loop
+        # Training set loop - set up
         epoch_loss.update({"train_loss": 0.0})
         train_mae_loss = jnp.inf
 
@@ -85,6 +85,7 @@ def fit(state: TrainState,
             mininterval=1.0,
             disable=True,
         )
+        # Training set loop - actual training
         for train_batch in range(train_batches_per_epoch // n_grad_acc):
             batch_data_list = [next(batch_train_dataset) for _ in range(n_grad_acc)]
             loss, mae_loss, state = train_step(state, batch_data_list)
@@ -96,6 +97,41 @@ def fit(state: TrainState,
                 mae=f"{train_mae_loss / effective_batch_size:0.3e}"
             )
             train_batch_pbar.update()
+        
+        epoch_loss["train_loss"] /= train_batches_per_epoch
+
+        # Validation set loop - set up
+        epoch_loss.update({"val_loss": 0.0})
+        epoch_val_mae_accumulator = 0.0
+
+        val_batch_pbar = trange(
+            0,
+            val_batches_per_epoch // n_grad_acc, # TODO is this fragile like the training loop equivalent?
+            desc="Val batch",
+            leave=False,
+            ncols=75,
+            smoothing=0.0,
+            mininterval=1.0,
+            disable=True,
+        )
+        # Validation set loop - actual training
+        for val_batch in range(val_batches_per_epoch // n_grad_acc):
+            batch_data_list = [next(batch_val_dataset) for _ in range(n_grad_acc)]
+            loss, mae_loss = val_step(state, batch_data_list)
+
+            epoch_val_mae_accumulator += mae_loss
+            epoch_loss["val_loss"] += loss
+
+            val_batch_pbar.set_postfix(
+                mae=f"{epoch_val_mae_accumulator / val_batches_per_epoch:0.1e}"
+            )
+
+        if (epoch_val_mae_accumulator / val_batches_per_epoch) < best_mae_loss:
+                best_mae_loss = epoch_val_mae_accumulator / val_batches_per_epoch
+                best_params['params'] = state.params
+
+        epoch_end_time = time.time()
+
 
     return
 
