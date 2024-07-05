@@ -1,265 +1,220 @@
 import logging
+import time
 from functools import partial
 from pathlib import Path
-import time
 from typing import Union
 
 log = logging.getLogger(__name__)
 
 import jax
 import jax.numpy as jnp
-import optax
 from clu import metrics
 from flax.training.train_state import TrainState
+# from orbax.checkpointing import CheckpointManager, CheckpointManagerOptions # for potential orbax migration
 from tensorflow.keras.callbacks import CallbackList
 from tqdm import trange
 
 from slh.data.input_pipeline import PureInMemoryDataset
+from slh.train.checkpoints import CheckpointManager, load_state
+from slh.train.loss import huber_loss
 
-# from slh.model.hmodel import HamiltonianModel
-# from slh.optimize.get_optimizer import get_opt
-# from slh.train.checkpoints import CheckpointManager
-
-OptaxGradientTransformation = Union[optax.GradientTransformation]
-OptimizerState = Union[optax.OptState, optax.MultiStepsState]
-
-
-def fit(
-    state: TrainState,
-    train_dataset: PureInMemoryDataset,
-    val_dataset: PureInMemoryDataset,
-    logging_metrics: metrics.Collection,
-    callbacks: CallbackList,
-    n_grad_acc: int,
-    n_epochs: int,
-    ckpt_dir: Path,
-    ckpt_interval: int = 1,
-    is_ensemble: bool = False,
-    data_parallel: bool = False,
-):
-
+def fit(state: TrainState,
+        train_dataset: PureInMemoryDataset,
+        val_dataset: PureInMemoryDataset,
+        logging_metrics: metrics.Collection,
+        callbacks: CallbackList,
+        n_grad_acc: int,
+        n_epochs: int,
+        ckpt_dir: Path,
+        ckpt_interval: int = 1,
+        is_ensemble: bool = False,
+        data_parallel: bool = False,
+        loss_function = huber_loss,
+        disable_pbar: bool = False,
+        disable_batch_pbar: bool = True):
+    
+    # Error handling here
+    # TODO implement these functionalities.
+    if data_parallel:
+        raise NotImplementedError
+    if is_ensemble:
+        raise NotImplementedError
+    
+    # Checkpointing directories and manager
     latest_dir = ckpt_dir / "latest"
     best_dir = ckpt_dir / "best"
-    # ckpt_manager = CheckpointManager()
+    # TODO Migrate to orbax checkpointing (?). Currently uses the legacy flax checkpointing API.
+    ckpt_manager = CheckpointManager()
+    # For potential orbax migration. inelegant but currently the easiest way to handle both best and latest.
+    # latest_ckpt_manager_options = CheckpointManagerOptions(max_to_keep=100, save_interval_steps=1)
+    # latest_ckpt_manager = CheckpointManager(path = latest_dir, options = latest_ckpt_manager_options)
+    # best_ckpt_manager_options = CheckpointManagerOptions(max_to_keep=5, save_interval_steps=1)
+    # best_ckpt_manager = CheckpointManager(path = best_dir, options = best_ckpt_manager_options)
 
+    # Dataset batching and shuffling
     train_batches_per_epoch = train_dataset.steps_per_epoch()
     val_batches_per_epoch = val_dataset.steps_per_epoch()
     batch_train_dataset = train_dataset.shuffle_and_batch()
     batch_val_dataset = val_dataset.shuffle_and_batch()
 
-    # TODO This is now invalid
-    model_apply = jax.vmap(state.apply_fn, in_axes=(None, 0, 0, 0))
-
-    optimizer = optax.radam(
-        learning_rate=optax.exponential_decay(
-        init_value=1e-3,
-        transition_steps=1,
-        decay_rate=0.9977,
-        transition_begin=20,
-        staircase=False,
-        end_value=1e-5),
-        nesterov=True
-        )
-
-    optimizer = optax.MultiSteps(optimizer, every_k_schedule=n_grad_acc)
-
-    opt_state = state.opt_state# optimizer.init(state.params)
-
-    try:
-
-        train_mae_loss = jnp.inf
-        val_mae_loss = jnp.inf
-        epoch_pbar = trange(
-            n_epochs, desc="Epochs", ncols=75, disable=False, leave=True
-        )
-
-        best_params = {}
-        best_mae_loss = jnp.inf
-        epoch_loss = {}
-
-        for epoch in range(n_epochs):
-            epoch_start_time = time.time()
-            # callbacks.on_epoch_begin(epoch=epoch + 1)
-
-            effective_batch_size = n_grad_acc * train_dataset.batch_size
-
-            epoch_loss.update({"train_loss": 0.0})
-            # train_batch_metrics = logging_metrics.empty()
-
-            train_batch_pbar = trange(
-                0,
-                train_batches_per_epoch
-                // n_grad_acc,  # TODO this is a big fragile if train_batches_per_epoch isn't a multiple
-                desc="Train batch",
-                leave=False,
-                ncols=75,
-                smoothing=0.0,
-                mininterval=1.0,
-                disable=True,
-            )
-
-            epoch_mae_loss = 0.0
-            for train_batch in range(0, train_batches_per_epoch // n_grad_acc):
-                batch_data_list = [next(batch_train_dataset) for _ in range(n_grad_acc)]
-                params, opt_state, _, loss, train_mae_loss = train_step(
-                    params,
-                    model_apply,
-                    optimizer,
-                    batch_data_list,
-                    opt_state,
-                )
-                epoch_mae_loss += train_mae_loss
-
-                train_batch_pbar.set_postfix(
-                    mae=f"{train_mae_loss / effective_batch_size:0.1e}"
-                )
-                train_batch_pbar.update()
-
-            val_batch_pbar = trange(
-                0,
-                val_batches_per_epoch // n_grad_acc,
-                desc="Val batch",
-                leave=False,
-                ncols=75,
-                smoothing=0.0,
-                mininterval=1.0,
-                disable=True,
-            )
-
-            epoch_val_mae_accumulator = 0.0
-
-            # val_batch_metrics = logging_metrics.empty()
-
-            for val_batch in range(0, val_batches_per_epoch // n_grad_acc):
-                batch_data_list = [next(batch_val_dataset) for _ in range(n_grad_acc)]
-                loss, val_mae = val_step(
-                    params,
-                    model_apply,
-                    batch_data_list,
-                )
-                epoch_val_mae_accumulator += val_mae
-
-                val_batch_pbar.set_postfix(mae=f"{val_mae / effective_batch_size:0.1e}")
-                val_batch_pbar.update()
-
-            epoch_pbar.set_postfix(
-                mae=f"{epoch_val_mae_accumulator / val_batches_per_epoch:0.1e}"
-            )
-
-            epoch_pbar.update()
-
-            if (epoch_val_mae_accumulator / val_batches_per_epoch) < best_mae_loss:
-                best_mae_loss = epoch_val_mae_accumulator / val_batches_per_epoch
-                best_params = params
-
-    except StopIteration:
-        print("Yes the stopiteration")
-
-    return state, params if len(best_params) == 0 else best_params
-
-
-@partial(jax.jit, static_argnames=("model_apply",))
-def val_step(params, model_apply, batch_full_list):
-    step_mae_loss = 0.0
-    for batch_full in batch_full_list:
-        batch, batch_labels = batch_full
-
-        def loss_function(params):
-            h_irreps_predicted = model_apply(
-                params,
-                batch["numbers"],
-                batch["idx_ij"],
-                batch["idx_D"],
-            )
-
-            assert (
-                h_irreps_predicted.shape
-                == batch_labels["h_irreps"].shape
-                == batch_labels["mask"].shape
-            ), "This happens when your readout and your labels are not consistent."
-
-            loss = jnp.mean(
-                optax.huber_loss(h_irreps_predicted, batch_labels["h_irreps"]),
-                where=batch_labels["mask"],
-            )
-
-            return loss, jnp.mean(
-                jnp.abs(h_irreps_predicted - batch_labels["h_irreps"]),
-                where=batch_labels["mask"],
-            )
-
-        loss, mae_loss = loss_function(params)
-        step_mae_loss += mae_loss
-
-    return loss, step_mae_loss
-
-
-def make_step_functions(loss_function, logging_metrics, model):
+    # Create train_step and val_step functions
+    train_step, val_step = make_step_functions(logging_metrics,
+                                               model = state.apply_fn,
+                                               loss_function = loss_function
+                                               )
     
+    state, start_epoch = load_state(state, latest_dir)
+    if start_epoch >= n_epochs:
+        raise ValueError(
+            f"n_epochs <= current epoch from checkpoint ({n_epochs} <= {start_epoch})"
+        )
+
+    best_params = {} # TODO do we need this if we're saving the state?
+    best_mae_loss = jnp.inf
+    best_loss = float(jnp.inf)
+    epoch_loss = {}
+
+    epoch_pbar = trange(
+        start_epoch, n_epochs, desc="Epochs", ncols=100, disable=disable_pbar, leave=True
+    )
+    for epoch in range(start_epoch, n_epochs):
+        epoch_start_time = time.time()
+
+        effective_batch_size = n_grad_acc * train_dataset.batch_size
+
+        # Training set loop - set up
+        epoch_loss.update({"train_loss": 0.0})
+        train_mae_loss = jnp.inf
+
+        train_batch_pbar = trange(
+            0,
+            train_batches_per_epoch
+            // n_grad_acc,  # TODO this is a big fragile if train_batches_per_epoch isn't a multiple
+            desc="Train batch",
+            leave=False,
+            ncols=75,
+            smoothing=0.0,
+            mininterval=1.0,
+            disable=disable_batch_pbar,
+        )
+        # Training set loop - actual training
+        for train_batch in range(train_batches_per_epoch // n_grad_acc):
+            batch_data_list = [next(batch_train_dataset) for _ in range(n_grad_acc)]
+            loss, mae_loss, state = train_step(state, batch_data_list)
+            
+            train_mae_loss += mae_loss
+            epoch_loss["train_loss"] += loss
+
+            train_batch_pbar.set_postfix(
+                mae=f"{train_mae_loss / effective_batch_size:0.3e}"
+            )
+            train_batch_pbar.update()
+        
+        epoch_loss["train_loss"] /= train_batches_per_epoch
+
+        # Validation set loop - set up
+        epoch_loss.update({"val_loss": 0.0})
+        epoch_val_mae_accumulator = 0.0
+
+        val_batch_pbar = trange(
+            0,
+            val_batches_per_epoch // n_grad_acc, # TODO is this fragile like the training loop equivalent?
+            desc="Val batch",
+            leave=False,
+            ncols=75,
+            smoothing=0.0,
+            mininterval=1.0,
+            disable=disable_batch_pbar,
+        )
+        # Validation set loop - actual training
+        for val_batch in range(val_batches_per_epoch // n_grad_acc):
+            batch_data_list = [next(batch_val_dataset) for _ in range(n_grad_acc)]
+            loss, mae_loss = val_step(state, batch_data_list)
+
+            epoch_val_mae_accumulator += mae_loss
+            epoch_loss["val_loss"] += loss
+
+            val_batch_pbar.set_postfix(
+                mae=f"{epoch_val_mae_accumulator / val_batches_per_epoch:0.3e}"
+            )
+
+        if (epoch_val_mae_accumulator / val_batches_per_epoch) < best_mae_loss:
+                best_mae_loss = epoch_val_mae_accumulator / val_batches_per_epoch
+                best_params['params'] = state.params
+
+        epoch_end_time = time.time()
+        # TODO store this elsewhere?
+        epoch_loss['epoch_time'] = epoch_end_time - epoch_start_time
+
+        ckpt = {"model": state, "epoch": epoch}
+        if epoch % ckpt_interval == 0:
+            ckpt_manager.save_checkpoint(ckpt, epoch, latest_dir)
+
+        if epoch_loss["val_loss"] < best_loss:
+            best_loss = epoch_loss["val_loss"]
+            ckpt_manager.save_checkpoint(ckpt, epoch, best_dir)
+
+        epoch_pbar.set_postfix(mae=f"{epoch_val_mae_accumulator / val_batches_per_epoch:0.3e}")
+        epoch_pbar.update()
+
+
+    return
+
+def calculate_loss(params, batch_full, loss_function, model):
+    batch, batch_labels = batch_full
+    model_apply = jax.vmap(model.apply, in_axes=(None, 0, 0, 0))
+    # TODO Make loss function an argument and allow user input.
+    h_irreps_predicted = model_apply(
+        params,
+        batch["numbers"],
+        batch["idx_ij"],
+        batch["idx_D"],
+    )
+
+    # TODO Remove this when we make the readout layer size automatically calculated.
+    assert (
+        h_irreps_predicted.shape
+        == batch_labels["h_irreps"].shape
+        == batch_labels["mask"].shape
+    ), "This happens when your readout and your labels are not consistent."
+
+    loss, mae_loss = loss_function(h_irreps_predicted, batch_labels)
+
+    return loss, mae_loss
+
+def make_step_functions(logging_metrics, model, loss_function = huber_loss):
+    loss_calculator = partial(calculate_loss, loss_function=loss_function, model=model)
+    grad_fn = jax.value_and_grad(loss_calculator, 0, has_aux=True)
+
+    def update_step(state, batch_full):
+        (loss, mae_loss), grads = grad_fn(state.params, batch_full)
+        state = state.apply_gradients(grads=grads)
+        return loss, mae_loss, state
+    
+    # TODO add support for ensemble models.
+
     @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
-    def train_step(
-        params: optax.Params,
-        model_apply: callable,
-        optimizer,
-        batch_full_list: list,
-        opt_state: OptimizerState,
-    ):
-        step_mae_loss = 0.0
-        for batch_full in batch_full_list:
-            inputs, labels = batch_full
-            offsite_h_irreps_prediction, onsite_h_irreps_prediction = model_apply(
-                    params,
-                    inputs["numbers"],
-                    inputs["idx_ij"],
-                    inputs["idx_D"],
-                )
-            
-            predictions = {
-                'onsite_h_irreps': onsite_h_irreps_prediction,
-                'offsite_h_irreps': offsite_h_irreps_prediction}
-            
-            assert (
-                    onsite_h_irreps_prediction.shape
-                    == labels["onsite_h_irreps"].shape
-                    == labels["onsite_irreps_mask"].shape
-                ), "This happens when your readout and your labels are not consistent."
+    def train_step(state, batch):
 
-            assert (
-                    offsite_h_irreps_prediction.shape
-                    == labels["offsite_h_irreps"].shape
-                    == labels["offsite_irreps_mask"].shape
-                ), "This happens when your readout and your labels are not consistent."
+        loss, mae_loss, state = update_step(state, batch)
+        return loss, mae_loss, state
+    
+    # TODO OLD KEPT JUST IN CASE. Remove when no longer needed.
+    # @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
+    # def train_step(params: optax.Params,
+    #                model_apply: callable,
+    #                optimizer,
+    #                batch_full_list: list,
+    #                opt_state: OptimizerState,):
+        
+    #     return params, opt_state, grad, loss, step_mae_loss
+    
+    
+    @partial(jax.jit, static_argnames=("model_apply",))
+    def val_step(state, batch):
 
-            # TODO This gets factored out
-            def loss_function(inputs, labels, predictions):
+        loss, mae_loss = loss_calculator(state, batch)
 
-                onsite_loss = jnp.mean(
-                    optax.huber_loss(predictions['onsite_h_irreps'],
-                                     labels["onsite_h_irreps"]),
-                    where=labels["onsite_irreps_mask"],
-                )
-                
-                offsite_loss = jnp.mean(
-                    optax.huber_loss(predictions['offsite_h_irreps'],
-                                     labels['offsite_h_irreps'],
-                                     ),
-                    where=labels["offsite_irreps_mask"],
-                )
-
-                loss = onsite_loss + offsite_loss
-
-                return loss, -1.0 
-
-            # TODO: Metrics like MAE etc
-            # jnp.mean(
-            #         jnp.abs(h_irreps_predicted - batch_labels["h_irreps"]),
-            #         where=batch_labels["mask"],
-            #     )
-
-            (loss, mae_loss), grad = jax.value_and_grad(loss_function, has_aux=True)(params)
-            updates, opt_state = optimizer.update(grad, opt_state, params)
-
-            params = optax.apply_updates(params, updates)
-            step_mae_loss += mae_loss
-
-        return params, opt_state, grad, loss, step_mae_loss
+        return loss, mae_loss
+    
+    return train_step, val_step
