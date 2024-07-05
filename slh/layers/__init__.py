@@ -4,6 +4,7 @@ from slh.layers.descriptor import (
     MPAtomCenteredDescriptor,
     SAAtomCenteredDescriptor,
     SpeciesAwareRadialBasis,
+    TDSAAtomCenteredDescriptor
 )
 from slh.layers.readout import Readout
 from slh.layers.residual_dense import DenseBlock

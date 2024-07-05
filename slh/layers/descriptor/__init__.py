@@ -1,7 +1,4 @@
-from .atomcentered import (
-    AtomCenteredTensorMomentDescriptor,
-    MPAtomCenteredDescriptor,
-    SAAtomCenteredDescriptor,
-)
+from .radial_basis import SpeciesAwareRadialBasis
+from .atomcentered import AtomCenteredTensorMomentDescriptor, MPAtomCenteredDescriptor, SAAtomCenteredDescriptor, TDSAAtomCenteredDescriptor
 from .bondcentered import BondCenteredTensorMomentDescriptor
 from .radial_basis import SpeciesAwareRadialBasis
