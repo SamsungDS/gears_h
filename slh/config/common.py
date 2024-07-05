@@ -5,12 +5,12 @@ from typing import Union
 
 import yaml
 
-from slh.config.train_config import Config
+from slh.config.train_config import TrainConfig
 
 log = logging.getLogger(__name__)
 
 
-def parse_config(config: Union[str, os.PathLike, dict], mode: str = "train") -> Config:
+def parse_config(config: Union[str, os.PathLike, dict], mode: str = "train") -> TrainConfig:
     """Load the training configuration from file or a dictionary.
 
     Parameters
@@ -27,7 +27,7 @@ def parse_config(config: Union[str, os.PathLike, dict], mode: str = "train") -> 
             config = yaml.safe_load(stream)
 
     if mode == "train":
-        config = Config.model_validate(config)
+        config = TrainConfig.model_validate(config)
 
     return config
 
