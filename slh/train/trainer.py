@@ -39,6 +39,8 @@ def fit(state: TrainState,
         raise NotImplementedError
     if is_ensemble:
         raise NotImplementedError
+    if n_grad_acc > 1:
+        raise NotImplementedError
     
     # Checkpointing directories and manager
     latest_dir = ckpt_dir / "latest"
@@ -100,7 +102,8 @@ def fit(state: TrainState,
         # Training set loop - actual training
         for train_batch in range(train_batches_per_epoch // n_grad_acc):
             batch_data_list = [next(batch_train_dataset) for _ in range(n_grad_acc)]
-            loss, mae_loss, state = train_step(state, batch_data_list)
+            # TODO refactor train_step for gradient accumulation and remove the hardcoded first element of the list below.
+            loss, mae_loss, state = train_step(state, batch_data_list[0])
             
             train_mae_loss += mae_loss
             epoch_loss["train_loss"] += loss
@@ -193,7 +196,7 @@ def make_step_functions(logging_metrics, model, loss_function = huber_loss):
     
     # TODO add support for ensemble models.
 
-    @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
+    # @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
     def train_step(state, batch):
 
         loss, mae_loss, state = update_step(state, batch)
@@ -210,7 +213,7 @@ def make_step_functions(logging_metrics, model, loss_function = huber_loss):
     #     return params, opt_state, grad, loss, step_mae_loss
     
     
-    @partial(jax.jit, static_argnames=("model_apply",))
+    # @partial(jax.jit, static_argnames=("model_apply",))
     def val_step(state, batch):
 
         loss, mae_loss = loss_calculator(state, batch)

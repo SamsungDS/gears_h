@@ -96,7 +96,7 @@ def run(user_config, log_level="error"):
         train_dataset=train_ds,
         val_dataset=val_ds, logging_metrics=None,
         callbacks=None,
-        n_grad_acc=1,
+        n_grad_acc=1, # TODO make this controllable
         n_epochs=config.n_epochs,
         ckpt_dir=config.data.model_version_path,
         ckpt_interval=1,
