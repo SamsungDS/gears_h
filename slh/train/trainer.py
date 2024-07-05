@@ -61,7 +61,7 @@ def fit(state: TrainState,
 
     # Create train_step and val_step functions
     train_step, val_step = make_step_functions(logging_metrics,
-                                               model = state.apply_fn,
+                                               state = state,
                                                loss_function = loss_function
                                                )
     
@@ -132,7 +132,8 @@ def fit(state: TrainState,
         # Validation set loop - actual training
         for val_batch in range(val_batches_per_epoch // n_grad_acc):
             batch_data_list = [next(batch_val_dataset) for _ in range(n_grad_acc)]
-            loss, mae_loss = val_step(state, batch_data_list)
+            # TODO refactor train_step for gradient accumulation and remove the hardcoded first element of the list below.
+            loss, mae_loss = val_step(state, batch_data_list[0])
 
             epoch_val_mae_accumulator += mae_loss
             epoch_loss["val_loss"] += loss
@@ -163,9 +164,9 @@ def fit(state: TrainState,
 
     return
 
-def calculate_loss(params, batch_full, loss_function, model):
+def calculate_loss(params, batch_full, loss_function, apply_function):
     batch, batch_labels = batch_full
-    model_apply = jax.vmap(model.apply, in_axes=(None, 0, 0, 0))
+    model_apply = apply_function#jax.vmap(apply_function, in_axes=(None, 0, 0, 0))
     # TODO Make loss function an argument and allow user input.
     h_irreps_predicted = model_apply(
         params,
@@ -185,8 +186,8 @@ def calculate_loss(params, batch_full, loss_function, model):
 
     return loss, mae_loss
 
-def make_step_functions(logging_metrics, model, loss_function = huber_loss):
-    loss_calculator = partial(calculate_loss, loss_function=loss_function, model=model)
+def make_step_functions(logging_metrics, state, loss_function = huber_loss):
+    loss_calculator = partial(calculate_loss, loss_function=loss_function, apply_function=state.apply_fn)
     grad_fn = jax.value_and_grad(loss_calculator, 0, has_aux=True)
 
     def update_step(state, batch_full):
@@ -197,6 +198,7 @@ def make_step_functions(logging_metrics, model, loss_function = huber_loss):
     # TODO add support for ensemble models.
 
     # @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
+    @jax.jit
     def train_step(state, batch):
 
         loss, mae_loss, state = update_step(state, batch)
@@ -214,9 +216,10 @@ def make_step_functions(logging_metrics, model, loss_function = huber_loss):
     
     
     # @partial(jax.jit, static_argnames=("model_apply",))
+    @jax.jit
     def val_step(state, batch):
 
-        loss, mae_loss = loss_calculator(state, batch)
+        loss, mae_loss = loss_calculator(state.params, batch)
 
         return loss, mae_loss
     
