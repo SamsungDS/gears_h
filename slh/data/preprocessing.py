@@ -1,7 +1,8 @@
 import collections
 import itertools
-import jax.numpy as jnp
+
 import jax
+import jax.numpy as jnp
 
 
 def prefetch_to_single_device(iterator, size: int):

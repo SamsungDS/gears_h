@@ -1,31 +1,28 @@
-import logging
-from multiprocessing import Pool
-from typing import Dict, Iterator
-from pathlib import Path
-import json
-from collections import deque
 import itertools
+import json
+import logging
 import uuid
+from collections import deque
+from multiprocessing import Pool
+from pathlib import Path
 from random import shuffle
-
-
-from ase.io import read
-from ase import Atoms
+from typing import Dict, Iterator
 
 import jax
 import jax.numpy as jnp
 import numpy as np
 import tensorflow as tf
-
+from ase import Atoms
+from ase.io import read
 from tqdm import tqdm, trange
 
+from slh.data.preprocessing import prefetch_to_single_device
+from slh.data.utilities import split_dataset, split_idxs
 from slh.hblockmapper import (
-    make_mapper_from_elements,
     MultiElementPairHBlockMapper,
     get_mask_dict,
+    make_mapper_from_elements,
 )
-from slh.data.preprocessing import prefetch_to_single_device
-from slh.data.utilities import split_idxs, split_dataset
 
 # (Atoms, {Z: [0, 1, 2, ...]}, ij, D, hblocks)
 DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list]]
@@ -34,13 +31,19 @@ log = logging.getLogger(__name__)
 
 
 def initialize_dataset_from_list(
-    dataset_as_list: DatasetList, num_train: int, num_val: int
+    dataset_as_list: DatasetList,
+    num_train: int,
+    num_val: int,
+    batch_size: int,
+    val_batch_size: int,
+    n_epochs: int,
 ):
     train_idx, val_idx = split_idxs(len(dataset_as_list), num_train, num_val)
     train_ds_list, val_ds_list = split_dataset(dataset_as_list, train_idx, val_idx)
-    train_ds, val_ds = PureInMemoryDataset(train_ds_list, 1, 10), PureInMemoryDataset(
-        val_ds_list, 10, 10
-    )
+    train_ds, val_ds = PureInMemoryDataset(
+        train_ds_list, batch_size=batch_size, n_epochs=n_epochs
+    ), PureInMemoryDataset(val_ds_list, batch_size=val_batch_size, n_epochs=n_epochs)
+    return train_ds, val_ds
 
 
 def pairwise_hamiltonian_from_file(filename: Path):
@@ -346,7 +349,9 @@ class InMemoryDataset:
         self.enqueue(min(self.buffer_size, self.n_data))
 
     def init_input(self):
-        pass
+        """Returns first batch of inputs and labels to init the model."""
+        inputs, _ = self.prepare_single_snapshot(0)
+        return inputs
 
     def steps_per_epoch(self):
         # This throws away a bit of the training data, but at most 1 batch worth.

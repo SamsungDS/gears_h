@@ -1,12 +1,11 @@
-from typing import Any, Union
 from functools import partial
+from typing import Any, Union
 
 import e3x
+import flax.linen as nn
 import jax
 import jax.numpy as jnp
-from jaxtyping import Float, Array
-
-import flax.linen as nn
+from jaxtyping import Array, Float
 
 
 class SpeciesAwareRadialBasis(nn.Module):
@@ -56,7 +55,6 @@ class SpeciesAwareRadialBasis(nn.Module):
             max_degree=self.max_degree,
             radial_fn=self.radial_function,
             # cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.cutoff),
-            damping_fn=partial(e3x.nn.smooth_damping, gamma=2.0),
             cartesian_order=False,
         ).astype(jnp.float32)
 

@@ -1,20 +1,18 @@
+from functools import partial
+
+import e3x
 import flax.linen as nn
+import jax
+import jax.numpy as jnp
 
 from slh.layers import (
     AtomCenteredTensorMomentDescriptor,
     BondCenteredTensorMomentDescriptor,
-    SpeciesAwareRadialBasis,
     DenseBlock,
     Readout,
+    SpeciesAwareRadialBasis,
 )
-
 from slh.layers.corrections import ExponentialScaleCorrection
-
-import e3x
-import jax
-import jax.numpy as jnp
-
-from functools import partial
 
 
 class HamiltonianModel(nn.Module):
@@ -82,7 +80,7 @@ class HamiltonianModel(nn.Module):
 
         off_diagonal_denseout = self.dense(bc_features)
         off_diagonal_irreps = self.readout(off_diagonal_denseout)
-        # scaling_correction = ExponentialScaleCorrection(self.readout.nfeatures, self.readout.max_ell)(
-        #     jnp.linalg.norm(neighbour_displacements, axis=-1, keepdims=True)
-        #     )
-        return off_diagonal_irreps # * scaling_correction
+        scaling_correction = ExponentialScaleCorrection(
+            self.readout.nfeatures, self.readout.max_ell
+        )(jnp.linalg.norm(neighbour_displacements, axis=-1, keepdims=True))
+        return off_diagonal_irreps  #  * scaling_correction

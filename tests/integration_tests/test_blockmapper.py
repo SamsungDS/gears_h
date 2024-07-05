@@ -1,5 +1,6 @@
-from slh.hblockmapper import make_mapper_from_elements, get_mask_dict
 import numpy as np
+
+from slh.hblockmapper import get_mask_dict, make_mapper_from_elements
 
 
 def test_block_mapper_identity():

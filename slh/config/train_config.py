@@ -1,37 +1,160 @@
+from pathlib import Path
+from typing import List, Literal, Optional
+
+import yaml
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
     NonNegativeFloat,
+    NonNegativeInt,
     PositiveFloat,
     PositiveInt,
+    StrictBool,
     create_model,
     model_validator,
-    StrictBool,
 )
-from typing import List, Literal
+
+
+class DataConfig(BaseModel, extra="forbid"):
+    directory: str = "slhmodels"
+    experiment: str = "default"
+    # ds_type: Literal["cached", "otf"] = "cached"
+    data_path: Optional[str] = None
+    train_data_path: Optional[str] = None
+    val_data_path: Optional[str] = None
+    test_data_path: Optional[str] = None
+
+    n_train: PositiveInt = 1000
+    n_valid: PositiveInt = 100
+    batch_size: PositiveInt = 32
+    valid_batch_size: PositiveInt = 100
+    shuffle_buffer_size: PositiveInt = 1000
+    additional_properties_info: dict[str, str] = {}
+
+    # shift_method: str = "per_element_regression_shift"
+    # shift_options: dict = {"energy_regularisation": 1.0}
+
+    # scale_method: str = "per_element_force_rms_scale"
+    # scale_options: Optional[dict] = {}
+
+    pos_unit: Optional[str] = "Ang"
+    energy_unit: Optional[str] = "eV"
+
+    @model_validator(mode="after")
+    def set_data_or_train_val_path(self):
+        not_data_path = self.data_path is None
+        not_train_path = self.train_data_path is None
+
+        neither_set = not_data_path and not_train_path
+        both_set = not not_data_path and not not_train_path
+
+        if neither_set or both_set:
+            raise ValueError("Please specify either data_path or train_data_path")
+
+        return self
+
+    # @model_validator(mode="after")
+    # def validate_shift_scale_methods(self):
+    #     method_lists = [shift_method_list, scale_method_list]
+    #     requested_methods = [self.shift_method, self.scale_method]
+    #     requested_options = [self.shift_options, self.scale_options]
+
+    #     cases = zip(method_lists, requested_methods, requested_options)
+    #     for method_list, requested_method, requested_params in cases:
+    #         methods = {method.name: method for method in method_list}
+
+    #         # check if method exists
+    #         if requested_method not in methods.keys():
+    #             raise KeyError(
+    #                 f"The initialization method '{requested_method}' is not among the"
+    #                 f" implemented methods. Choose from {methods.keys()}"
+    #             )
+
+    #         # check if parameters names are complete and correct
+    #         method = methods[requested_method]
+    #         fields = {
+    #             name: (dtype, ...)
+    #             for name, dtype in zip(method.parameters, method.dtypes)
+    #         }
+    #         MethodConfig = create_model(
+    #             f"{method.name}Config", __config__=ConfigDict(extra="forbid"), **fields
+    #         )
+
+    #         _ = MethodConfig(**requested_params)
+
+    #     return self
+
+    @property
+    def model_version_path(self):
+        version_path = Path(self.directory) / self.experiment
+        return version_path
+
+    @property
+    def best_model_path(self):
+        return self.model_version_path / "best"
+
+
+class RadialBasisConfig(BaseModel, extra="forbid"):
+    cutoff: PositiveFloat
+    num_radial: PositiveInt
+    max_degree: NonNegativeFloat
+    num_elemental_embedding: PositiveInt
+    tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
+
+
+class AtomCenteredConfig(BaseModel, extra="forbid"):
+    mp_steps: PositiveInt = 2
+    mp_degree: NonNegativeInt = 4
+    mp_options: dict = {}
+
+
+class AtomPairConfig(BaseModel, extra="forbid"):
+    cutoff: PositiveFloat
+    basis_degree: NonNegativeFloat
+    tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
+
+
+class NNConfig(BaseModel, extra="forbid"):
+    nn: List[PositiveInt] = [128]
 
 
 class ModelConfig(BaseModel, extra="forbid"):
-    radial_cutoff: PositiveFloat
-    n_radial: PositiveInt = 32
-    radial_max_degree: PositiveInt = 2
-    elemental_embedding_width: PositiveInt = 64
-    radial_embedding_residual_connection: StrictBool = True
-
-    num_moment_features: PositiveInt = 64
-    n_max_moment: PositiveInt = 2
-    moment_max_degree: PositiveInt = 4
-    use_fused_tensor: StrictBool = True
-    ac_embedding_residual_connection: StrictBool = True
-
-    bc_cutoff: PositiveFloat
-    bc_max_degree: PositiveInt = 2
-
-    nn: List[PositiveInt] = [128, 128]
-
-    ac_tensor_dtype: Literal["bf16", "fp32", "fp64"] = "fp32"
-    bc_tensor_dtype: Literal["bf16", "fp32", "fp64"] = "fp32"
+    radial_basis: RadialBasisConfig
+    atom_centered: AtomCenteredConfig
+    atom_pair: AtomPairConfig
+    nn: NNConfig
 
     def get_dict(self):
         return self.model_dump()
+
+
+class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
+    name: str = "adam"
+    lr: NonNegativeFloat = 0.001
+    opt_kwargs: dict = {}
+    sam_rho: NonNegativeFloat = 0.0
+
+
+class TrainConfig(BaseModel, frozen=True, extra="forbid"):
+    n_epochs: PositiveInt
+    patience: Optional[PositiveInt] = None
+    seed: int = 2465
+
+    model: ModelConfig
+    data: DataConfig
+    # metrics: List[MetricsConfig] = []
+    # loss: List[LossConfig]
+    optimizer: OptimizerConfig = OptimizerConfig()
+    # callbacks: List[CallBack] = [CSVCallback(name="csv")]
+
+    def dump_config(self, save_path: Path):
+        """
+        Writes the current config file to the specified directory.
+
+        Parameters
+        ----------
+        save_path: Path to the directory.
+        """
+        with open(save_path / "config.yaml", "w") as conf:
+            yaml.dump(self.model_dump(), conf, default_flow_style=False)

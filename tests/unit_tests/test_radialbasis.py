@@ -1,9 +1,7 @@
-from slh.layers.descriptor.radial_basis import (
-    SpeciesAwareRadialBasis,
-)
-
 import jax
 import jax.numpy as jnp
+
+from slh.layers.descriptor.radial_basis import SpeciesAwareRadialBasis
 
 
 def test_rb():

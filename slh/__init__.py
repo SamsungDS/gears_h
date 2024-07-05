@@ -1,6 +1,8 @@
 import os
+
 import e3x
 import jax
+
 
 os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"

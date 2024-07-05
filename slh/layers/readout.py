@@ -1,9 +1,8 @@
 import e3x
+import flax.linen as nn
 import jax
 import jax.numpy as jnp
-import flax.linen as nn
-
-from jaxtyping import Float, Array, Int
+from jaxtyping import Array, Float, Int
 
 
 class Readout(nn.Module):

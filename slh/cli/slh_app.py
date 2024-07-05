@@ -8,7 +8,6 @@ import yaml
 from pydantic import ValidationError
 from rich.console import Console
 
-
 console = Console(highlight=False)
 
 app = typer.Typer(
@@ -39,7 +38,10 @@ def train(
     """
     Starts the training of a H/S model with parameters provided by a configuration file.
     """
-    console.print("Eventually this will set up a training")
+
+    from slh.train.run import run
+
+    run(train_config_path, log_level)
 
 
 # @app.command()
