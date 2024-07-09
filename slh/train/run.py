@@ -9,7 +9,7 @@ from slh.config.train_config import TrainConfig
 from slh.data.input_pipeline import initialize_dataset_from_list, read_dataset_as_list
 from slh.model.builder import build_lcao_hamiltonian_model
 
-# from slh.train.callbacks import initialize_callbacks
+from slh.train.callbacks import initialize_callbacks
 # from slh.train.metrics import initialize_metrics
 from slh.train.checkpoints import create_params, create_train_state
 from slh.train.trainer import fit
@@ -51,7 +51,7 @@ def run(user_config, log_level="error"):
     config.dump_config(config.data.model_version_path)
     log.info(f"Running on {jax.devices()}")
 
-    # callbacks = initialize_callbacks(config.callbacks, config.data.model_version_path)
+    callbacks = initialize_callbacks(config.callbacks, config.data.model_version_path)
     # loss_fn = initialize_loss_fn(config.loss)
     # logging_metrics = initialize_metrics(config.metrics)
 
@@ -95,7 +95,7 @@ def run(user_config, log_level="error"):
         state,
         train_dataset=train_ds,
         val_dataset=val_ds, logging_metrics=None,
-        callbacks=None,
+        callbacks=callbacks,
         n_grad_acc=1, # TODO make this controllable
         n_epochs=config.n_epochs,
         ckpt_dir=config.data.model_version_path,
