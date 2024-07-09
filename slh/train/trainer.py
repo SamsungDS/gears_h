@@ -154,7 +154,7 @@ def fit(state: TrainState,
         epoch_end_time = time.time()
         # TODO store this elsewhere?
         epoch_loss['epoch_time'] = epoch_end_time - epoch_start_time
-        callbacks.on_epoch_end(epoch=epoch, logs=epoch_metrics)
+        callbacks.on_epoch_end(epoch=epoch, logs=epoch_loss)
 
         ckpt = {"model": state, "epoch": epoch}
         if epoch % ckpt_interval == 0:
@@ -166,6 +166,7 @@ def fit(state: TrainState,
 
         epoch_pbar.set_postfix(mae=f"{epoch_val_mae_accumulator / val_batches_per_epoch:0.3e}")
         epoch_pbar.update()
+    epoch_pbar.close()
     callbacks.on_train_end()
 
 
