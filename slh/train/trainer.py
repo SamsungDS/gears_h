@@ -41,6 +41,8 @@ def fit(state: TrainState,
         raise NotImplementedError
     if n_grad_acc > 1:
         raise NotImplementedError
+
+    callbacks.on_train_begin()
     
     # Checkpointing directories and manager
     latest_dir = ckpt_dir / "latest"
@@ -81,6 +83,7 @@ def fit(state: TrainState,
     )
     for epoch in range(start_epoch, n_epochs):
         epoch_start_time = time.time()
+        callbacks.on_epoch_begin(epoch=epoch + 1)
 
         effective_batch_size = n_grad_acc * train_dataset.batch_size
 
@@ -101,6 +104,7 @@ def fit(state: TrainState,
         )
         # Training set loop - actual training
         for train_batch in range(train_batches_per_epoch // n_grad_acc):
+            callbacks.on_train_batch_begin(batch=train_batch)
             batch_data_list = [next(batch_train_dataset) for _ in range(n_grad_acc)]
             # TODO refactor train_step for gradient accumulation and remove the hardcoded first element of the list below.
             loss, mae_loss, state = train_step(state, batch_data_list[0])
@@ -111,6 +115,7 @@ def fit(state: TrainState,
             train_batch_pbar.set_postfix(
                 mae=f"{train_mae_loss / effective_batch_size:0.3e}"
             )
+            callbacks.on_train_batch_end(batch=train_batch)
             train_batch_pbar.update()
         
         epoch_loss["train_loss"] /= train_batches_per_epoch
@@ -149,6 +154,7 @@ def fit(state: TrainState,
         epoch_end_time = time.time()
         # TODO store this elsewhere?
         epoch_loss['epoch_time'] = epoch_end_time - epoch_start_time
+        callbacks.on_epoch_end(epoch=epoch, logs=epoch_metrics)
 
         ckpt = {"model": state, "epoch": epoch}
         if epoch % ckpt_interval == 0:
@@ -160,6 +166,7 @@ def fit(state: TrainState,
 
         epoch_pbar.set_postfix(mae=f"{epoch_val_mae_accumulator / val_batches_per_epoch:0.3e}")
         epoch_pbar.update()
+    callbacks.on_train_end()
 
 
     return

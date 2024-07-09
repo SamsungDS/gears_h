@@ -118,4 +118,4 @@ def initialize_callbacks(config: TrainConfig, model_version_path: Path):
         callback.set_model(callback_info["model"])
         callbacks.append(callback)
 
-    return tf.keras.callbacks.CallbackList([callback])
+    return tf.keras.callbacks.CallbackList([callback]) # TODO should this be callbacks? in that case it will be a list of lists?
