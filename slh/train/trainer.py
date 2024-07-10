@@ -119,6 +119,8 @@ def fit(state: TrainState,
             train_batch_pbar.update()
         
         epoch_loss["train_loss"] /= train_batches_per_epoch
+        epoch_loss["train_loss"] = float(epoch_loss["train_loss"])
+
 
         # Validation set loop - set up
         epoch_loss.update({"val_loss": 0.0})
@@ -146,6 +148,9 @@ def fit(state: TrainState,
             val_batch_pbar.set_postfix(
                 mae=f"{epoch_val_mae_accumulator / val_batches_per_epoch:0.3e}"
             )
+        
+        epoch_loss["val_loss"] /= val_batches_per_epoch
+        epoch_loss["val_loss"] = float(epoch_loss["val_loss"])
 
         if (epoch_val_mae_accumulator / val_batches_per_epoch) < best_mae_loss:
                 best_mae_loss = epoch_val_mae_accumulator / val_batches_per_epoch
