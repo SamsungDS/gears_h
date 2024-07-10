@@ -281,6 +281,9 @@ class TDSAAtomCenteredDescriptor(nn.Module):
             neighbour_displacements=neighbour_displacements, Z_j=Z_j
         ).astype(jnp.float32)
 
+        # num_atoms x 1 x L x F
+        y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
+
         y = e3x.nn.TensorDense(self.num_tensordense_features,
                                self.max_tensordense_degree,
                                cartesian_order=False,
