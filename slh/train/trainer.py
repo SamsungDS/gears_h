@@ -42,6 +42,7 @@ def fit(state: TrainState,
     if n_grad_acc > 1:
         raise NotImplementedError
 
+    log.info("Beginning Training")
     callbacks.on_train_begin()
     
     # Checkpointing directories and manager
