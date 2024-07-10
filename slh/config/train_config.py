@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import List, Literal, Optional
+from typing_extensions import Annotated
 
 import yaml
 from pydantic import (
@@ -129,6 +130,23 @@ class ModelConfig(BaseModel, extra="forbid"):
         return self.model_dump()
 
 
+class CSVCallback(BaseModel, frozen=True, extra="forbid"):
+    """
+    Configuration of the CSVCallback.
+
+    Parameters
+    ----------
+    name: Keyword of the callback used..
+    """
+
+    name: Literal["csv"]
+
+CallBack = Annotated[CSVCallback, Field(discriminator="name")]
+
+# CallBack = Annotated[ # TODO implement other callbacks if we want them
+#     Union[CSVCallback, TBCallback, MLFlowCallback], Field(discriminator="name")
+# ]
+
 class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     name: str = "adam"
     lr: NonNegativeFloat = 0.001
@@ -146,7 +164,7 @@ class TrainConfig(BaseModel, frozen=True, extra="forbid"):
     # metrics: List[MetricsConfig] = []
     # loss: List[LossConfig]
     optimizer: OptimizerConfig = OptimizerConfig()
-    # callbacks: List[CallBack] = [CSVCallback(name="csv")]
+    callbacks: List[CallBack] = [CSVCallback(name="csv")]
 
     def dump_config(self, save_path: Path):
         """
