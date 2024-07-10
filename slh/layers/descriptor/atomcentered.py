@@ -225,7 +225,7 @@ class SAAtomCenteredDescriptor(nn.Module):
                 use_basis_bias=True,
                 cartesian_order=False,
                 use_fused_tensor=self.use_fused_tensor,
-                num_heads=4,
+                num_heads=1,
             )(
                 y,
                 e3x.nn.basis(
