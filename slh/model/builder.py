@@ -41,7 +41,7 @@ class ModelBuilder:
         self.config = model_config
 
     def build_species_aware_radial_basis(self):
-        radial_config = self.config.atom_centered.radial_basis
+        radial_config = self.config['atom_centered']['radial_basis']
         if radial_config["tensor_module"] == "tensor":
             tensor_module = partial(e3x.nn.Tensor,
                                     param_dtype=getattr(jnp,radial_config["tensor_module_dtype"]))
@@ -60,15 +60,15 @@ class ModelBuilder:
     def build_atom_centered_descriptor(self):
         radial_basis = self.build_species_aware_radial_basis()
 
-        ac_config = self.config.atom_centered
-        descriptor_name = ac_config.descriptor.descriptor_name
-        descriptor_options = {key : val for key, val in ac_config.descriptor.items() if key != descriptor_name}
+        ac_config = self.config['atom_centered']
+        descriptor_name = ac_config['descriptor']['descriptor_name']
+        descriptor_options = {key : val for key, val in ac_config['descriptor'].items() if key != "descriptor_name"}
         acd = getattr(slh.layers.descriptor, descriptor_name)(radial_basis=radial_basis,
                                                               **descriptor_options)
         return acd
     
     def build_bond_centered_descriptor(self):
-        bc_config = self.config.bond_centered
+        bc_config = self.config['bond_centered']
         if bc_config["tensor_module"] == "tensor":
             tensor_module = partial(e3x.nn.Tensor,
                                     param_dtype=getattr(jnp,bc_config["tensor_module_dtype"]))
@@ -83,7 +83,7 @@ class ModelBuilder:
         return bcd
     
     def build_mlp(self):
-        mlp_config = self.config.mlp
+        mlp_config = self.config['mlp']
         dense_layer = partial(e3x.nn.Dense, 
                               param_dtype=getattr(jnp,mlp_config["mlp_dtype"])),
         mlp = DenseBlock(dense_layer=dense_layer,
