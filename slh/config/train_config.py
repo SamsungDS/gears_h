@@ -111,7 +111,7 @@ class AtomCenteredConfig(BaseModel, extra="forbid"):
     mp_options: dict = {}
 
 
-class AtomPairConfig(BaseModel, extra="forbid"):
+class BondCenteredConfig(BaseModel, extra="forbid"):
     cutoff: PositiveFloat
     basis_degree: NonNegativeFloat
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
@@ -123,7 +123,7 @@ class MLPConfig(BaseModel, extra="forbid"):
 
 class ModelConfig(BaseModel, extra="forbid"):
     atom_centered: AtomCenteredConfig
-    atom_pair: AtomPairConfig
+    bond_centered: BondCenteredConfig
     mlp: MLPConfig
 
     def get_dict(self):
