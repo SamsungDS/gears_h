@@ -99,7 +99,7 @@ class DataConfig(BaseModel, extra="forbid"):
 class RadialBasisConfig(BaseModel, extra="forbid"):
     cutoff: PositiveFloat
     num_radial: PositiveInt
-    max_degree: NonNegativeFloat
+    max_degree: NonNegativeInt
     num_elemental_embedding: PositiveInt
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
 
@@ -113,7 +113,7 @@ class AtomCenteredConfig(BaseModel, extra="forbid"):
 
 class BondCenteredConfig(BaseModel, extra="forbid"):
     cutoff: PositiveFloat
-    basis_degree: NonNegativeFloat
+    basis_degree: NonNegativeInt
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
 
 
