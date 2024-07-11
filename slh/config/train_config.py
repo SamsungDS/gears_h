@@ -104,6 +104,7 @@ class RadialBasisConfig(BaseModel, extra="forbid"):
     num_elemental_embedding: PositiveInt = 8
     embedding_residual_connection: bool = False
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
+    tensor_module_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
 
 class SAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
     descriptor_name: Literal["SAAtomCenteredDescriptor"] = "SAAtomCenteredDescriptor"
@@ -132,6 +133,7 @@ class BondCenteredConfig(BaseModel, extra="forbid"):
     max_degree: NonNegativeInt = 4
     max_actp_degree : NonNegativeInt = 4
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
+    tensor_module_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
 
 
 class MLPConfig(BaseModel, extra="forbid"):

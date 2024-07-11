@@ -43,9 +43,11 @@ class ModelBuilder:
     def build_species_aware_radial_basis(self):
         radial_config = self.config.atom_centered.radial_basis
         if radial_config["tensor_module"] == "tensor":
-            tensor_module = e3x.nn.Tensor
+            tensor_module = partial(e3x.nn.Tensor,
+                                    param_dtype=getattr(jnp,radial_config["tensor_module_dtype"]))
         elif radial_config["tensor_module"] == "fused_tensor":
-            tensor_module = e3x.nn.FusedTensor
+            tensor_module = partial(e3x.nn.FusedTensor,
+                                    param_dtype=getattr(jnp,radial_config["tensor_module_dtype"])))
         sarb = SpeciesAwareRadialBasis(cutoff=radial_config["cutoff"],
                                        num_radial=radial_config["num_radial"],
                                        max_degree=radial_config["max_degree"],
