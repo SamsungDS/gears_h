@@ -15,7 +15,7 @@ class LinearLR(BaseModel, frozen=True, extra="forbid"):
         Final LR at the end of training.
     """
 
-    name: Literal["linear"]
+    name: Literal["linear"] = "linear"
     transition_begin: int = 0
     end_value: NonNegativeFloat = 1e-4
 
@@ -34,6 +34,6 @@ class CyclicCosineLR(BaseModel, frozen=True, extra="forbid"):
         1.0 means no decrease.
     """
 
-    name: Literal["cyclic_cosine"]
+    name: Literal["cyclic_cosine"] = "cyclic_cosine"
     period: int = 20
     decay_factor: NonNegativeFloat = 1.0

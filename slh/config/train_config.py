@@ -106,7 +106,7 @@ class RadialBasisConfig(BaseModel, extra="forbid"):
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
 
 class SAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
-    descriptor_name: Literal["SAAtomCenteredDescriptor"]
+    descriptor_name: Literal["SAAtomCenteredDescriptor"] = "SAAtomCenteredDescriptor"
     use_fused_tensor: bool = False
     embedding_residual_connection: bool = True
     mp_steps: int = 2
@@ -114,7 +114,7 @@ class SAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
     mp_options: dict = {}
 
 class TDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
-    descriptor_name: Literal["TDSAAtomCenteredDescriptor"]
+    descriptor_name: Literal["TDSAAtomCenteredDescriptor"] = "TDSAAtomCenteredDescriptor"
     max_tensordense_degree: int = 4
     num_tensordense_features: int = 32
     use_fused_tensor: bool = False
@@ -122,7 +122,8 @@ class TDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
 
 class AtomCenteredConfig(BaseModel, extra="forbid"):
     descriptor: Union[SAAtomCenteredDescriptorConfig, 
-                      TDSAAtomCenteredDescriptorConfig] = Field(..., discriminator='descriptor_name')
+                      TDSAAtomCenteredDescriptorConfig] = Field(SAAtomCenteredDescriptorConfig(), 
+                                                                discriminator='descriptor_name')
     radial_basis: RadialBasisConfig
 
 class BondCenteredConfig(BaseModel, extra="forbid"):
@@ -168,7 +169,7 @@ class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     lr: NonNegativeFloat = 0.005
     opt_kwargs: dict = {}
     schedule: Union[LinearLR, CyclicCosineLR] = Field(
-        ..., discriminator="name"
+        LinearLR(), discriminator="name"
     )
     
 
@@ -178,7 +179,7 @@ class TrainConfig(BaseModel, frozen=True, extra="forbid"):
     patience: Optional[PositiveInt] = None
     seed: int = 2465
 
-    model: ModelConfig
+    model: ModelConfig = ModelConfig()
     data: DataConfig
     # metrics: List[MetricsConfig] = []
     # loss: List[LossConfig]
