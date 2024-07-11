@@ -4,11 +4,12 @@ import e3x
 import jax
 import jax.numpy as jnp
 
+from slh.config.train_config import ModelConfig
 from slh.layers.descriptor import (
-    AtomCenteredTensorMomentDescriptor,
     BondCenteredTensorMomentDescriptor,
     SAAtomCenteredDescriptor,
     SpeciesAwareRadialBasis,
+    TDSAAtomCenteredDescriptor
 )
 from slh.layers.readout import Readout
 from slh.layers.residual_dense import DenseBlock
@@ -34,6 +35,27 @@ def build_model(config, readout_config):
         features=5,
     )
 
+class ModelBuilder:
+    def __init__(self, model_config: ModelConfig):
+        self.config = model_config
+
+    def build_species_aware_radial_basis(self):
+        radial_config = self.config.atom_centered.radial_basis
+        if radial_config["tensor_module"] == "tensor":
+            tensor_module = e3x.nn.Tensor
+        elif radial_config["tensor_module"] == "fused_tensor":
+            tensor_module = e3x.nn.FusedTensor
+        sarb = SpeciesAwareRadialBasis(cutoff=radial_config["cutoff"],
+                                       num_radial=radial_config["num_radial"],
+                                       max_degree=radial_config["max_degree"],
+                                       num_elemental_embedding=radial_config["num_elemental_embedding"],
+                                       tensor_module=tensor_module,
+                                       embedding_residual_connection=radial_config["embedding_residual_connection"] 
+                                      )
+        return sarb
+    
+
+    
 
 # class ModelBuilder:
 #     def __init__(self, model_config: ModelConfig, n_species: int = 119):
