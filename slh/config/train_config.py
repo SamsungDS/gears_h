@@ -107,6 +107,7 @@ class RadialBasisConfig(BaseModel, extra="forbid"):
 class AtomCenteredConfig(BaseModel, extra="forbid"):
     mp_steps: PositiveInt = 2
     mp_degree: NonNegativeInt = 4
+    radial_basis: RadialBasisConfig
     mp_options: dict = {}
 
 
@@ -121,7 +122,6 @@ class NNConfig(BaseModel, extra="forbid"):
 
 
 class ModelConfig(BaseModel, extra="forbid"):
-    radial_basis: RadialBasisConfig
     atom_centered: AtomCenteredConfig
     atom_pair: AtomPairConfig
     nn: NNConfig
