@@ -7,7 +7,7 @@ import jax
 from slh.config.common import parse_config
 from slh.config.train_config import TrainConfig
 from slh.data.input_pipeline import initialize_dataset_from_list, read_dataset_as_list
-from slh.model.builder import build_lcao_hamiltonian_model
+from slh.model.builder import ModelBuilder
 
 from slh.train.callbacks import initialize_callbacks
 # from slh.train.metrics import initialize_metrics
@@ -74,13 +74,15 @@ def run(user_config, log_level="error"):
         val_batch_size=config.data.valid_batch_size,
         n_epochs=config.n_epochs,
     )
+    max_ell = train_ds.max_ell
+    readout_nfeatures = train_ds.readout_nfeatures
 
     log.info("Initializing Model")
     sample_input = train_ds.init_input()
 
-    model = build_lcao_hamiltonian_model(
-        config.model.get_dict(),
-    )
+    model_builder = ModelBuilder(config.ModelConfig)
+    model = model_builder.build_lcao_hamiltonian_model(readout_nfeatures, max_ell)
+    
     batched_model = jax.vmap(
         model.apply, in_axes=(None, 0, 0, 0), axis_name="batch"
     )
