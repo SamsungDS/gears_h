@@ -37,10 +37,8 @@ def build_model(config, readout_config):
     )
 
 class ModelBuilder:
-    def __init__(self, model_config: ModelConfig, readout_nfeatures: int, max_ell: int):
+    def __init__(self, model_config: ModelConfig):
         self.config = model_config
-        self.readout_nfeatures = readout_nfeatures
-        self.max_ell = max_ell
 
     def build_species_aware_radial_basis(self):
         radial_config = self.config.atom_centered.radial_basis
@@ -93,8 +91,20 @@ class ModelBuilder:
                         )
         return mlp
 
-    def build_readout(self):
-        return Readout(self.readout_nfeatures, max_ell=self.max_ell)
+    def build_readout(self, readout_nfeatures: int, max_ell: int):
+        return Readout(readout_nfeatures, max_ell=max_ell)
+    
+    def build_lcao_hamiltonian_model(self, readout_nfeatures: int, max_ell: int):
+        acd = self.build_atom_centered_descriptor()
+        bcd = self.build_bond_centered_descriptor()
+        mlp = self.build_mlp()
+        readout = self.build_readout(readout_nfeatures, max_ell=max_ell)
+        hmodel = HamiltonianModel(atom_centered=acd,
+                                  bond_centered=bcd,
+                                  dense=mlp,
+                                  readout=readout
+                                 )
+        return hmodel
 
     
 
