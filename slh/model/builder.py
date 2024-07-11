@@ -58,10 +58,13 @@ class ModelBuilder:
         return sarb
     
     def build_atom_centered_descriptor(self):
+        radial_basis = self.build_species_aware_radial_basis()
+
         ac_config = self.config.atom_centered
         descriptor_name = ac_config.descriptor.descriptor_name
         descriptor_options = {key : val for key, val in ac_config.descriptor.items() if key != descriptor_name}
-        acd = getattr(slh.layers.descriptor, descriptor_name)(**descriptor_options)
+        acd = getattr(slh.layers.descriptor, descriptor_name)(radial_basis=radial_basis,
+                                                              **descriptor_options)
         return acd
     
     def build_bond_centered_descriptor(self):
