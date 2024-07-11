@@ -106,7 +106,7 @@ class RadialBasisConfig(BaseModel, extra="forbid"):
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
 
 class SAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
-    descriptor_name = Literal["SAAtomCenteredDescriptor"]
+    descriptor_name: Literal["SAAtomCenteredDescriptor"]
     use_fused_tensor: bool = False
     embedding_residual_connection: bool = True
     mp_steps: int = 2
@@ -114,7 +114,7 @@ class SAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
     mp_options: dict = {}
 
 class TDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
-    descriptor_name = Literal["TDSAAtomCenteredDescriptor"]
+    descriptor_name: Literal["TDSAAtomCenteredDescriptor"]
     max_tensordense_degree: int = 4
     num_tensordense_features: int = 32
     use_fused_tensor: bool = False
