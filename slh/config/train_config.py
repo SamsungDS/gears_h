@@ -98,9 +98,10 @@ class DataConfig(BaseModel, extra="forbid"):
 
 class RadialBasisConfig(BaseModel, extra="forbid"):
     cutoff: PositiveFloat
-    num_radial: PositiveInt
-    max_degree: NonNegativeInt
-    num_elemental_embedding: PositiveInt
+    num_radial: PositiveInt = 8
+    max_degree: NonNegativeInt = 2
+    num_elemental_embedding: PositiveInt = 8
+    embedding_residual_connection: bool = False
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
 
 class SAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
