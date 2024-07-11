@@ -117,14 +117,14 @@ class AtomPairConfig(BaseModel, extra="forbid"):
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
 
 
-class NNConfig(BaseModel, extra="forbid"):
+class MLPConfig(BaseModel, extra="forbid"):
     nn: List[PositiveInt] = [128]
 
 
 class ModelConfig(BaseModel, extra="forbid"):
     atom_centered: AtomCenteredConfig
     atom_pair: AtomPairConfig
-    nn: NNConfig
+    mlp: MLPConfig
 
     def get_dict(self):
         return self.model_dump()
