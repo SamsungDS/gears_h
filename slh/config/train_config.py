@@ -184,7 +184,7 @@ class TrainConfig(BaseModel, frozen=True, extra="forbid"):
     patience: Optional[PositiveInt] = None
     seed: int = 2465
 
-    model: ModelConfig = ModelConfig()
+    model: ModelConfig
     data: DataConfig
     # metrics: List[MetricsConfig] = []
     # loss: List[LossConfig]
