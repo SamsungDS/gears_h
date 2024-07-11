@@ -37,8 +37,10 @@ def build_model(config, readout_config):
     )
 
 class ModelBuilder:
-    def __init__(self, model_config: ModelConfig):
+    def __init__(self, model_config: ModelConfig, readout_nfeatures: int, max_ell: int):
         self.config = model_config
+        self.readout_nfeatures = readout_nfeatures
+        self.max_ell = max_ell
 
     def build_species_aware_radial_basis(self):
         radial_config = self.config.atom_centered.radial_basis
@@ -90,6 +92,9 @@ class ModelBuilder:
                          layer_widths=mlp_config['mlp_layer_widths']
                         )
         return mlp
+
+    def build_readout(self):
+        return Readout(self.readout_nfeatures, max_ell=self.max_ell)
 
     
 
