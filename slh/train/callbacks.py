@@ -10,6 +10,8 @@ from keras.callbacks import CSVLogger#, TensorBoard # TODO implement tensorboard
 from slh.config.common import flatten
 from slh.config.train_config import TrainConfig
 
+log = logging.getLogger(__name__)
+
 def format_str(k):
     return f"{k:.5f}"
 
@@ -61,7 +63,7 @@ class CSVLoggerSLH(CSVLogger):
 
 def initialize_callbacks(config: TrainConfig, model_version_path: Path):
     callback_configs = config.callbacks
-    # log.info("Initializing Callbacks") # TODO add logging
+    log.info("Initializing Callbacks")
 
     dummy_model = tf.keras.Model()
     callback_dict = {
