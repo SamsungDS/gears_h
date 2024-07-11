@@ -47,7 +47,7 @@ class ModelBuilder:
                                     param_dtype=getattr(jnp,radial_config["tensor_module_dtype"]))
         elif radial_config["tensor_module"] == "fused_tensor":
             tensor_module = partial(e3x.nn.FusedTensor,
-                                    param_dtype=getattr(jnp,radial_config["tensor_module_dtype"])))
+                                    param_dtype=getattr(jnp,radial_config["tensor_module_dtype"]))
         sarb = SpeciesAwareRadialBasis(cutoff=radial_config["cutoff"],
                                        num_radial=radial_config["num_radial"],
                                        max_degree=radial_config["max_degree"],
@@ -63,6 +63,21 @@ class ModelBuilder:
         descriptor_options = {key : val for key, val in ac_config.descriptor.items() if key != descriptor_name}
         acd = getattr(slh.layers.descriptor, descriptor_name)(**descriptor_options)
         return acd
+    
+    def build_bond_centered_descriptor(self):
+        bc_config = self.config.bond_centered
+        if bc_config["tensor_module"] == "tensor":
+            tensor_module = partial(e3x.nn.Tensor,
+                                    param_dtype=getattr(jnp,bc_config["tensor_module_dtype"]))
+        elif bc_config["tensor_module"] == "fused_tensor":
+            tensor_module = partial(e3x.nn.FusedTensor,
+                                    param_dtype=getattr(jnp,bc_config["tensor_module_dtype"]))
+        bcd = BondCenteredTensorMomentDescriptor(cutoff=bc_config["cutoff"],
+                                                 max_actp_degree=bc_config["max_actp_degree"],
+                                                 max_basis_degree=bc_config["max_basis_degree"],
+                                                 max_degree=bc_config["max_degree"],
+                                                 tensor_module=tensor_module)
+        return bcd
 
     
 
