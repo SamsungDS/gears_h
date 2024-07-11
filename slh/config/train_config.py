@@ -137,7 +137,8 @@ class BondCenteredConfig(BaseModel, extra="forbid"):
 
 
 class MLPConfig(BaseModel, extra="forbid"):
-    nn: List[PositiveInt] = [128]
+    mlp_layer_widths: List[PositiveInt] = [128]
+    mlp_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
 
 
 class ModelConfig(BaseModel, extra="forbid"):
