@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Union
 from typing_extensions import Annotated
 
 import yaml
@@ -103,13 +103,25 @@ class RadialBasisConfig(BaseModel, extra="forbid"):
     num_elemental_embedding: PositiveInt
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
 
+class SAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
+    descriptor_name = Literal["SAAtomCenteredDescriptor"]
+    use_fused_tensor: Optional[bool] = False
+    embedding_residual_connection: Optional[bool] = True
+    mp_steps: Optional[int] = 2
+    mp_degree: Optional[int] = 4
+    mp_options: Optional[dict] = {}
+
+class TDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
+    descriptor_name = Literal["TDSAAtomCenteredDescriptor"]
+    max_tensordense_degree: Optional[int] = 4
+    num_tensordense_features: Optional[int] = 32
+    use_fused_tensor: Optional[bool] = False
+    embedding_residual_connection: Optional[bool] = False
 
 class AtomCenteredConfig(BaseModel, extra="forbid"):
-    mp_steps: PositiveInt = 2
-    mp_degree: NonNegativeInt = 4
+    descriptor: Union[SAAtomCenteredDescriptorConfig, 
+                      TDSAAtomCenteredDescriptorConfig] = Field(..., discriminator='descriptor_name')
     radial_basis: RadialBasisConfig
-    mp_options: dict = {}
-
 
 class BondCenteredConfig(BaseModel, extra="forbid"):
     cutoff: PositiveFloat
