@@ -4,6 +4,7 @@ import e3x
 import jax
 import jax.numpy as jnp
 
+import slh
 from slh.config.train_config import ModelConfig
 from slh.layers.descriptor import (
     BondCenteredTensorMomentDescriptor,
@@ -54,6 +55,12 @@ class ModelBuilder:
                                       )
         return sarb
     
+    def build_atom_centered_descriptor(self):
+        ac_config = self.config.atom_centered
+        descriptor_name = ac_config.descriptor.descriptor_name
+        descriptor_options = {key : val for key, val in ac_config.descriptor.items() if key != descriptor_name}
+        acd = getattr(slh.layers.descriptor, descriptor_name)(**descriptor_options)
+        return acd
 
     
 
