@@ -80,9 +80,9 @@ def run(user_config, log_level="error"):
     log.info("Initializing Model")
     sample_input = train_ds.init_input()
 
-    model_builder = ModelBuilder(config.ModelConfig)
+    model_builder = ModelBuilder(config.model)
     model = model_builder.build_lcao_hamiltonian_model(readout_nfeatures, max_ell)
-    
+
     batched_model = jax.vmap(
         model.apply, in_axes=(None, 0, 0, 0), axis_name="batch"
     )
