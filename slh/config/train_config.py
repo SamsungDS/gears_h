@@ -16,6 +16,7 @@ from pydantic import (
     model_validator,
 )
 
+from slh.config.lr_config import LinearLR, CyclicCosineLR
 
 class DataConfig(BaseModel, extra="forbid"):
     directory: str = "slhmodels"
@@ -164,9 +165,12 @@ CallBack = Annotated[CSVCallback, Field(discriminator="name")]
 
 class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     name: str = "adam"
-    lr: NonNegativeFloat = 0.001
+    lr: NonNegativeFloat = 0.005
     opt_kwargs: dict = {}
-    sam_rho: NonNegativeFloat = 0.0
+    schedule: Union[LinearLR, CyclicCosineLR] = Field(
+        ..., discriminator="name"
+    )
+    
 
 
 class TrainConfig(BaseModel, frozen=True, extra="forbid"):
