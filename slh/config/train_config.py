@@ -16,7 +16,7 @@ from pydantic import (
     model_validator,
 )
 
-from slh.config.lr_config import LinearLR, CyclicCosineLR
+from slh.config.lr_config import LinearSchedule, CyclicCosineSchedule, ExponentialDecaySchedule
 
 class DataConfig(BaseModel, extra="forbid"):
     directory: str = "slhmodels"
@@ -168,8 +168,10 @@ class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     name: str = "adam"
     lr: NonNegativeFloat = 0.005
     opt_kwargs: dict = {}
-    schedule: Union[LinearLR, CyclicCosineLR] = Field(
-        LinearLR(), discriminator="name"
+    schedule: Union[LinearSchedule, 
+                    CyclicCosineSchedule, 
+                    ExponentialDecaySchedule] = Field(ExponentialDecaySchedule(), 
+                                                      discriminator="name"
     )
     
 
