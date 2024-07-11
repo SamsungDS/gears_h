@@ -8,6 +8,8 @@ import yaml
 from pydantic import ValidationError
 from rich.console import Console
 
+from slh.cli import templates
+
 console = Console(highlight=False)
 
 app = typer.Typer(
