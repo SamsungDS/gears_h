@@ -125,7 +125,9 @@ class AtomCenteredConfig(BaseModel, extra="forbid"):
 
 class BondCenteredConfig(BaseModel, extra="forbid"):
     cutoff: PositiveFloat
-    basis_degree: NonNegativeInt
+    max_basis_degree: NonNegativeInt = 2
+    max_degree: NonNegativeInt = 4
+    max_actp_degree : NonNegativeInt = 4
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
 
 
