@@ -85,7 +85,7 @@ class ModelBuilder:
     def build_mlp(self):
         mlp_config = self.config['mlp']
         dense_layer = partial(e3x.nn.Dense, 
-                              param_dtype=getattr(jnp,mlp_config["mlp_dtype"])),
+                              param_dtype=getattr(jnp,mlp_config["mlp_dtype"]))
         mlp = DenseBlock(dense_layer=dense_layer,
                          layer_widths=mlp_config['mlp_layer_widths']
                         )
