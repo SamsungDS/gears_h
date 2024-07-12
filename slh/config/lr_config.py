@@ -43,4 +43,3 @@ class ExponentialDecaySchedule(BaseModel, frozen=True, extra="forbid"):
     transition_begin: int = 20
     decay_rate: NonNegativeFloat = 0.99
     end_value: NonNegativeFloat = 1e-4
-    nesterov: bool = True
