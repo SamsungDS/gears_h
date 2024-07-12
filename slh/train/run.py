@@ -80,7 +80,7 @@ def run(user_config, log_level="error"):
     log.info("Initializing Model")
     sample_input = train_ds.init_input()
 
-    model_builder = ModelBuilder(config.model.get_dict())
+    model_builder = ModelBuilder(config.model.model_dump())
     model = model_builder.build_lcao_hamiltonian_model(readout_nfeatures, max_ell)
 
     batched_model = jax.vmap(
@@ -89,9 +89,16 @@ def run(user_config, log_level="error"):
 
     params, rng_key = create_params(model, rng_key, sample_input, 1)
 
-    # TODO Make this controllable from the input file.
+    # TODO Switch to using slh.optimize.get_optimizer and enable different LRs for each parameter group.
     import optax
-    state = create_train_state(batched_model, params, optax.adam(1e-3))
+    optimizer_config = config.optimizer.model_dump()
+    lr_options = {key : val for key, val in optimizer_config['schedule'].items() if key != "name"}
+    learning_rate = getattr(optax,optimizer_config['schedule']['name'])(optimizer_config['lr'],
+                                                                        **lr_options)
+    opt = getattr(optax,optimizer_config['name'])(learning_rate, 
+                                               **optimizer_config["opt_kwargs"])
+    # state = create_train_state(batched_model, params, optax.adam(1e-3))
+    state = create_train_state(batched_model, params, opt)
 
     fit(
         state,

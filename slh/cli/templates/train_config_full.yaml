@@ -11,6 +11,8 @@ data:
   batch_size: 2
   valid_batch_size: 2
   shuffle_buffer_size: 100
+  energy_unit: eV
+  pos_unit: Ang
 
 model:
   atom_centered:
@@ -20,6 +22,7 @@ model:
       embedding_residual_connection: True
       mp_steps: 2
       mp_degree: 4
+      mp_options: {}
     radial_basis:
       cutoff: <CUTOFF>
       num_radial: 8
@@ -42,3 +45,12 @@ optimizer:
   name: "adam"
   lr: 0.001
   opt_kwargs: {nesterov: True}
+  schedule:
+    name: exponential_decay
+    decay_rate: 0.99
+      end_value: 0.0001
+      nesterov: true
+      transition_begin: 20
+      transition_steps: 1
+  patience: null
+  seed: 2465

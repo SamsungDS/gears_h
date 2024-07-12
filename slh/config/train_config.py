@@ -5,14 +5,11 @@ from typing_extensions import Annotated
 import yaml
 from pydantic import (
     BaseModel,
-    ConfigDict,
     Field,
     NonNegativeFloat,
     NonNegativeInt,
     PositiveFloat,
     PositiveInt,
-    StrictBool,
-    create_model,
     model_validator,
 )
 
@@ -34,12 +31,6 @@ class DataConfig(BaseModel, extra="forbid"):
     shuffle_buffer_size: PositiveInt = 1000
     additional_properties_info: dict[str, str] = {}
 
-    # shift_method: str = "per_element_regression_shift"
-    # shift_options: dict = {"energy_regularisation": 1.0}
-
-    # scale_method: str = "per_element_force_rms_scale"
-    # scale_options: Optional[dict] = {}
-
     pos_unit: Optional[str] = "Ang"
     energy_unit: Optional[str] = "eV"
 
@@ -55,37 +46,6 @@ class DataConfig(BaseModel, extra="forbid"):
             raise ValueError("Please specify either data_path or train_data_path")
 
         return self
-
-    # @model_validator(mode="after")
-    # def validate_shift_scale_methods(self):
-    #     method_lists = [shift_method_list, scale_method_list]
-    #     requested_methods = [self.shift_method, self.scale_method]
-    #     requested_options = [self.shift_options, self.scale_options]
-
-    #     cases = zip(method_lists, requested_methods, requested_options)
-    #     for method_list, requested_method, requested_params in cases:
-    #         methods = {method.name: method for method in method_list}
-
-    #         # check if method exists
-    #         if requested_method not in methods.keys():
-    #             raise KeyError(
-    #                 f"The initialization method '{requested_method}' is not among the"
-    #                 f" implemented methods. Choose from {methods.keys()}"
-    #             )
-
-    #         # check if parameters names are complete and correct
-    #         method = methods[requested_method]
-    #         fields = {
-    #             name: (dtype, ...)
-    #             for name, dtype in zip(method.parameters, method.dtypes)
-    #         }
-    #         MethodConfig = create_model(
-    #             f"{method.name}Config", __config__=ConfigDict(extra="forbid"), **fields
-    #         )
-
-    #         _ = MethodConfig(**requested_params)
-
-    #     return self
 
     @property
     def model_version_path(self):
@@ -146,10 +106,6 @@ class ModelConfig(BaseModel, extra="forbid"):
     bond_centered: BondCenteredConfig
     mlp: MLPConfig
 
-    def get_dict(self):
-        return self.model_dump()
-
-
 class CSVCallback(BaseModel, frozen=True, extra="forbid"):
     """
     Configuration of the CSVCallback.
@@ -170,7 +126,7 @@ CallBack = Annotated[CSVCallback, Field(discriminator="name")]
 class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     name: str = "adam"
     lr: NonNegativeFloat = 0.005
-    opt_kwargs: dict = {}
+    opt_kwargs: dict[str, bool] = {"nesterov" : True}
     schedule: Union[LinearSchedule, 
                     CyclicCosineSchedule, 
                     ExponentialDecaySchedule] = Field(ExponentialDecaySchedule(), 
