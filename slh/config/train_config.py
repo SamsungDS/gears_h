@@ -130,7 +130,7 @@ CallBack = Annotated[CSVCallback, Field(discriminator="name")]
 class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     name: str = "adam"
     lr: NonNegativeFloat = 0.005
-    opt_kwargs: dict = {}
+    opt_kwargs: dict[str, bool] = {"nesterov" : True}
     schedule: Union[LinearSchedule, 
                     CyclicCosineSchedule, 
                     ExponentialDecaySchedule] = Field(ExponentialDecaySchedule(), 
