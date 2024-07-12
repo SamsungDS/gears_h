@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "surrogatelcaohamiltonians"
-version = "0.0.5"
+version = "0.1.0"
 description = "Package to learn electronic structure hamiltonians in an LCAO basis"
 authors = ["Anubhab Haldar <a.haldar@samsung.com>"]
 keywords=["machine-learning", "hamiltonians", "electronic-structure"]
