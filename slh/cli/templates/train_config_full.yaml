@@ -48,9 +48,9 @@ optimizer:
   schedule:
     name: exponential_decay
     decay_rate: 0.99
-      end_value: 0.0001
-      nesterov: true
-      transition_begin: 20
-      transition_steps: 1
-  patience: null
-  seed: 2465
+    end_value: 0.0001
+    transition_begin: 20
+    transition_steps: 1
+
+patience: null
+seed: 2465
