@@ -86,11 +86,12 @@ def fit(state: TrainState,
         epoch_start_time = time.time()
         callbacks.on_epoch_begin(epoch=epoch + 1)
 
-        effective_batch_size = n_grad_acc * train_dataset.batch_size
+        # TODO when we implement gradient accumulation, start using this value rather than train_batches_per_epoch etc
+        # effective_batch_size = n_grad_acc * train_dataset.batch_size
 
         # Training set loop - set up
         epoch_loss.update({"train_loss": 0.0})
-        train_mae_loss = jnp.inf
+        train_mae_loss = 0.0
 
         train_batch_pbar = trange(
             0,
@@ -114,13 +115,14 @@ def fit(state: TrainState,
             epoch_loss["train_loss"] += loss
 
             train_batch_pbar.set_postfix(
-                mae=f"{train_mae_loss / effective_batch_size:0.3e}"
+                mae=f"{train_mae_loss / train_batches_per_epoch:0.3e}"
             )
             callbacks.on_train_batch_end(batch=train_batch)
             train_batch_pbar.update()
         
         epoch_loss["train_loss"] /= train_batches_per_epoch
         epoch_loss["train_loss"] = float(epoch_loss["train_loss"])
+        epoch_loss["train_mae"] = float(train_mae_loss / train_batches_per_epoch)
 
 
         # Validation set loop - set up
@@ -152,6 +154,7 @@ def fit(state: TrainState,
         
         epoch_loss["val_loss"] /= val_batches_per_epoch
         epoch_loss["val_loss"] = float(epoch_loss["val_loss"])
+        epoch_loss["val_mae"] = float(epoch_val_mae_accumulator / val_batches_per_epoch)
 
         if (epoch_val_mae_accumulator / val_batches_per_epoch) < best_mae_loss:
                 best_mae_loss = epoch_val_mae_accumulator / val_batches_per_epoch
