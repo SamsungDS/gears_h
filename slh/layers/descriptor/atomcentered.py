@@ -74,10 +74,10 @@ class SAAtomCenteredDescriptor(nn.Module):
                     max_degree=2,
                     num=8,
                     radial_fn=partial(
-                        e3x.nn.exponential_bernstein,
-                        limit=self.radial_basis.cutoff,
+                        e3x.nn.exponential_bernstein,,
                         gamma=soft_abs(gamma),
                     ),
+                    cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff),
                     cartesian_order=False,
                 )(neighbour_displacements),
                 src_idx=idx_j,
@@ -158,10 +158,10 @@ class TDSAAtomCenteredDescriptor(nn.Module):
                     max_degree=2,
                     num=8,
                     radial_fn=partial(
-                        e3x.nn.exponential_bernstein,
-                        limit=self.radial_basis.cutoff,
-                        gamma=soft_abs(gamma),  # This is a 'soft absolute' function
+                        e3x.nn.exponential_bernstein,,
+                        gamma=soft_abs(gamma),
                     ),
+                    cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff),
                     cartesian_order=False,
                 )(neighbour_displacements),
                 src_idx=idx_j,
