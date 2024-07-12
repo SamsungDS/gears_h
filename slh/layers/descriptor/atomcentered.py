@@ -91,6 +91,10 @@ class TDSAAtomCenteredDescriptor(nn.Module):
     use_fused_tensor: bool = False
     embedding_residual_connection: bool = True
 
+    mp_steps: int = 2
+    mp_degree: int = 4
+    mp_options: dict = field(default_factory=lambda: {})
+
     def setup(self):
         self.embedding = self.radial_basis.embedding
         self.embedding_transformation = e3x.nn.Dense(
@@ -98,6 +102,25 @@ class TDSAAtomCenteredDescriptor(nn.Module):
             name="embed_transform",
             dtype=jnp.float32,
             param_dtype=jnp.float32,
+        )
+
+        self.mp_block = e3x.nn.SelfAttention(
+            max_degree=self.mp_degree,
+            cartesian_order=False,
+            **self.mp_options,
+        )
+
+        self.mp_basis = partial(
+            e3x.nn.basis,
+            max_degree=2,
+            num=8,
+            radial_fn=partial(
+                e3x.nn.exponential_bernstein,
+                limit=self.radial_basis.cutoff,
+                gamma=1 / 1.5,
+                cuspless=True,
+            ),
+            cartesian_order=False,
         )
 
     @nn.compact
@@ -110,7 +133,7 @@ class TDSAAtomCenteredDescriptor(nn.Module):
         neighbour_displacements = neighbour_displacements
 
         idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
-        Z_i, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
+        _, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
 
         # This is aware of the Z_j's
         y = self.radial_basis(
