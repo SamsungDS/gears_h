@@ -59,8 +59,8 @@ class SAAtomCenteredDescriptor(nn.Module):
         # num_atoms x 1 x L x F
         y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
 
-        gamma = self.param("gamma", nn.initializers.constant(1.0))
-
+        gamma = self.param("gamma", nn.initializers.constant(1.0), shape=(1,))
+        
         for _ in range(self.mp_steps):
             y = e3x.nn.SelfAttention(
                 max_degree=self.mp_degree,
@@ -148,7 +148,7 @@ class TDSAAtomCenteredDescriptor(nn.Module):
             use_fused_tensor=self.use_fused_tensor,
         )(y)
 
-        gamma = self.param("gamma", nn.initializers.constant(1.0))
+        gamma = self.param("gamma", nn.initializers.constant(1.0), shape=(1,))
 
         for _ in range(2):
             y = self.mp_block(
