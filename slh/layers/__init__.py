@@ -1,7 +1,5 @@
 from slh.layers.descriptor import (
-    AtomCenteredTensorMomentDescriptor,
     BondCenteredTensorMomentDescriptor,
-    MPAtomCenteredDescriptor,
     SAAtomCenteredDescriptor,
     SpeciesAwareRadialBasis,
     TDSAAtomCenteredDescriptor
