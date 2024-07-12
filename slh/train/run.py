@@ -7,9 +7,9 @@ import jax
 from slh.config.common import parse_config
 from slh.config.train_config import TrainConfig
 from slh.data.input_pipeline import initialize_dataset_from_list, read_dataset_as_list
-from slh.model.builder import build_lcao_hamiltonian_model
+from slh.model.builder import ModelBuilder
 
-# from slh.train.callbacks import initialize_callbacks
+from slh.train.callbacks import initialize_callbacks
 # from slh.train.metrics import initialize_metrics
 from slh.train.checkpoints import create_params, create_train_state
 from slh.train.trainer import fit
@@ -51,7 +51,7 @@ def run(user_config, log_level="error"):
     config.dump_config(config.data.model_version_path)
     log.info(f"Running on {jax.devices()}")
 
-    # callbacks = initialize_callbacks(config.callbacks, config.data.model_version_path)
+    callbacks = initialize_callbacks(config, config.data.model_version_path)
     # loss_fn = initialize_loss_fn(config.loss)
     # logging_metrics = initialize_metrics(config.metrics)
 
@@ -74,13 +74,15 @@ def run(user_config, log_level="error"):
         val_batch_size=config.data.valid_batch_size,
         n_epochs=config.n_epochs,
     )
+    max_ell = train_ds.max_ell
+    readout_nfeatures = train_ds.readout_nfeatures
 
     log.info("Initializing Model")
     sample_input = train_ds.init_input()
 
-    model = build_lcao_hamiltonian_model(
-        config.model.get_dict(),
-    )
+    model_builder = ModelBuilder(config.model.get_dict())
+    model = model_builder.build_lcao_hamiltonian_model(readout_nfeatures, max_ell)
+
     batched_model = jax.vmap(
         model.apply, in_axes=(None, 0, 0, 0), axis_name="batch"
     )
@@ -95,7 +97,7 @@ def run(user_config, log_level="error"):
         state,
         train_dataset=train_ds,
         val_dataset=val_ds, logging_metrics=None,
-        callbacks=None,
+        callbacks=callbacks,
         n_grad_acc=1, # TODO make this controllable
         n_epochs=config.n_epochs,
         ckpt_dir=config.data.model_version_path,

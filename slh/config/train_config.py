@@ -1,5 +1,6 @@
 from pathlib import Path
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Union
+from typing_extensions import Annotated
 
 import yaml
 from pydantic import (
@@ -15,6 +16,7 @@ from pydantic import (
     model_validator,
 )
 
+from slh.config.lr_config import LinearSchedule, CyclicCosineSchedule, ExponentialDecaySchedule
 
 class DataConfig(BaseModel, extra="forbid"):
     directory: str = "slhmodels"
@@ -97,43 +99,84 @@ class DataConfig(BaseModel, extra="forbid"):
 
 class RadialBasisConfig(BaseModel, extra="forbid"):
     cutoff: PositiveFloat
-    num_radial: PositiveInt
-    max_degree: NonNegativeFloat
-    num_elemental_embedding: PositiveInt
+    num_radial: PositiveInt = 8
+    max_degree: NonNegativeInt = 2
+    num_elemental_embedding: PositiveInt = 8
+    embedding_residual_connection: bool = False
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
+    tensor_module_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
 
-
-class AtomCenteredConfig(BaseModel, extra="forbid"):
-    mp_steps: PositiveInt = 2
-    mp_degree: NonNegativeInt = 4
+class SAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
+    descriptor_name: Literal["SAAtomCenteredDescriptor"] = "SAAtomCenteredDescriptor"
+    use_fused_tensor: bool = False
+    embedding_residual_connection: bool = True
+    mp_steps: int = 2
+    mp_degree: int = 4
     mp_options: dict = {}
 
+class TDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
+    descriptor_name: Literal["TDSAAtomCenteredDescriptor"] = "TDSAAtomCenteredDescriptor"
+    max_tensordense_degree: int = 4
+    num_tensordense_features: int = 32
+    use_fused_tensor: bool = False
+    embedding_residual_connection: bool = False
 
-class AtomPairConfig(BaseModel, extra="forbid"):
+class AtomCenteredConfig(BaseModel, extra="forbid"):
+    descriptor: Union[SAAtomCenteredDescriptorConfig, 
+                      TDSAAtomCenteredDescriptorConfig] = Field(SAAtomCenteredDescriptorConfig(), 
+                                                                discriminator='descriptor_name')
+    radial_basis: RadialBasisConfig
+
+class BondCenteredConfig(BaseModel, extra="forbid"):
     cutoff: PositiveFloat
-    basis_degree: NonNegativeFloat
+    max_basis_degree: NonNegativeInt = 2
+    max_degree: NonNegativeInt = 4
+    max_actp_degree : NonNegativeInt = 4
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
+    tensor_module_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
 
 
-class NNConfig(BaseModel, extra="forbid"):
-    nn: List[PositiveInt] = [128]
+class MLPConfig(BaseModel, extra="forbid"):
+    mlp_layer_widths: List[PositiveInt] = [128]
+    mlp_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
 
 
 class ModelConfig(BaseModel, extra="forbid"):
-    radial_basis: RadialBasisConfig
     atom_centered: AtomCenteredConfig
-    atom_pair: AtomPairConfig
-    nn: NNConfig
+    bond_centered: BondCenteredConfig
+    mlp: MLPConfig
 
     def get_dict(self):
         return self.model_dump()
 
 
+class CSVCallback(BaseModel, frozen=True, extra="forbid"):
+    """
+    Configuration of the CSVCallback.
+
+    Parameters
+    ----------
+    name: Keyword of the callback used..
+    """
+
+    name: Literal["csv"]
+
+CallBack = Annotated[CSVCallback, Field(discriminator="name")]
+
+# CallBack = Annotated[ # TODO implement other callbacks if we want them
+#     Union[CSVCallback, TBCallback, MLFlowCallback], Field(discriminator="name")
+# ]
+
 class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     name: str = "adam"
-    lr: NonNegativeFloat = 0.001
+    lr: NonNegativeFloat = 0.005
     opt_kwargs: dict = {}
-    sam_rho: NonNegativeFloat = 0.0
+    schedule: Union[LinearSchedule, 
+                    CyclicCosineSchedule, 
+                    ExponentialDecaySchedule] = Field(ExponentialDecaySchedule(), 
+                                                      discriminator="name"
+    )
+    
 
 
 class TrainConfig(BaseModel, frozen=True, extra="forbid"):
@@ -146,7 +189,7 @@ class TrainConfig(BaseModel, frozen=True, extra="forbid"):
     # metrics: List[MetricsConfig] = []
     # loss: List[LossConfig]
     optimizer: OptimizerConfig = OptimizerConfig()
-    # callbacks: List[CallBack] = [CSVCallback(name="csv")]
+    callbacks: List[CallBack] = [CSVCallback(name="csv")]
 
     def dump_config(self, save_path: Path):
         """

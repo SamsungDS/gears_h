@@ -61,7 +61,7 @@ class SAAtomCenteredDescriptor(nn.Module):
                 use_basis_bias=True,
                 cartesian_order=False,
                 use_fused_tensor=self.use_fused_tensor,
-                num_heads=4,
+                num_heads=1,
             )(
                 y,
                 e3x.nn.basis(
@@ -116,6 +116,9 @@ class TDSAAtomCenteredDescriptor(nn.Module):
         y = self.radial_basis(
             neighbour_displacements=neighbour_displacements, Z_j=Z_j
         ).astype(jnp.float32)
+
+        # num_atoms x 1 x L x F
+        y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
 
         y = e3x.nn.TensorDense(
             self.num_tensordense_features,

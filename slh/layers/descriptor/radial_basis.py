@@ -14,7 +14,7 @@ class SpeciesAwareRadialBasis(nn.Module):
     max_degree: int = 3
     num_elemental_embedding: int = 64
     tensor_module: Union[e3x.nn.Tensor, e3x.nn.FusedTensor] = e3x.nn.Tensor
-    embedding_residual_connection: int = True
+    embedding_residual_connection: bool = True
 
     def setup(self):
         self.radial_function = partial(jinclike, limit=self.cutoff)

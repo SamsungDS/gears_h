@@ -1,0 +1,44 @@
+n_epochs: 50
+callbacks: 
+- name: csv
+
+data:
+  directory: models
+  experiment: slh
+  data_path: <PATH>
+  n_train: 100
+  n_valid: 10
+  batch_size: 2
+  valid_batch_size: 2
+  shuffle_buffer_size: 100
+
+model:
+  atom_centered:
+    descriptor: 
+      descriptor_name: SAAtomCenteredDescriptor
+      use_fused_tensor: False
+      embedding_residual_connection: True
+      mp_steps: 2
+      mp_degree: 4
+    radial_basis:
+      cutoff: <CUTOFF>
+      num_radial: 8
+      max_degree: 2
+      num_elemental_embedding: 8
+      tensor_module: tensor
+      tensor_module_dtype: float32
+  bond_centered:
+    cutoff: <CUTOFF>
+    max_basis_degree: 2
+    max_degree: 4
+    max_actp_degree: 4
+    tensor_module: tensor
+    tensor_module_dtype: float32
+  mlp:
+    mlp_layer_widths: [128]
+    mlp_dtype: float32
+
+optimizer:
+  name: "adam"
+  lr: 0.001
+  opt_kwargs: {nesterov: True}

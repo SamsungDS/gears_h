@@ -10,7 +10,7 @@ from jaxtyping import Array, Float
 
 
 class DenseBlock(nn.Module):
-    dense_layer: e3x.nn.Dense
+    dense_layer: e3x.nn.Dense = e3x.nn.Dense
     layer_widths: list[int] = field(default_factory=lambda: [128, 128])
     activation: Union[Callable, nn.Module] = e3x.nn.shifted_softplus
     name = "residual_dense"
