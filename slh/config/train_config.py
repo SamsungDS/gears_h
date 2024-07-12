@@ -106,10 +106,6 @@ class ModelConfig(BaseModel, extra="forbid"):
     bond_centered: BondCenteredConfig
     mlp: MLPConfig
 
-    def get_dict(self):
-        return self.model_dump()
-
-
 class CSVCallback(BaseModel, frozen=True, extra="forbid"):
     """
     Configuration of the CSVCallback.
