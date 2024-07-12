@@ -117,7 +117,6 @@ class TDSAAtomCenteredDescriptor(nn.Module):
             max_degree=self.mp_degree,
             cartesian_order=False,
             use_basis_bias=False,
-            cartesian_order=False,
             use_fused_tensor=self.use_fused_tensor,
             **self.mp_options,
         )
@@ -205,7 +204,6 @@ class MBSAAtomCenteredDescriptor(nn.Module):
             max_degree=self.mp_degree,
             cartesian_order=False,
             use_basis_bias=False,
-            cartesian_order=False,
             use_fused_tensor=self.use_fused_tensor,
             **self.mp_options,
         )
