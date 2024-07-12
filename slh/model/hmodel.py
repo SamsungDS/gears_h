@@ -1,49 +1,23 @@
-from functools import partial
-
-import e3x
 import flax.linen as nn
-import jax
 import jax.numpy as jnp
 
 from slh.layers import (
-    AtomCenteredTensorMomentDescriptor,
+    SAAtomCenteredDescriptor,
+    TDSAAtomCenteredDescriptor,
     BondCenteredTensorMomentDescriptor,
     DenseBlock,
     Readout,
-    SpeciesAwareRadialBasis,
 )
 from slh.layers.corrections import ExponentialScaleCorrection
 
+from typing import Union
+
 
 class HamiltonianModel(nn.Module):
-    atom_centered: AtomCenteredTensorMomentDescriptor = (
-        AtomCenteredTensorMomentDescriptor(
-            SpeciesAwareRadialBasis(
-                cutoff=6.8,
-                max_degree=1,
-                num_elemental_embedding=32,
-                num_radial=32,
-                tensor_module=partial(e3x.nn.Tensor, param_dtype=jnp.float32),
-            ),
-            moment_max_degree=2,
-            max_moment=2,
-            num_moment_features=32,
-            use_fused_tensor=True,
-        )
-    )
-    bond_centered: BondCenteredTensorMomentDescriptor = (
-        BondCenteredTensorMomentDescriptor(
-            cutoff=6.8,
-            max_degree=4,
-            tensor_module=partial(e3x.nn.FusedTensor, param_dtype=jnp.float32),
-        )
-    )
-    dense: DenseBlock = DenseBlock(
-        dense_layer=partial(e3x.nn.Dense, param_dtype=jnp.float32),
-        layer_widths=[128, 128],
-    )
-
-    readout: Readout = Readout(2, max_ell=2)
+    atom_centered: Union[SAAtomCenteredDescriptor,TDSAAtomCenteredDescriptor]
+    bond_centered: BondCenteredTensorMomentDescriptor
+    dense: DenseBlock
+    readout: Readout
 
     @nn.compact
     def __call__(self, atomic_numbers, neighbour_indices, neighbour_displacements):
