@@ -49,8 +49,11 @@ def initialize_dataset_from_list(
 def orbital_spec_from_file(filename: Path) -> dict[int, list[int]]:
     return json.load(open(filename, mode="r"))
 
+def diagonal_hamiltonian_from_file(directory: Path, hblocks_filename: Path):
+    hblocks = np.load(directory / hblocks_filename, allow_pickle=True)["hblocks"]
+    return hblocks
 
-def pairwise_hamiltonian_from_file(
+def pairwise_off_diagonal_hamiltonian_from_file(
     directory, ijD_filename, hblocks_filename: Path
 ) -> tuple[np.ndarray, np.ndarray, list]:
     ijD = np.load(directory / ijD_filename)
@@ -68,7 +71,8 @@ def snapshot_tuple_from_directory(
     atoms_filename: str = "atoms.extxyz",
     orbital_spec_filename: str = "orbital_ells.json",
     ijD_filename: str = "ijD.npz",
-    hamiltonian_dataset_filename: str = "hblocks.npz",
+    off_diagonal_hamiltonian_dataset_filename: str = "hblocks_off-diagonal.npz",
+    diagonal_hamiltonian_dataset_filename: str = "hblocks_on-diagonal.npz",
 ):
     atoms = read(directory / atoms_filename)
 
@@ -80,11 +84,12 @@ def snapshot_tuple_from_directory(
     (
         bond_atom_indices,
         bond_vectors,
-        hblocks,
-    ) = pairwise_hamiltonian_from_file(
-        directory, ijD_filename, hamiltonian_dataset_filename
+        off_diagonal_hblocks,
+    ) = pairwise_off_diagonal_hamiltonian_from_file(
+        directory, ijD_filename, off_diagonal_hamiltonian_dataset_filename
     )
-    return atoms, orbital_spec, bond_atom_indices, bond_vectors, hblocks
+    on_diagonal_hblocks = diagonal_hamiltonian_from_file(directory, diagonal_hamiltonian_dataset_filename)
+    return atoms, orbital_spec, bond_atom_indices, bond_vectors, off_diagonal_hblocks, on_diagonal_hblocks
 
 
 def read_dataset_as_list(
