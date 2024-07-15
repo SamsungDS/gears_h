@@ -477,8 +477,8 @@ class InMemoryDataset:
         labels = self.labels
         labels = {k: v[i] for k, v in labels.items()}
         log.debug(f"{i}, {labels['h_irreps']}")
-        labels["h_irreps"] = np.pad(
-            labels["h_irreps"],
+        labels["h_irreps_off_diagonal"] = np.pad(
+            labels["h_irreps_off_diagonal"],
             (
                 (0, zeros_to_add),
                 (0, 0),  # Parity dim
@@ -487,9 +487,29 @@ class InMemoryDataset:
             ),  # Feature dim
             "constant",
         ).astype(np.float32)
+        labels["mask_off_diagonal"] = np.pad(
+            labels["mask_off_diagonal"],
+            (
+                (0, zeros_to_add),
+                (0, 0),  # Parity dim
+                (0, 0),  # irreps dim
+                (0, 0),  # Feature dim
+            ),
+            "constant",
+        ).astype(np.int8)
 
-        labels["mask"] = np.pad(
-            labels["mask"],
+        labels["h_irreps_on_diagonal"] = np.pad(
+            labels["h_irreps_on_diagonal"],
+            (
+                (0, zeros_to_add),
+                (0, 0),  # Parity dim
+                (0, 0),  # irreps dim
+                (0, 0),
+            ),  # Feature dim
+            "constant",
+        ).astype(np.float32)
+        labels["mask_on_diagonal"] = np.pad(
+            labels["mask_on_diagonal"],
             (
                 (0, zeros_to_add),
                 (0, 0),  # Parity dim
