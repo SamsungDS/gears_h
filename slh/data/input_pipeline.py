@@ -234,7 +234,7 @@ def get_h_irreps(
     return irreps_array_off_diagonal, irreps_array_on_diagonal
 
 
-def get_irreps_mask(
+def get_irreps_mask_off_diagonal(
     mask_dict, atomic_numbers, neighbour_indices, max_ell, readout_nfeatures
 ):
     mask = np.zeros(
@@ -245,6 +245,16 @@ def get_irreps_mask(
         mask[i] = mask_dict[(atomic_numbers[idxpair[0]], atomic_numbers[idxpair[1]])]
     return mask
 
+def get_irreps_mask_on_diagonal(
+    mask_dict, atomic_numbers, max_ell, readout_nfeatures
+):
+    mask = np.zeros(
+        (len(atomic_numbers), 2, (max_ell + 1) ** 2, readout_nfeatures),
+        dtype=np.int8,
+    )
+    for i, atomic_number in enumerate(atomic_numbers):
+        mask[i] = mask_dict[(atomic_number, atomic_number)]
+    return mask
 
 def prepare_input_dict(dataset_as_list: DatasetList):
     inputs_dict = {}
@@ -287,14 +297,24 @@ def prepare_label_dict(
     labels_dict["h_irreps_on_diagonal"] = [irreps[1] for irreps in tmp_irrep_list]
 
     labels_dict["mask_off_diagonal"] = [
-        get_irreps_mask(
+        get_irreps_mask_off_diagonal(
             mask_dict,
             inputs_dict["numbers"][i],
             inputs_dict["idx_ij"][i],
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i in trange(len(dataset_as_list), desc="Making irreps masks")
+        for i in trange(len(dataset_as_list), desc="Making off-diagonal irreps masks")
+    ]
+
+    labels_dict["mask_on_diagonal"] = [
+        get_irreps_mask_on_diagonal(
+            mask_dict,
+            inputs_dict["numbers"][i],
+            max_ell=max_ell,
+            readout_nfeatures=readout_nfeatures,
+        )
+        for i in trange(len(dataset_as_list), desc="Making on-diagonal irreps masks")
     ]
 
     return labels_dict
