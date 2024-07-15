@@ -179,16 +179,17 @@ def get_max_ell_and_max_features(hmap: MultiElementPairHBlockMapper):
 
 
 def get_h_irreps(
-    hblocks: list[np.ndarray],  # For one snapshot.
+    hblocks_off_diagonal: list[np.ndarray],  # For one snapshot.
+    hblocks_on_diagonal: list[np.ndarray],
     hmapper: MultiElementPairHBlockMapper,
     atomic_numbers: np.ndarray,
     neighbour_indices: np.ndarray,
     max_ell,
     readout_nfeatures,
 ):
-    irreps_array = np.zeros((len(hblocks), 2, (max_ell + 1) ** 2, readout_nfeatures))
+    irreps_array_off_diagonal = np.zeros((len(hblocks_off_diagonal), 2, (max_ell + 1) ** 2, readout_nfeatures))
 
-    assert len(hblocks) == len(neighbour_indices)
+    assert len(hblocks_off_diagonal) == len(neighbour_indices)
 
     atomic_number_pairs = atomic_numbers[neighbour_indices]
     assert atomic_number_pairs.shape[-1] == 2
@@ -200,18 +201,37 @@ def get_h_irreps(
 
         # Take all hblocks consisting of this specie-pair
         hblocks_of_pairs = np.stack(
-            list(itertools.compress(hblocks, boolean_indices_of_pairs))
+            list(itertools.compress(hblocks_off_diagonal, boolean_indices_of_pairs))
         ).astype(np.float32)
 
-        assert len(hblocks_of_pairs) == len(irreps_array[boolean_indices_of_pairs])
+        assert len(hblocks_of_pairs) == len(irreps_array_off_diagonal[boolean_indices_of_pairs])
 
-        irreps_array[boolean_indices_of_pairs] = hmapper.hblocks_to_irreps(
+        irreps_array_off_diagonal[boolean_indices_of_pairs] = hmapper.hblocks_to_irreps(
             hblocks_of_pairs,
-            irreps_array[boolean_indices_of_pairs],
+            irreps_array_off_diagonal[boolean_indices_of_pairs],
             pair[0],
             pair[1],
         )
-    return irreps_array
+
+    irreps_array_on_diagonal = np.zeros((len(hblocks_on_diagonal), 2, (max_ell + 1) ** 2, readout_nfeatures))
+
+    for number in np.unique(atomic_numbers):
+        # Find all atoms of this species
+        boolean_indices_of_species = number == atomic_numbers
+
+        # Get all hblocks for this species
+        hblocks_of_species = np.stack(
+            list(itertools.compress(hblocks_on_diagonal, boolean_indices_of_species))
+        ).astype(np.float32)
+
+        irreps_array_on_diagonal[boolean_indices_of_species] = hmapper.hblocks_to_irreps(
+            hblocks_of_species,
+            irreps_array_on_diagonal[boolean_indices_of_species],
+            number,
+            number
+        )
+    # TODO requires both on and off diagonal. Fix in future versions.
+    return irreps_array_off_diagonal, irreps_array_on_diagonal
 
 
 def get_irreps_mask(
@@ -247,9 +267,10 @@ def prepare_label_dict(
 ):
     labels_dict = {}
 
-    labels_dict["h_irreps"] = [
+    tmp_irrep_list = [
         get_h_irreps(
-            hblocks=datatuple[-1],
+            hblocks_off_diagonal=datatuple[4],
+            hblocks_on_diagonal=datatuple[5],
             hmapper=hmapper,
             atomic_numbers=inputs_dict["numbers"][i],
             neighbour_indices=datatuple[2],
@@ -262,8 +283,10 @@ def prepare_label_dict(
             total=len(dataset_as_list),
         )
     ]
+    labels_dict["h_irreps_off_diagonal"] = [irreps[0] for irreps in tmp_irrep_list]
+    labels_dict["h_irreps_on_diagonal"] = [irreps[1] for irreps in tmp_irrep_list]
 
-    labels_dict["mask"] = [
+    labels_dict["mask_off_diagonal"] = [
         get_irreps_mask(
             mask_dict,
             inputs_dict["numbers"][i],
