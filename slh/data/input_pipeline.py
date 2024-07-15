@@ -376,15 +376,25 @@ class InMemoryDataset:
             return input_signature
 
         label_signature = {}
-        label_signature["h_irreps"] = tf.TensorSpec(
+        label_signature["h_irreps_off_diagonal"] = tf.TensorSpec(
             (self.max_nneighbours, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
             dtype=tf.float64,
-            name="h_irreps",
+            name="h_irreps_off_diagonal",
         )
-        label_signature["mask"] = tf.TensorSpec(
+        label_signature["mask_off_diagonal"] = tf.TensorSpec(
             (self.max_nneighbours, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
             dtype=tf.int16,
-            name="mask",
+            name="mask_off_diagonal",
+        )
+        label_signature["h_irreps_on_diagonal"] = tf.TensorSpec(
+            (self.max_natoms, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
+            dtype=tf.float64,
+            name="h_irreps_on_diagonal",
+        )
+        label_signature["mask_on_diagonal"] = tf.TensorSpec(
+            (self.max_natoms, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
+            dtype=tf.int16,
+            name="mask_on_diagonal",
         )
         signature = (input_signature, label_signature)
         return signature
