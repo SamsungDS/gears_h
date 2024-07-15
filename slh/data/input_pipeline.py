@@ -45,16 +45,6 @@ def initialize_dataset_from_list(
     ), PureInMemoryDataset(val_ds_list, batch_size=val_batch_size, n_epochs=n_epochs)
     return train_ds, val_ds
 
-
-def pairwise_hamiltonian_from_file(filename: Path):
-    data = np.load(filename)
-    keys = data.keys()
-    bond_atom_indices = np.column_stack([key[0:2] for key in keys])
-    bond_vectors = np.column_stack([[key[2:]] for key in keys])
-    hblocks = [block for block in data.values()]
-    return bond_atom_indices, bond_vectors, hblocks
-
-
 # TODO Need not be a json specifically, we'll see
 def orbital_spec_from_file(filename: Path) -> dict[int, list[int]]:
     return json.load(open(filename, mode="r"))
