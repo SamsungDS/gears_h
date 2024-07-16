@@ -460,26 +460,6 @@ class InMemoryDataset:
             inputs["numbers"], (0, natoms_zeros_to_add), "constant"
         ).astype(np.int16)
 
-        labels["h_irreps_on_diagonal"] = np.pad(
-            labels["h_irreps_on_diagonal"],
-            (
-                (0, natoms_zeros_to_add),
-                (0, 0),  # Parity dim
-                (0, 0),  # irreps dim
-                (0, 0),
-            ),  # Feature dim
-            "constant",
-        ).astype(np.float32)
-        labels["mask_on_diagonal"] = np.pad(
-            labels["mask_on_diagonal"],
-            (
-                (0, natoms_zeros_to_add),
-                (0, 0),  # Parity dim
-                (0, 0),  # irreps dim
-                (0, 0),  # Feature dim
-            ),
-            "constant",
-        ).astype(np.int8)
 
         neigbour_zeros_to_add = self.max_nneighbours - len(inputs["idx_ij"])
         inputs["idx_ij"] = np.pad(
@@ -512,6 +492,27 @@ class InMemoryDataset:
             labels["mask_off_diagonal"],
             (
                 (0, neigbour_zeros_to_add),
+                (0, 0),  # Parity dim
+                (0, 0),  # irreps dim
+                (0, 0),  # Feature dim
+            ),
+            "constant",
+        ).astype(np.int8)
+
+        labels["h_irreps_on_diagonal"] = np.pad(
+            labels["h_irreps_on_diagonal"],
+            (
+                (0, natoms_zeros_to_add),
+                (0, 0),  # Parity dim
+                (0, 0),  # irreps dim
+                (0, 0),
+            ),  # Feature dim
+            "constant",
+        ).astype(np.float32)
+        labels["mask_on_diagonal"] = np.pad(
+            labels["mask_on_diagonal"],
+            (
+                (0, natoms_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),  # Feature dim
