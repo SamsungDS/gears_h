@@ -25,8 +25,8 @@ class HamiltonianModel(nn.Module):
             atomic_numbers, neighbour_indices, neighbour_displacements
         )
 
-        atom_centered_descriptors = atom_centered_descriptors.astype(jnp.float32)
-        assert atom_centered_descriptors.dtype == jnp.float32
+        # atom_centered_descriptors = atom_centered_descriptors.astype(jnp.float32)
+        # assert atom_centered_descriptors.dtype == jnp.float32
 
         bc_features = self.bond_centered(
             atom_centered_descriptors, neighbour_indices, neighbour_displacements
