@@ -25,7 +25,7 @@ from slh.hblockmapper import (
 )
 
 # (Atoms, {Z: [0, 1, 2, ...]}, ij, D, hblocks)
-DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list]]
+DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list, list]]
 
 log = logging.getLogger(__name__)
 
