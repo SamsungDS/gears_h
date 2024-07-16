@@ -80,6 +80,9 @@ class TDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
     num_tensordense_features: int = 32
     use_fused_tensor: bool = False
     embedding_residual_connection: bool = False
+    mp_steps: int = 2
+    mp_degree: int = 4
+    mp_options: dict = {}
 
 class AtomCenteredConfig(BaseModel, extra="forbid"):
     descriptor: Union[SAAtomCenteredDescriptorConfig, 
