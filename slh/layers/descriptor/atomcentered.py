@@ -9,7 +9,7 @@ from jaxtyping import Array, Float, Int
 from typing import Literal
 
 from slh.layers.descriptor.radial_basis import SpeciesAwareRadialBasis
-from slh.utilities.functions import soft_abs
+# from slh.utilities.functions import soft_abs
 
 
 class SAAtomCenteredDescriptor(nn.Module):

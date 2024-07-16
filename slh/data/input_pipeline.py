@@ -476,7 +476,7 @@ class InMemoryDataset:
 
         labels = self.labels
         labels = {k: v[i] for k, v in labels.items()}
-        log.debug(f"{i}, {labels['h_irreps']}")
+        # log.debug(f"{i}, {labels['h_irreps']}")
         labels["h_irreps_off_diagonal"] = np.pad(
             labels["h_irreps_off_diagonal"],
             (
