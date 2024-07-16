@@ -194,8 +194,8 @@ def calculate_loss(params, batch_full, loss_function, apply_function):
     # TODO Remove this when we make the readout layer size automatically calculated.
     assert (
         h_irreps_off_diagonal_predicted.shape
-        == batch_labels["h_irreps"].shape
-        == batch_labels["mask"].shape
+        == batch_labels["h_irreps_off_diagonal"].shape
+        == batch_labels["mask_off_diagonal"].shape
     ), "This happens when your readout and your labels are not consistent."
 
     # TODO Currently we are using the hard coded loss weights in the loss function. Make controllable.
