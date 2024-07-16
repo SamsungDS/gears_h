@@ -10,16 +10,16 @@ def huber_loss(h_irreps_off_diagonal_predicted,
                               }
               ):
     on_diagonal_loss = jnp.mean(optax.huber_loss(h_irreps_on_diagonal_predicted, batch_labels["h_irreps_on_diagonal"]),
-                    where=batch_labels["mask"])
+                    where=batch_labels["mask_on_diagonal"])
 
     on_diagonal_mae_loss = jnp.mean(jnp.abs(h_irreps_on_diagonal_predicted - batch_labels["h_irreps_on_diagonal"]),
-                        where=batch_labels["mask"])
+                        where=batch_labels["mask_on_diagonal"])
 
     off_diagonal_loss = jnp.mean(optax.huber_loss(h_irreps_off_diagonal_predicted, batch_labels["h_irreps_off_diagonal"]),
-                    where=batch_labels["mask"])
+                    where=batch_labels["mask_off_diagonal"])
 
     off_diagonal_mae_loss = jnp.mean(jnp.abs(h_irreps_off_diagonal_predicted - batch_labels["h_irreps_off_diagonal"]),
-                        where=batch_labels["mask"])
+                        where=batch_labels["mask_off_diagonal"])
     
     weighted_mean_loss = (loss_weights['on_diagonal']*on_diagonal_loss + \
                           loss_weights['off_diagonal']*off_diagonal_loss )/2
