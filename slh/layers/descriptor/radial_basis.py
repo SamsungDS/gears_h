@@ -7,8 +7,6 @@ import jax
 import jax.numpy as jnp
 from jaxtyping import Array, Float
 
-from slh.utilities.functions import soft_abs
-
 
 class SpeciesAwareRadialBasis(nn.Module):
     cutoff: float
