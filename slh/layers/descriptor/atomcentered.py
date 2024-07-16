@@ -4,14 +4,13 @@ from functools import partial
 import e3x
 import flax.linen as nn
 import jax.numpy as jnp
+import jax
 from jaxtyping import Array, Float, Int
 from typing import Literal
 
 from slh.layers.descriptor.radial_basis import SpeciesAwareRadialBasis
+from slh.utilities.functions import soft_abs
 
-
-def soft_abs(x, scale=1.0):
-    return x * jnp.tanh(scale * x)
 
 class SAAtomCenteredDescriptor(nn.Module):
     radial_basis: SpeciesAwareRadialBasis
@@ -45,10 +44,9 @@ class SAAtomCenteredDescriptor(nn.Module):
         neighbour_indices: Int[Array, "... num_neighbours 2"],
         neighbour_displacements: Float[Array, "... num_neighbours 3"],
     ):
-        neighbour_displacements = neighbour_displacements
 
         idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
-        Z_i, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
+        _, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
 
         # num_neighbours x 1 x L x F
         # This is aware of the Z_j's
@@ -59,23 +57,18 @@ class SAAtomCenteredDescriptor(nn.Module):
         # num_atoms x 1 x L x F
         y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
 
-        gamma = self.param("gamma", nn.initializers.constant(1.0), shape=(1,))
+        # gamma = self.param("gamma", nn.initializers.constant(1.0), shape=(1,))
         
         for _ in range(self.mp_steps):
-            y = e3x.nn.SelfAttention(
-                max_degree=self.mp_degree,
-                use_basis_bias=True,
-                cartesian_order=False,
-                use_fused_tensor=self.use_fused_tensor,
-            )(
+            y = self.mp_block(
                 inputs=y,
                 basis=partial(
                     e3x.nn.basis,
                     max_degree=2,
                     num=8,
                     radial_fn=partial(
-                        e3x.nn.exponential_bernstein,
-                        gamma=soft_abs(gamma),
+                        e3x.nn.basic_fourier,
+                        limit=self.radial_basis.cutoff,
                     ),
                     cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff),
                     cartesian_order=False,
@@ -83,6 +76,7 @@ class SAAtomCenteredDescriptor(nn.Module):
                 src_idx=idx_j,
                 dst_idx=idx_i,
                 num_segments=len(atomic_numbers),
+                cutoff_value=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff)(jnp.linalg.norm(neighbour_displacements, axis=1))
             )
 
         if self.embedding_residual_connection:
@@ -114,6 +108,7 @@ class TDSAAtomCenteredDescriptor(nn.Module):
         )
 
         self.mp_block: e3x.nn.SelfAttention = e3x.nn.SelfAttention(
+            num_heads=2,
             max_degree=self.mp_degree,
             cartesian_order=False,
             use_basis_bias=False,
@@ -128,7 +123,6 @@ class TDSAAtomCenteredDescriptor(nn.Module):
         neighbour_indices: Int[Array, "... num_neighbours 2"],
         neighbour_displacements: Float[Array, "... num_neighbours 3"],
     ):
-        neighbour_displacements = neighbour_displacements
 
         idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
         _, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
@@ -148,9 +142,9 @@ class TDSAAtomCenteredDescriptor(nn.Module):
             use_fused_tensor=self.use_fused_tensor,
         )(y)
 
-        gamma = self.param("gamma", nn.initializers.constant(1.0), shape=(1,))
+        # gamma = self.param("gamma", nn.initializers.constant(1.0), shape=(1,))
 
-        for _ in range(2):
+        for _ in range(self.mp_steps):
             y = self.mp_block(
                 inputs=y,
                 basis=partial(
@@ -158,8 +152,8 @@ class TDSAAtomCenteredDescriptor(nn.Module):
                     max_degree=2,
                     num=8,
                     radial_fn=partial(
-                        e3x.nn.exponential_bernstein,
-                        gamma=soft_abs(gamma),
+                        e3x.nn.basic_fourier,
+                        limit=self.radial_basis.cutoff,
                     ),
                     cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff),
                     cartesian_order=False,
@@ -167,6 +161,7 @@ class TDSAAtomCenteredDescriptor(nn.Module):
                 src_idx=idx_j,
                 dst_idx=idx_i,
                 num_segments=len(atomic_numbers),
+                cutoff_value=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff)(jnp.linalg.norm(neighbour_displacements, axis=1))
             )
 
         if self.embedding_residual_connection:

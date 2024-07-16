@@ -7,6 +7,8 @@ import jax
 import jax.numpy as jnp
 from jaxtyping import Array, Float
 
+from slh.utilities.functions import soft_abs
+
 
 class SpeciesAwareRadialBasis(nn.Module):
     cutoff: float
@@ -17,7 +19,10 @@ class SpeciesAwareRadialBasis(nn.Module):
     embedding_residual_connection: bool = True
 
     def setup(self):
-        self.radial_function = partial(jinclike, limit=self.cutoff)
+        self.radial_function = partial(
+                        e3x.nn.basic_fourier,
+                        limit=self.cutoff,
+                    )
         # TODO Do we really want anything more than Bismuth? No. No, we do not.
         self.embedding = e3x.nn.Embed(
             83,
@@ -54,7 +59,7 @@ class SpeciesAwareRadialBasis(nn.Module):
             num=self.num_radial,
             max_degree=self.max_degree,
             radial_fn=self.radial_function,
-            # cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.cutoff),
+            cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.cutoff),
             cartesian_order=False,
         ).astype(jnp.float32)
 
@@ -66,12 +71,14 @@ class SpeciesAwareRadialBasis(nn.Module):
             self.num_radial, dtype=jnp.float32, name="embed_transform"
         )(self.embedding(Z_j))
 
-        y = self.tensor_module(
-            max_degree=self.max_degree,
-            include_pseudotensors=False,
-            cartesian_order=False,
-            name="tensor_embed_basis",
-        )(transformed_embedding, basis_expansion)
+        y = basis_expansion
+
+        # y = self.tensor_module(
+        #     max_degree=self.max_degree,
+        #     include_pseudotensors=False,
+        #     cartesian_order=False,
+        #     name="tensor_embed_basis",
+        # )(transformed_embedding, basis_expansion)
 
         if self.embedding_residual_connection:
             y = e3x.nn.add(y, transformed_embedding)
