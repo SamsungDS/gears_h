@@ -305,7 +305,7 @@ def prepare_label_dict(
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i in trange(len(dataset_as_list), desc="Making off-diagonal irreps masks")
+        for i in trange(len(dataset_as_list), desc="Making off-diagonal irreps masks", ncols=100)
     ]
 
     labels_dict["mask_on_diagonal"] = [
@@ -315,7 +315,7 @@ def prepare_label_dict(
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i in trange(len(dataset_as_list), desc="Making on-diagonal irreps masks")
+        for i in trange(len(dataset_as_list), desc="Making on-diagonal irreps masks", ncols=100)
     ]
 
     return labels_dict
