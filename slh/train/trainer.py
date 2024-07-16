@@ -76,7 +76,7 @@ def fit(state: TrainState,
 
     best_params = {} # TODO do we need this if we're saving the state?
     best_mae_loss = jnp.inf
-    best_loss = float(jnp.inf)
+    best_loss = jnp.inf
     epoch_loss = {}
 
     epoch_pbar = trange(
