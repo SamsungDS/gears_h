@@ -107,7 +107,7 @@ def read_dataset_as_list(
 
     dataset_as_list = [
         snapshot_tuple_from_directory(fd)
-        for fd in tqdm(dataset_dirlist, desc="Reading dataset")
+        for fd in tqdm(dataset_dirlist, desc="Reading dataset", ncols=100)
     ]
     # with Pool(nprocs) as pool:
     #     with tqdm(total=len(dataset_dirlist)) as pbar:
@@ -291,6 +291,7 @@ def prepare_label_dict(
             enumerate(dataset_as_list),
             desc="Converting H blocks to irreps",
             total=len(dataset_as_list),
+            ncols=100
         )
     ]
     labels_dict["h_irreps_off_diagonal"] = [irreps[0] for irreps in tmp_irrep_list]
