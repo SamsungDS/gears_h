@@ -25,7 +25,7 @@ from slh.hblockmapper import (
 )
 
 # (Atoms, {Z: [0, 1, 2, ...]}, ij, D, hblocks)
-DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list]]
+DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list, list]]
 
 log = logging.getLogger(__name__)
 
@@ -45,22 +45,15 @@ def initialize_dataset_from_list(
     ), PureInMemoryDataset(val_ds_list, batch_size=val_batch_size, n_epochs=n_epochs)
     return train_ds, val_ds
 
-
-def pairwise_hamiltonian_from_file(filename: Path):
-    data = np.load(filename)
-    keys = data.keys()
-    bond_atom_indices = np.column_stack([key[0:2] for key in keys])
-    bond_vectors = np.column_stack([[key[2:]] for key in keys])
-    hblocks = [block for block in data.values()]
-    return bond_atom_indices, bond_vectors, hblocks
-
-
 # TODO Need not be a json specifically, we'll see
 def orbital_spec_from_file(filename: Path) -> dict[int, list[int]]:
     return json.load(open(filename, mode="r"))
 
+def diagonal_hamiltonian_from_file(directory: Path, hblocks_filename: Path):
+    hblocks = np.load(directory / hblocks_filename, allow_pickle=True)["hblocks"]
+    return hblocks
 
-def pairwise_hamiltonian_from_file(
+def pairwise_off_diagonal_hamiltonian_from_file(
     directory, ijD_filename, hblocks_filename: Path
 ) -> tuple[np.ndarray, np.ndarray, list]:
     ijD = np.load(directory / ijD_filename)
@@ -78,7 +71,8 @@ def snapshot_tuple_from_directory(
     atoms_filename: str = "atoms.extxyz",
     orbital_spec_filename: str = "orbital_ells.json",
     ijD_filename: str = "ijD.npz",
-    hamiltonian_dataset_filename: str = "hblocks.npz",
+    off_diagonal_hamiltonian_dataset_filename: str = "hblocks_off-diagonal.npz",
+    diagonal_hamiltonian_dataset_filename: str = "hblocks_on-diagonal.npz",
 ):
     atoms = read(directory / atoms_filename)
 
@@ -90,11 +84,12 @@ def snapshot_tuple_from_directory(
     (
         bond_atom_indices,
         bond_vectors,
-        hblocks,
-    ) = pairwise_hamiltonian_from_file(
-        directory, ijD_filename, hamiltonian_dataset_filename
+        off_diagonal_hblocks,
+    ) = pairwise_off_diagonal_hamiltonian_from_file(
+        directory, ijD_filename, off_diagonal_hamiltonian_dataset_filename
     )
-    return atoms, orbital_spec, bond_atom_indices, bond_vectors, hblocks
+    on_diagonal_hblocks = diagonal_hamiltonian_from_file(directory, diagonal_hamiltonian_dataset_filename)
+    return atoms, orbital_spec, bond_atom_indices, bond_vectors, off_diagonal_hblocks, on_diagonal_hblocks
 
 
 def read_dataset_as_list(
@@ -112,7 +107,7 @@ def read_dataset_as_list(
 
     dataset_as_list = [
         snapshot_tuple_from_directory(fd)
-        for fd in tqdm(dataset_dirlist, desc="Reading dataset")
+        for fd in tqdm(dataset_dirlist, desc="Reading dataset", ncols=100)
     ]
     # with Pool(nprocs) as pool:
     #     with tqdm(total=len(dataset_dirlist)) as pbar:
@@ -184,16 +179,17 @@ def get_max_ell_and_max_features(hmap: MultiElementPairHBlockMapper):
 
 
 def get_h_irreps(
-    hblocks: list[np.ndarray],  # For one snapshot.
+    hblocks_off_diagonal: list[np.ndarray],  # For one snapshot.
+    hblocks_on_diagonal: list[np.ndarray],
     hmapper: MultiElementPairHBlockMapper,
     atomic_numbers: np.ndarray,
     neighbour_indices: np.ndarray,
     max_ell,
     readout_nfeatures,
 ):
-    irreps_array = np.zeros((len(hblocks), 2, (max_ell + 1) ** 2, readout_nfeatures))
+    irreps_array_off_diagonal = np.zeros((len(hblocks_off_diagonal), 2, (max_ell + 1) ** 2, readout_nfeatures))
 
-    assert len(hblocks) == len(neighbour_indices)
+    assert len(hblocks_off_diagonal) == len(neighbour_indices)
 
     atomic_number_pairs = atomic_numbers[neighbour_indices]
     assert atomic_number_pairs.shape[-1] == 2
@@ -205,21 +201,40 @@ def get_h_irreps(
 
         # Take all hblocks consisting of this specie-pair
         hblocks_of_pairs = np.stack(
-            list(itertools.compress(hblocks, boolean_indices_of_pairs))
+            list(itertools.compress(hblocks_off_diagonal, boolean_indices_of_pairs))
         ).astype(np.float32)
 
-        assert len(hblocks_of_pairs) == len(irreps_array[boolean_indices_of_pairs])
+        assert len(hblocks_of_pairs) == len(irreps_array_off_diagonal[boolean_indices_of_pairs])
 
-        irreps_array[boolean_indices_of_pairs] = hmapper.hblocks_to_irreps(
+        irreps_array_off_diagonal[boolean_indices_of_pairs] = hmapper.hblocks_to_irreps(
             hblocks_of_pairs,
-            irreps_array[boolean_indices_of_pairs],
+            irreps_array_off_diagonal[boolean_indices_of_pairs],
             pair[0],
             pair[1],
         )
-    return irreps_array
+
+    irreps_array_on_diagonal = np.zeros((len(hblocks_on_diagonal), 2, (max_ell + 1) ** 2, readout_nfeatures))
+
+    for number in np.unique(atomic_numbers):
+        # Find all atoms of this species
+        boolean_indices_of_species = number == atomic_numbers
+
+        # Get all hblocks for this species
+        hblocks_of_species = np.stack(
+            list(itertools.compress(hblocks_on_diagonal, boolean_indices_of_species))
+        ).astype(np.float32)
+
+        irreps_array_on_diagonal[boolean_indices_of_species] = hmapper.hblocks_to_irreps(
+            hblocks_of_species,
+            irreps_array_on_diagonal[boolean_indices_of_species],
+            number,
+            number
+        )
+    # TODO requires both on and off diagonal. Fix in future versions.
+    return irreps_array_off_diagonal, irreps_array_on_diagonal
 
 
-def get_irreps_mask(
+def get_irreps_mask_off_diagonal(
     mask_dict, atomic_numbers, neighbour_indices, max_ell, readout_nfeatures
 ):
     mask = np.zeros(
@@ -230,6 +245,16 @@ def get_irreps_mask(
         mask[i] = mask_dict[(atomic_numbers[idxpair[0]], atomic_numbers[idxpair[1]])]
     return mask
 
+def get_irreps_mask_on_diagonal(
+    mask_dict, atomic_numbers, max_ell, readout_nfeatures
+):
+    mask = np.zeros(
+        (len(atomic_numbers), 2, (max_ell + 1) ** 2, readout_nfeatures),
+        dtype=np.int8,
+    )
+    for i, atomic_number in enumerate(atomic_numbers):
+        mask[i] = mask_dict[(atomic_number, atomic_number)]
+    return mask
 
 def prepare_input_dict(dataset_as_list: DatasetList):
     inputs_dict = {}
@@ -252,9 +277,10 @@ def prepare_label_dict(
 ):
     labels_dict = {}
 
-    labels_dict["h_irreps"] = [
+    tmp_irrep_list = [
         get_h_irreps(
-            hblocks=datatuple[-1],
+            hblocks_off_diagonal=datatuple[4],
+            hblocks_on_diagonal=datatuple[5],
             hmapper=hmapper,
             atomic_numbers=inputs_dict["numbers"][i],
             neighbour_indices=datatuple[2],
@@ -265,18 +291,31 @@ def prepare_label_dict(
             enumerate(dataset_as_list),
             desc="Converting H blocks to irreps",
             total=len(dataset_as_list),
+            ncols=100
         )
     ]
+    labels_dict["h_irreps_off_diagonal"] = [irreps[0] for irreps in tmp_irrep_list]
+    labels_dict["h_irreps_on_diagonal"] = [irreps[1] for irreps in tmp_irrep_list]
 
-    labels_dict["mask"] = [
-        get_irreps_mask(
+    labels_dict["mask_off_diagonal"] = [
+        get_irreps_mask_off_diagonal(
             mask_dict,
             inputs_dict["numbers"][i],
             inputs_dict["idx_ij"][i],
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i in trange(len(dataset_as_list), desc="Making irreps masks")
+        for i in trange(len(dataset_as_list), desc="Making off-diagonal irreps masks", ncols=100)
+    ]
+
+    labels_dict["mask_on_diagonal"] = [
+        get_irreps_mask_on_diagonal(
+            mask_dict,
+            inputs_dict["numbers"][i],
+            max_ell=max_ell,
+            readout_nfeatures=readout_nfeatures,
+        )
+        for i in trange(len(dataset_as_list), desc="Making on-diagonal irreps masks", ncols=100)
     ]
 
     return labels_dict
@@ -381,15 +420,25 @@ class InMemoryDataset:
             return input_signature
 
         label_signature = {}
-        label_signature["h_irreps"] = tf.TensorSpec(
+        label_signature["h_irreps_off_diagonal"] = tf.TensorSpec(
             (self.max_nneighbours, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
             dtype=tf.float64,
-            name="h_irreps",
+            name="h_irreps_off_diagonal",
         )
-        label_signature["mask"] = tf.TensorSpec(
+        label_signature["mask_off_diagonal"] = tf.TensorSpec(
             (self.max_nneighbours, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
             dtype=tf.int16,
-            name="mask",
+            name="mask_off_diagonal",
+        )
+        label_signature["h_irreps_on_diagonal"] = tf.TensorSpec(
+            (self.max_natoms, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
+            dtype=tf.float64,
+            name="h_irreps_on_diagonal",
+        )
+        label_signature["mask_on_diagonal"] = tf.TensorSpec(
+            (self.max_natoms, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
+            dtype=tf.int16,
+            name="mask_on_diagonal",
         )
         signature = (input_signature, label_signature)
         return signature
@@ -404,23 +453,24 @@ class InMemoryDataset:
         inputs = self.inputs
         inputs = {k: v[i] for k, v in inputs.items()}
 
-        zeros_to_add = self.max_natoms - len(inputs["numbers"])
+        natoms_zeros_to_add = self.max_natoms - len(inputs["numbers"])
         inputs["positions"] = np.pad(
-            inputs["positions"], ((0, zeros_to_add), (0, 0)), "constant"
+            inputs["positions"], ((0, natoms_zeros_to_add), (0, 0)), "constant"
         ).astype(np.float32)
         inputs["numbers"] = np.pad(
-            inputs["numbers"], (0, zeros_to_add), "constant"
+            inputs["numbers"], (0, natoms_zeros_to_add), "constant"
         ).astype(np.int16)
 
-        zeros_to_add = self.max_nneighbours - len(inputs["idx_ij"])
+
+        neigbour_zeros_to_add = self.max_nneighbours - len(inputs["idx_ij"])
         inputs["idx_ij"] = np.pad(
             inputs["idx_ij"],
-            ((0, zeros_to_add), (0, 0)),
+            ((0, neigbour_zeros_to_add), (0, 0)),
             "constant",
             constant_values=self.max_natoms + 1,
         ).astype(np.int16)
         inputs["idx_D"] = np.pad(
-            inputs["idx_D"], ((0, zeros_to_add), (0, 0)), "constant"
+            inputs["idx_D"], ((0, neigbour_zeros_to_add), (0, 0)), "constant"
         ).astype(np.float32)
 
         if self.is_inference:
@@ -428,22 +478,42 @@ class InMemoryDataset:
 
         labels = self.labels
         labels = {k: v[i] for k, v in labels.items()}
-        log.debug(f"{i}, {labels['h_irreps']}")
-        labels["h_irreps"] = np.pad(
-            labels["h_irreps"],
+        # log.debug(f"{i}, {labels['h_irreps']}")
+        labels["h_irreps_off_diagonal"] = np.pad(
+            labels["h_irreps_off_diagonal"],
             (
-                (0, zeros_to_add),
+                (0, neigbour_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),
             ),  # Feature dim
             "constant",
         ).astype(np.float32)
-
-        labels["mask"] = np.pad(
-            labels["mask"],
+        labels["mask_off_diagonal"] = np.pad(
+            labels["mask_off_diagonal"],
             (
-                (0, zeros_to_add),
+                (0, neigbour_zeros_to_add),
+                (0, 0),  # Parity dim
+                (0, 0),  # irreps dim
+                (0, 0),  # Feature dim
+            ),
+            "constant",
+        ).astype(np.int8)
+
+        labels["h_irreps_on_diagonal"] = np.pad(
+            labels["h_irreps_on_diagonal"],
+            (
+                (0, natoms_zeros_to_add),
+                (0, 0),  # Parity dim
+                (0, 0),  # irreps dim
+                (0, 0),
+            ),  # Feature dim
+            "constant",
+        ).astype(np.float32)
+        labels["mask_on_diagonal"] = np.pad(
+            labels["mask_on_diagonal"],
+            (
+                (0, natoms_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),  # Feature dim

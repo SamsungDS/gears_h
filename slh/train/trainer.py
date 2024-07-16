@@ -4,8 +4,6 @@ from functools import partial
 from pathlib import Path
 from typing import Union
 
-log = logging.getLogger(__name__)
-
 import jax
 import jax.numpy as jnp
 from clu import metrics
@@ -17,6 +15,8 @@ from tqdm import trange
 from slh.data.input_pipeline import PureInMemoryDataset
 from slh.train.checkpoints import CheckpointManager, load_state
 from slh.train.loss import huber_loss
+
+log = logging.getLogger(__name__)
 
 def fit(state: TrainState,
         train_dataset: PureInMemoryDataset,
@@ -183,9 +183,8 @@ def fit(state: TrainState,
 
 def calculate_loss(params, batch_full, loss_function, apply_function):
     batch, batch_labels = batch_full
-    model_apply = apply_function#jax.vmap(apply_function, in_axes=(None, 0, 0, 0))
     # TODO Make loss function an argument and allow user input.
-    h_irreps_predicted = model_apply(
+    h_irreps_off_diagonal_predicted, h_irreps_on_diagonal_predicted = apply_function(
         params,
         batch["numbers"],
         batch["idx_ij"],
@@ -194,12 +193,15 @@ def calculate_loss(params, batch_full, loss_function, apply_function):
 
     # TODO Remove this when we make the readout layer size automatically calculated.
     assert (
-        h_irreps_predicted.shape
-        == batch_labels["h_irreps"].shape
-        == batch_labels["mask"].shape
+        h_irreps_off_diagonal_predicted.shape
+        == batch_labels["h_irreps_off_diagonal"].shape
+        == batch_labels["mask_off_diagonal"].shape
     ), "This happens when your readout and your labels are not consistent."
 
-    loss, mae_loss = loss_function(h_irreps_predicted, batch_labels)
+    # TODO Currently we are using the hard coded loss weights in the loss function. Make controllable.
+    loss, mae_loss = loss_function(h_irreps_off_diagonal_predicted,
+                                   h_irreps_on_diagonal_predicted,
+                                   batch_labels)
 
     return loss, mae_loss
 
