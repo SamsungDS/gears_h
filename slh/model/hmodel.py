@@ -37,8 +37,8 @@ class HamiltonianModel(nn.Module):
         off_diagonal_denseout = self.dense(bc_features)
         off_diagonal_irreps = self.readout(off_diagonal_denseout)
 
-        on_diagonal_denseout = self.dense(2.0 * atom_centered_descriptors)
-        on_diagonal_irreps = self.readout(on_diagonal_denseout)
+        on_diagonal_denseout = DenseBlock(layer_widths=self.dense.layer_widths)(2.0 * atom_centered_descriptors)
+        on_diagonal_irreps = Readout(self.readout.nfeatures, self.readout.max_ell)(on_diagonal_denseout)
         # scaling_correction = ExponentialScaleCorrection(
         #     self.readout.nfeatures, self.readout.max_ell
         # )(jnp.linalg.norm(neighbour_displacements, axis=-1, keepdims=True))
