@@ -108,7 +108,6 @@ class TDSAAtomCenteredDescriptor(nn.Module):
         )
 
         self.mp_block: e3x.nn.SelfAttention = e3x.nn.SelfAttention(
-            num_heads=2,
             max_degree=self.mp_degree,
             cartesian_order=False,
             use_basis_bias=False,
