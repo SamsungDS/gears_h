@@ -205,7 +205,6 @@ class MBSAAtomCenteredDescriptor(nn.Module):
 
         self.mp_basis = partial(
             e3x.nn.basis,
-            max_degree=2,
             num=8,
             radial_fn=partial(
                 e3x.nn.exponential_bernstein,
