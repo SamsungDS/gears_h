@@ -1,5 +1,8 @@
 import flax.linen as nn
+import flax.linen
 import jax.numpy as jnp
+
+import flax
 
 from slh.layers import (
     SAAtomCenteredDescriptor,
@@ -42,4 +45,6 @@ class HamiltonianModel(nn.Module):
         # scaling_correction = ExponentialScaleCorrection(
         #     self.readout.nfeatures, self.readout.max_ell
         # )(jnp.linalg.norm(neighbour_displacements, axis=-1, keepdims=True))
-        return off_diagonal_irreps, on_diagonal_irreps  #  * scaling_correction
+        diagonal_scaling = self.param("scale", flax.linen.initializers.constant(2.0), shape=(1,))
+        diagonal_scaling = flax.linen.softplus(diagonal_scaling)
+        return off_diagonal_irreps, diagonal_scaling * on_diagonal_irreps  #  * scaling_correction
