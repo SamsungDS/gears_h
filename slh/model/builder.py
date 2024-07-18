@@ -64,7 +64,8 @@ class ModelBuilder:
         dense_layer = partial(e3x.nn.Dense, 
                               param_dtype=getattr(jnp,mlp_config["mlp_dtype"]))
         mlp = DenseBlock(dense_layer=dense_layer,
-                         layer_widths=mlp_config['mlp_layer_widths']
+                         layer_widths=mlp_config['mlp_layer_widths'],
+                         activation=mlp_config["mlp_activation_function"]
                         )
         return mlp
 
