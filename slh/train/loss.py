@@ -5,7 +5,7 @@ import optax
 def huber_loss(h_irreps_off_diagonal_predicted,
                h_irreps_on_diagonal_predicted, 
                batch_labels,
-               loss_weights = {"on_diagonal" : 0.1,
+               loss_weights = {"on_diagonal" : 1,
                                "off_diagonal" : 1
                               }
               ):

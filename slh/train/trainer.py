@@ -165,8 +165,8 @@ def fit(state: TrainState,
         epoch_loss["val_loss"] /= val_batches_per_epoch
         epoch_loss["val_loss"] = float(epoch_loss["val_loss"])
         epoch_loss["val_mae_weighted"] = float(val_mae_loss_weighted / val_batches_per_epoch)
-        epoch_loss["val_mae_loss_off"] = float(val_mae_loss_off / train_batches_per_epoch)
-        epoch_loss["val_mae_loss_on"] = float(val_mae_loss_on / train_batches_per_epoch)
+        epoch_loss["val_mae_loss_off"] = float(val_mae_loss_off / val_batches_per_epoch)
+        epoch_loss["val_mae_loss_on"] = float(val_mae_loss_on / val_batches_per_epoch)
 
         if (val_mae_loss_weighted / val_batches_per_epoch) < best_mae_loss:
                 best_mae_loss = val_mae_loss_weighted / val_batches_per_epoch
