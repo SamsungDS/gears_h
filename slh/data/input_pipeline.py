@@ -25,7 +25,7 @@ from slh.hblockmapper import (
 )
 
 # (Atoms, {Z: [0, 1, 2, ...]}, ij, D, hblocks)
-DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list]]
+DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list, list]]
 
 log = logging.getLogger(__name__)
 
@@ -107,7 +107,7 @@ def read_dataset_as_list(
 
     dataset_as_list = [
         snapshot_tuple_from_directory(fd)
-        for fd in tqdm(dataset_dirlist, desc="Reading dataset")
+        for fd in tqdm(dataset_dirlist, desc="Reading dataset", ncols=100)
     ]
     # with Pool(nprocs) as pool:
     #     with tqdm(total=len(dataset_dirlist)) as pbar:
@@ -291,6 +291,7 @@ def prepare_label_dict(
             enumerate(dataset_as_list),
             desc="Converting H blocks to irreps",
             total=len(dataset_as_list),
+            ncols=100
         )
     ]
     labels_dict["h_irreps_off_diagonal"] = [irreps[0] for irreps in tmp_irrep_list]
@@ -304,7 +305,7 @@ def prepare_label_dict(
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i in trange(len(dataset_as_list), desc="Making off-diagonal irreps masks")
+        for i in trange(len(dataset_as_list), desc="Making off-diagonal irreps masks", ncols=100)
     ]
 
     labels_dict["mask_on_diagonal"] = [
@@ -314,7 +315,7 @@ def prepare_label_dict(
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i in trange(len(dataset_as_list), desc="Making on-diagonal irreps masks")
+        for i in trange(len(dataset_as_list), desc="Making on-diagonal irreps masks", ncols=100)
     ]
 
     return labels_dict
@@ -327,7 +328,7 @@ class InMemoryDataset:
         batch_size: int,
         n_epochs: int,
         is_inference: bool = False,
-        buffer_size=1000,
+        buffer_size=100,
         cache_path=".",
     ):
         self.n_data = len(dataset_as_list)
@@ -337,7 +338,7 @@ class InMemoryDataset:
 
         self.count = 0
         self.buffer = deque()
-        self.buffer_size = buffer_size
+        self.buffer_size = min(buffer_size, self.n_data)
         self.cache_file = Path(cache_path) / str(uuid.uuid4())
 
         self.sample_data = dataset_as_list[0]
@@ -452,23 +453,24 @@ class InMemoryDataset:
         inputs = self.inputs
         inputs = {k: v[i] for k, v in inputs.items()}
 
-        zeros_to_add = self.max_natoms - len(inputs["numbers"])
+        natoms_zeros_to_add = self.max_natoms - len(inputs["numbers"])
         inputs["positions"] = np.pad(
-            inputs["positions"], ((0, zeros_to_add), (0, 0)), "constant"
+            inputs["positions"], ((0, natoms_zeros_to_add), (0, 0)), "constant"
         ).astype(np.float32)
         inputs["numbers"] = np.pad(
-            inputs["numbers"], (0, zeros_to_add), "constant"
+            inputs["numbers"], (0, natoms_zeros_to_add), "constant"
         ).astype(np.int16)
 
-        zeros_to_add = self.max_nneighbours - len(inputs["idx_ij"])
+
+        neigbour_zeros_to_add = self.max_nneighbours - len(inputs["idx_ij"])
         inputs["idx_ij"] = np.pad(
             inputs["idx_ij"],
-            ((0, zeros_to_add), (0, 0)),
+            ((0, neigbour_zeros_to_add), (0, 0)),
             "constant",
             constant_values=self.max_natoms + 1,
         ).astype(np.int16)
         inputs["idx_D"] = np.pad(
-            inputs["idx_D"], ((0, zeros_to_add), (0, 0)), "constant"
+            inputs["idx_D"], ((0, neigbour_zeros_to_add), (0, 0)), "constant"
         ).astype(np.float32)
 
         if self.is_inference:
@@ -476,11 +478,11 @@ class InMemoryDataset:
 
         labels = self.labels
         labels = {k: v[i] for k, v in labels.items()}
-        log.debug(f"{i}, {labels['h_irreps']}")
+        # log.debug(f"{i}, {labels['h_irreps']}")
         labels["h_irreps_off_diagonal"] = np.pad(
             labels["h_irreps_off_diagonal"],
             (
-                (0, zeros_to_add),
+                (0, neigbour_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),
@@ -490,7 +492,7 @@ class InMemoryDataset:
         labels["mask_off_diagonal"] = np.pad(
             labels["mask_off_diagonal"],
             (
-                (0, zeros_to_add),
+                (0, neigbour_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),  # Feature dim
@@ -501,7 +503,7 @@ class InMemoryDataset:
         labels["h_irreps_on_diagonal"] = np.pad(
             labels["h_irreps_on_diagonal"],
             (
-                (0, zeros_to_add),
+                (0, natoms_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),
@@ -511,7 +513,7 @@ class InMemoryDataset:
         labels["mask_on_diagonal"] = np.pad(
             labels["mask_on_diagonal"],
             (
-                (0, zeros_to_add),
+                (0, natoms_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),  # Feature dim
@@ -558,7 +560,7 @@ class PureInMemoryDataset(InMemoryDataset):
         )
 
         ds = ds.shuffle(
-            buffer_size=self.buffer_size, reshuffle_each_iteration=True
+            buffer_size=self.buffer_size, reshuffle_each_iteration=True,
         ).batch(batch_size=self.batch_size)
         # if self.n_jit_steps > 1:
         #     ds = ds.batch(batch_size=self.n_jit_steps)

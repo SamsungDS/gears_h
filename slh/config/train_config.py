@@ -13,7 +13,11 @@ from pydantic import (
     model_validator,
 )
 
-from slh.config.lr_config import LinearSchedule, CyclicCosineSchedule, ExponentialDecaySchedule
+from slh.config.lr_config import (LinearSchedule, 
+                                  CyclicCosineSchedule, 
+                                  ExponentialDecaySchedule,
+                                  WarmupCosineDecay
+)
 
 class DataConfig(BaseModel, extra="forbid"):
     directory: str = "slhmodels"
@@ -102,6 +106,7 @@ class BondCenteredConfig(BaseModel, extra="forbid"):
 class MLPConfig(BaseModel, extra="forbid"):
     mlp_layer_widths: List[PositiveInt] = [128]
     mlp_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
+    mlp_activation_function: Literal["shifted_softplus", "mish"] = "shifted_softplus"
 
 
 class ModelConfig(BaseModel, extra="forbid"):
@@ -132,9 +137,9 @@ class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     opt_kwargs: dict[str, bool] = {"nesterov" : True}
     schedule: Union[LinearSchedule, 
                     CyclicCosineSchedule, 
-                    ExponentialDecaySchedule] = Field(ExponentialDecaySchedule(), 
-                                                      discriminator="name"
-    )
+                    ExponentialDecaySchedule,
+                    WarmupCosineDecay] = Field(ExponentialDecaySchedule(), 
+                                               discriminator="name")
     
 
 

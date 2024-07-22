@@ -40,6 +40,7 @@ model:
   mlp:
     mlp_layer_widths: [128]
     mlp_dtype: float32
+    mlp_activation_function: shifted_softplus
 
 optimizer:
   name: "adam"
