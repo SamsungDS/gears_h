@@ -160,7 +160,7 @@ class TDSAAtomCenteredDescriptor(nn.Module):
                 src_idx=idx_j,
                 dst_idx=idx_i,
                 num_segments=len(atomic_numbers),
-                cutoff_value=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff)(jnp.linalg.norm(neighbour_displacements, axis=1))
+                cutoff_value=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff)(jnp.linalg.norm(neighbour_displacements, axis=1)),
             )
 
         if self.embedding_residual_connection:
