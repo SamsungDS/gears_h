@@ -88,6 +88,8 @@ def run(user_config, log_level="error"):
     )
 
     params, rng_key = create_params(model, rng_key, sample_input, 1)
+    n_params = int(jax.tree.reduce(jax.numpy.add, jax.tree.map(lambda x: len(x.ravel()), params)))
+    log.info(f"Number of parameters: {n_params}")
 
     # TODO Switch to using slh.optimize.get_optimizer and enable different LRs for each parameter group.
     import optax

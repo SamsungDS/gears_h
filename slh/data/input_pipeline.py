@@ -328,7 +328,7 @@ class InMemoryDataset:
         batch_size: int,
         n_epochs: int,
         is_inference: bool = False,
-        buffer_size=1000,
+        buffer_size=100,
         cache_path=".",
     ):
         self.n_data = len(dataset_as_list)
@@ -338,7 +338,7 @@ class InMemoryDataset:
 
         self.count = 0
         self.buffer = deque()
-        self.buffer_size = buffer_size
+        self.buffer_size = min(buffer_size, self.n_data)
         self.cache_file = Path(cache_path) / str(uuid.uuid4())
 
         self.sample_data = dataset_as_list[0]
@@ -560,7 +560,7 @@ class PureInMemoryDataset(InMemoryDataset):
         )
 
         ds = ds.shuffle(
-            buffer_size=self.buffer_size, reshuffle_each_iteration=True
+            buffer_size=self.buffer_size, reshuffle_each_iteration=True,
         ).batch(batch_size=self.batch_size)
         # if self.n_jit_steps > 1:
         #     ds = ds.batch(batch_size=self.n_jit_steps)

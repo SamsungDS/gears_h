@@ -1,5 +1,5 @@
 from typing import Literal
-from pydantic import BaseModel, NonNegativeFloat
+from pydantic import BaseModel, NonNegativeFloat, NonNegativeInt
 
 class LinearSchedule(BaseModel, frozen=True, extra="forbid"):
     """
@@ -43,3 +43,12 @@ class ExponentialDecaySchedule(BaseModel, frozen=True, extra="forbid"):
     transition_begin: int = 20
     decay_rate: NonNegativeFloat = 0.99
     end_value: NonNegativeFloat = 1e-4
+
+class WarmupCosineDecay(BaseModel, frozen = True, extra = "forbid"):
+    name: Literal["warmup_cosine_decay_schedule"] = "warmup_cosine_decay_schedule"
+    #init_value: NonNegativeFloat = 1e-3
+    peak_value: NonNegativeFloat = 1e-2
+    end_value: NonNegativeFloat = 1e-4
+    warmup_steps: NonNegativeInt = 25
+    decay_steps: NonNegativeInt = 225
+    exponent: float = 1

@@ -91,7 +91,9 @@ def fit(state: TrainState,
 
         # Training set loop - set up
         epoch_loss.update({"train_loss": 0.0})
-        train_mae_loss = 0.0
+        train_mae_loss_weighted = 0.0
+        train_mae_loss_off = 0.0
+        train_mae_loss_on = 0.0
 
         train_batch_pbar = trange(
             0,
@@ -109,25 +111,31 @@ def fit(state: TrainState,
             callbacks.on_train_batch_begin(batch=train_batch)
             batch_data_list = [next(batch_train_dataset) for _ in range(n_grad_acc)]
             # TODO refactor train_step for gradient accumulation and remove the hardcoded first element of the list below.
-            loss, mae_loss, state = train_step(state, batch_data_list[0])
+            loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss, state = train_step(state, batch_data_list[0])
             
-            train_mae_loss += mae_loss
+            train_mae_loss_weighted += mae_loss
+            train_mae_loss_off += off_diagonal_mae_loss
+            train_mae_loss_on += on_diagonal_mae_loss
             epoch_loss["train_loss"] += loss
 
             train_batch_pbar.set_postfix(
-                mae=f"{train_mae_loss / train_batches_per_epoch:0.3e}"
+                mae=f"{train_mae_loss_weighted / train_batches_per_epoch:0.3e}"
             )
             callbacks.on_train_batch_end(batch=train_batch)
             train_batch_pbar.update()
         
         epoch_loss["train_loss"] /= train_batches_per_epoch
         epoch_loss["train_loss"] = float(epoch_loss["train_loss"])
-        epoch_loss["train_mae"] = float(train_mae_loss / train_batches_per_epoch)
+        epoch_loss["train_mae_weighted"] = float(train_mae_loss_weighted / train_batches_per_epoch)
+        epoch_loss["train_mae_loss_off"] = float(train_mae_loss_off / train_batches_per_epoch)
+        epoch_loss["train_mae_loss_on"] = float(train_mae_loss_on / train_batches_per_epoch)
 
 
         # Validation set loop - set up
         epoch_loss.update({"val_loss": 0.0})
-        epoch_val_mae_accumulator = 0.0
+        val_mae_loss_weighted = 0.0
+        val_mae_loss_off = 0.0
+        val_mae_loss_on = 0.0
 
         val_batch_pbar = trange(
             0,
@@ -143,21 +151,25 @@ def fit(state: TrainState,
         for val_batch in range(val_batches_per_epoch // n_grad_acc):
             batch_data_list = [next(batch_val_dataset) for _ in range(n_grad_acc)]
             # TODO refactor train_step for gradient accumulation and remove the hardcoded first element of the list below.
-            loss, mae_loss = val_step(state, batch_data_list[0])
+            loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss = val_step(state, batch_data_list[0])
 
-            epoch_val_mae_accumulator += mae_loss
+            val_mae_loss_weighted += mae_loss
+            val_mae_loss_off += off_diagonal_mae_loss
+            val_mae_loss_on += on_diagonal_mae_loss
             epoch_loss["val_loss"] += loss
 
             val_batch_pbar.set_postfix(
-                mae=f"{epoch_val_mae_accumulator / val_batches_per_epoch:0.3e}"
+                mae=f"{val_mae_loss_weighted / val_batches_per_epoch:0.3e}"
             )
         
         epoch_loss["val_loss"] /= val_batches_per_epoch
         epoch_loss["val_loss"] = float(epoch_loss["val_loss"])
-        epoch_loss["val_mae"] = float(epoch_val_mae_accumulator / val_batches_per_epoch)
+        epoch_loss["val_mae_weighted"] = float(val_mae_loss_weighted / val_batches_per_epoch)
+        epoch_loss["val_mae_loss_off"] = float(val_mae_loss_off / val_batches_per_epoch)
+        epoch_loss["val_mae_loss_on"] = float(val_mae_loss_on / val_batches_per_epoch)
 
-        if (epoch_val_mae_accumulator / val_batches_per_epoch) < best_mae_loss:
-                best_mae_loss = epoch_val_mae_accumulator / val_batches_per_epoch
+        if (val_mae_loss_weighted / val_batches_per_epoch) < best_mae_loss:
+                best_mae_loss = val_mae_loss_weighted / val_batches_per_epoch
                 best_params['params'] = state.params
 
         epoch_end_time = time.time()
@@ -173,7 +185,7 @@ def fit(state: TrainState,
             best_loss = epoch_loss["val_loss"]
             ckpt_manager.save_checkpoint(ckpt, epoch, best_dir)
 
-        epoch_pbar.set_postfix(mae=f"{epoch_val_mae_accumulator / val_batches_per_epoch:0.3e}")
+        epoch_pbar.set_postfix(mae=f"{val_mae_loss_weighted / val_batches_per_epoch:0.3e}")
         epoch_pbar.update()
     epoch_pbar.close()
     callbacks.on_train_end()
@@ -199,20 +211,22 @@ def calculate_loss(params, batch_full, loss_function, apply_function):
     ), "This happens when your readout and your labels are not consistent."
 
     # TODO Currently we are using the hard coded loss weights in the loss function. Make controllable.
-    loss, mae_loss = loss_function(h_irreps_off_diagonal_predicted,
+    loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss = loss_function(h_irreps_off_diagonal_predicted,
                                    h_irreps_on_diagonal_predicted,
                                    batch_labels)
+    aux = (mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss)
 
-    return loss, mae_loss
+    return loss, aux
 
 def make_step_functions(logging_metrics, state, loss_function = huber_loss):
     loss_calculator = partial(calculate_loss, loss_function=loss_function, apply_function=state.apply_fn)
     grad_fn = jax.value_and_grad(loss_calculator, 0, has_aux=True)
 
     def update_step(state, batch_full):
-        (loss, mae_loss), grads = grad_fn(state.params, batch_full)
+        (loss, aux), grads = grad_fn(state.params, batch_full)
+        mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss = aux
         state = state.apply_gradients(grads=grads)
-        return loss, mae_loss, state
+        return loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss, state
     
     # TODO add support for ensemble models.
 
@@ -220,8 +234,8 @@ def make_step_functions(logging_metrics, state, loss_function = huber_loss):
     @jax.jit
     def train_step(state, batch):
 
-        loss, mae_loss, state = update_step(state, batch)
-        return loss, mae_loss, state
+        loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss, state = update_step(state, batch)
+        return loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss, state
     
     # TODO OLD KEPT JUST IN CASE. Remove when no longer needed.
     # @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
@@ -238,8 +252,9 @@ def make_step_functions(logging_metrics, state, loss_function = huber_loss):
     @jax.jit
     def val_step(state, batch):
 
-        loss, mae_loss = loss_calculator(state.params, batch)
+        loss, aux = loss_calculator(state.params, batch)
+        mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss = aux
 
-        return loss, mae_loss
+        return loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss
     
     return train_step, val_step

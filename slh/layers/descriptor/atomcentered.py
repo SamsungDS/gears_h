@@ -108,7 +108,6 @@ class TDSAAtomCenteredDescriptor(nn.Module):
         )
 
         self.mp_block: e3x.nn.SelfAttention = e3x.nn.SelfAttention(
-            num_heads=2,
             max_degree=self.mp_degree,
             cartesian_order=False,
             use_basis_bias=False,
@@ -161,7 +160,7 @@ class TDSAAtomCenteredDescriptor(nn.Module):
                 src_idx=idx_j,
                 dst_idx=idx_i,
                 num_segments=len(atomic_numbers),
-                cutoff_value=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff)(jnp.linalg.norm(neighbour_displacements, axis=1))
+                cutoff_value=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff)(jnp.linalg.norm(neighbour_displacements, axis=1)),
             )
 
         if self.embedding_residual_connection:
@@ -205,7 +204,6 @@ class MBSAAtomCenteredDescriptor(nn.Module):
 
         self.mp_basis = partial(
             e3x.nn.basis,
-            max_degree=2,
             num=8,
             radial_fn=partial(
                 e3x.nn.exponential_bernstein,
