@@ -26,26 +26,30 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
             atomic_descriptors[neighbours_i],
             atomic_descriptors[neighbours_j],
         )
-        # y = self.tensor_module(
-        #     max_degree=self.max_actp_degree,
-        #     name="atompair_tp",
-        #     cartesian_order=False,
-        #     dtype=jnp.float32,
-        # )(atom1_desc, atom2_desc)
+        y = self.tensor_module(
+            max_degree=self.max_actp_degree,
+            name="atompair_tp",
+            cartesian_order=False,
+            dtype=jnp.float32,
+        )(atom1_desc, atom2_desc)
 
-        y = e3x.nn.add(atom1_desc, atom2_desc)
+        # y = e3x.nn.add(atom1_desc, atom2_desc)
 
         # We put in information about the orientation/length of the bond vector here
         bond_expansion = e3x.nn.basis(
             neighbour_displacements,
             num=num_radial_features,
             max_degree=self.max_basis_degree,
-            radial_fn=partial(jinclike, limit=self.cutoff),
+            radial_fn=partial(
+                        e3x.nn.basic_fourier,
+                        limit=self.cutoff,
+                    ),
+                    cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.cutoff),
             cartesian_order=False,
         ).astype(jnp.float32)
-        bond_expanded_dense = (
-            bond_expansion  # e3x.nn.Dense(num_radial_features)(bond_expansion)
-        )
+        bond_expanded_dense = e3x.nn.Dense(num_radial_features)(bond_expansion)
+        bond_expanded_dense = e3x.nn.mish(bond_expanded_dense)
+        bond_expanded_dense = e3x.nn.Dense(num_radial_features)(bond_expanded_dense)
 
         # num_pairs x 2 x (max_degree + 1)^2 x num_radial_features
         # y = e3x.nn.add(y, bond_expansion)

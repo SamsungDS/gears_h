@@ -163,6 +163,10 @@ class TDSAAtomCenteredDescriptor(nn.Module):
                 cutoff_value=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff)(jnp.linalg.norm(neighbour_displacements, axis=1)),
             )
 
+        y = e3x.nn.Dense(self.embedding_transformation.features)(y)
+        y = e3x.nn.mish(y)
+        y = e3x.nn.Dense(self.embedding_transformation.features)(y)
+
         if self.embedding_residual_connection:
             y = e3x.nn.add(
                 y, self.embedding_transformation(self.embedding(atomic_numbers))
