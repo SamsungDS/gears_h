@@ -134,16 +134,13 @@ class TDSAAtomCenteredDescriptor(nn.Module):
         # num_atoms x 1 x L x F
         y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
 
-        y = e3x.nn.TensorDense(
+        for _ in range(self.mp_steps):
+            y = e3x.nn.TensorDense(
             self.num_tensordense_features,
             self.max_tensordense_degree,
             cartesian_order=False,
             use_fused_tensor=self.use_fused_tensor,
-        )(y)
-
-        # gamma = self.param("gamma", nn.initializers.constant(1.0), shape=(1,))
-
-        for _ in range(self.mp_steps):
+            )(y)
             y = self.mp_block(
                 inputs=y,
                 basis=partial(
@@ -162,10 +159,15 @@ class TDSAAtomCenteredDescriptor(nn.Module):
                 num_segments=len(atomic_numbers),
                 cutoff_value=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff)(jnp.linalg.norm(neighbour_displacements, axis=1)),
             )
+            y = e3x.nn.add(
+                y, self.embedding_transformation(self.embedding(atomic_numbers))
+            )
+            y: Array = e3x.ops.normalize(y, axis=-2)
 
-        y = e3x.nn.Dense(self.embedding_transformation.features)(y)
+        y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y
+        y = e3x.ops.normalize(y, axis=-2)
         y = e3x.nn.mish(y)
-        y = e3x.nn.Dense(self.embedding_transformation.features)(y)
+        y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y
 
         if self.embedding_residual_connection:
             y = e3x.nn.add(
