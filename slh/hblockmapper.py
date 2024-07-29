@@ -21,7 +21,7 @@ class BlockIrrepMappingSpec:
     irreps_slices: list[tuple[int, slice, int]]
     max_ell: int
     nfeatures: int
-    cgc = e3x.so3.clebsch_gordan(2, 2, 4, cartesian_order=False)
+    cgc = e3x.so3.clebsch_gordan(3, 3, 6, cartesian_order=False)
 
     def __repr__(self):
         return f"Mapper(nblocks={len(self.block_slices)}, max_ell={self.max_ell}, nfeatures={self.nfeatures})"
