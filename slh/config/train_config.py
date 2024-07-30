@@ -141,7 +141,14 @@ class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
                     WarmupCosineDecay] = Field(ExponentialDecaySchedule(), 
                                                discriminator="name")
     
-
+class LossConfig(BaseModel, frozen=True, extra="forbid"):
+    name: str = "weighted_huber_and_mae"
+    loss_parameters: dict[str, float] = {"off_diagonal_weight" : 4.0,
+                                         "on_diagonal_weight" : 1.0,
+                                         "huber_weight" : 1.0,
+                                         "mae_weight" : 1.0,
+                                         "loss_multiplier" : 5.0
+                                        }
 
 class TrainConfig(BaseModel, frozen=True, extra="forbid"):
     n_epochs: PositiveInt
@@ -151,7 +158,7 @@ class TrainConfig(BaseModel, frozen=True, extra="forbid"):
     model: ModelConfig
     data: DataConfig
     # metrics: List[MetricsConfig] = []
-    # loss: List[LossConfig]
+    loss: LossConfig
     optimizer: OptimizerConfig = OptimizerConfig()
     callbacks: List[CallBack] = [CSVCallback(name="csv")]
 

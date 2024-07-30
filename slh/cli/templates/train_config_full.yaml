@@ -53,5 +53,14 @@ optimizer:
     transition_begin: 20
     transition_steps: 1
 
+loss:
+  name: weighted_huber_and_mae
+  loss_parameters:
+    off_diagonal_weight: 4.0
+    on_diagonal_weight : 1.0
+    huber_weight       : 1.0
+    mae_weight         : 1.0
+    loss_multiplier    : 5.0
+
 patience: null
 seed: 2465

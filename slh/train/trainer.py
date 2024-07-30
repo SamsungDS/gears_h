@@ -14,13 +14,13 @@ from tqdm import trange
 
 from slh.data.input_pipeline import PureInMemoryDataset
 from slh.train.checkpoints import CheckpointManager, load_state
-from slh.train.loss import huber_loss
 
 log = logging.getLogger(__name__)
 
 def fit(state: TrainState,
         train_dataset: PureInMemoryDataset,
         val_dataset: PureInMemoryDataset,
+        loss_function: callable,
         logging_metrics: metrics.Collection,
         callbacks: CallbackList,
         n_grad_acc: int,
@@ -29,7 +29,6 @@ def fit(state: TrainState,
         ckpt_interval: int = 1,
         is_ensemble: bool = False,
         data_parallel: bool = False,
-        loss_function = huber_loss,
         disable_pbar: bool = False,
         disable_batch_pbar: bool = True):
     
@@ -218,7 +217,7 @@ def calculate_loss(params, batch_full, loss_function, apply_function):
 
     return loss, aux
 
-def make_step_functions(logging_metrics, state, loss_function = huber_loss):
+def make_step_functions(logging_metrics, state, loss_function):
     loss_calculator = partial(calculate_loss, loss_function=loss_function, apply_function=state.apply_fn)
     grad_fn = jax.value_and_grad(loss_calculator, 0, has_aux=True)
 

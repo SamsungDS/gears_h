@@ -3,7 +3,9 @@ import sys
 from pathlib import Path
 
 import jax
+from functools import partial
 
+import slh
 from slh.config.common import parse_config
 from slh.config.train_config import TrainConfig
 from slh.data.input_pipeline import initialize_dataset_from_list, read_dataset_as_list
@@ -91,6 +93,10 @@ def run(user_config, log_level="error"):
     n_params = int(jax.tree.reduce(jax.numpy.add, jax.tree.map(lambda x: len(x.ravel()), params)))
     log.info(f"Number of parameters: {n_params}")
 
+    loss_function = getattr(slh.train.loss, config.loss.name)
+    loss_parameters = config.loss.model_dump()['loss_parameters']
+    loss_function = partial(loss_function, loss_parameters = loss_parameters)
+
     # TODO Switch to using slh.optimize.get_optimizer and enable different LRs for each parameter group.
     import optax
     optimizer_config = config.optimizer.model_dump()
@@ -106,7 +112,9 @@ def run(user_config, log_level="error"):
     fit(
         state,
         train_dataset=train_ds,
-        val_dataset=val_ds, logging_metrics=None,
+        val_dataset=val_ds, 
+        loss_function = loss_function,
+        logging_metrics=None,
         callbacks=callbacks,
         n_grad_acc=1, # TODO make this controllable
         n_epochs=config.n_epochs,
