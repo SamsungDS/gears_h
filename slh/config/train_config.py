@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Literal, Optional, Union
+from typing import List, Literal, Optional, Union, Any
 from typing_extensions import Annotated
 
 import yaml
@@ -10,7 +10,7 @@ from pydantic import (
     NonNegativeInt,
     PositiveFloat,
     PositiveInt,
-    model_validator,
+    model_validator
 )
 
 from slh.config.lr_config import (LinearSchedule, 
@@ -127,14 +127,14 @@ class CSVCallback(BaseModel, frozen=True, extra="forbid"):
 
 CallBack = Annotated[CSVCallback, Field(discriminator="name")]
 
-# CallBack = Annotated[ # TODO implement other callbacks if we want them
+# CallBack = Annotated[ # TODO implement other   callbacks if we want them
 #     Union[CSVCallback, TBCallback, MLFlowCallback], Field(discriminator="name")
 # ]
 
 class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     name: str = "adam"
     lr: NonNegativeFloat = 0.005
-    opt_kwargs: dict[str, bool] = {"nesterov" : True}
+    opt_kwargs: dict[str, Any] = {"nesterov" : True}
     schedule: Union[LinearSchedule, 
                     CyclicCosineSchedule, 
                     ExponentialDecaySchedule,
