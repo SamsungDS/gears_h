@@ -9,6 +9,7 @@ from jaxtyping import Array, Float, Int
 from typing import Literal
 
 from slh.layers.descriptor.radial_basis import SpeciesAwareRadialBasis
+from slh.layers.layer_norm import LayerNorm
 # from slh.utilities.functions import soft_abs
 
 
@@ -165,7 +166,7 @@ class TDSAAtomCenteredDescriptor(nn.Module):
             y: Array = e3x.ops.normalize(y, axis=-2)
 
         y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y
-        y = e3x.ops.normalize(y, axis=-2)
+        y = LayerNorm(y.shape)(y)
         y = e3x.nn.mish(y)
         y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y
 
