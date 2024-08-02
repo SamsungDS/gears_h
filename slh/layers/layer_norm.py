@@ -5,10 +5,11 @@ import jax.numpy as jnp
 from jaxtyping import Array, Float, Int
 
 class LayerNorm(nn.module):
-    nfeatures: Int
-    max_ell: Int
+    shape: e3x.nn.features.Shape
 
     def setup(self):
+        self.max_ell = e3x.nn.features._extract_max_degree_and_check_shape(self.shape)
+        self.nfeatures = self.shape[-1]
         idx_l = e3x.nn.modules._duplication_indices_for_max_degree(self.max_ell)
         # 1 x P x L x F
         self.irrepwise_scaling = self.param("irrepwise_scaling",
