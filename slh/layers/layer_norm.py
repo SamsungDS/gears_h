@@ -25,7 +25,11 @@ class LayerNorm(nn.module):
         for i in range(self.max_ell+1):
             indices = jnp.where(self.idx_l == i)
             feature_array_slice = feature_array[...,indices,:]
-            normalized_feature_array_slice = e3x.ops.normalize(feature_array_slice, axis=-2)
+            if i == 0:
+                feature_array_slice = feature_array_slice - jnp.mean(feature_array_slice)
+                normalized_feature_array_slice = e3x.ops.normalize(feature_array_slice, axis=-1)    
+            else:
+                normalized_feature_array_slice = e3x.ops.normalize(feature_array_slice, axis=-2)
             normalized_feature_array = normalized_feature_array.at[...,indices,:].set(normalized_feature_array_slice)
         
         return self.irrepwise_scaling*normalized_feature_array
