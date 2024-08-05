@@ -6,20 +6,17 @@ from jaxtyping import Array, Float, Int
 
 class LayerNorm(nn.module):
     shape: e3x.nn.features.Shape
-
-    def setup(self):
-        self.max_ell = e3x.nn.features._extract_max_degree_and_check_shape(self.shape)
-        self.nfeatures = self.shape[-1]
-        self.idx_l = e3x.nn.modules._duplication_indices_for_max_degree(self.max_ell)
-        # 1 x P x L x F
-        self.irrepwise_scaling = self.param("irrepwise_scaling",
-                                            nn.initializers.constant(1.0),
-                                            shape = (1, 1, self.max_ell+1, self.nfeatures)
-                                           )
-        self.irrepwise_scaling = jnp.take(self.irrepwise_scaling,self.idx_l,axis=-2)
-        # TODO how and where to do the normalization--do we do it here in the setup once, or every time we call?
-        
+    
+    @nn.compact
     def __call__(self, feature_array: Float[Array, '... 1 (max_ell+1)**2 nfeatures']):
+        max_ell = e3x.nn.features._extract_max_degree_and_check_shape(self.shape)
+        nfeatures = self.shape[-1]
+        idx_l = e3x.nn.modules._duplication_indices_for_max_degree(max_ell)
+        irrepwise_scaling = self.param("irrepwise_scaling",
+                                       nn.initializers.constant(1.0),
+                                       shape = (1, 1, max_ell+1, nfeatures)
+                                      )
+        irrepwise_scaling = jnp.take(self.irrepwise_scaling,idx_l,axis=-2)
         # normalization
         normalized_feature_array = jnp.zeros(self.shape)
         for i in range(self.max_ell+1):
@@ -32,4 +29,4 @@ class LayerNorm(nn.module):
                 normalized_feature_array_slice = e3x.ops.normalize(feature_array_slice, axis=-2)
             normalized_feature_array = normalized_feature_array.at[...,indices,:].set(normalized_feature_array_slice)
         
-        return self.irrepwise_scaling*normalized_feature_array
+        return irrepwise_scaling*normalized_feature_array
