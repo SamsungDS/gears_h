@@ -4,7 +4,6 @@ from functools import partial
 import e3x
 import flax.linen as nn
 import jax.numpy as jnp
-import jax
 from jaxtyping import Array, Float, Int
 from typing import Literal
 
@@ -163,7 +162,7 @@ class TDSAAtomCenteredDescriptor(nn.Module):
             y = e3x.nn.add(
                 y, self.embedding_transformation(self.embedding(atomic_numbers))
             )
-            y: Array = e3x.ops.normalize(y, axis=-2)
+            y = LayerNorm()(y)
 
         y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y
         y = LayerNorm()(y)
