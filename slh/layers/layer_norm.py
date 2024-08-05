@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from jaxtyping import Array, Float
 from typing import Union
 
-class LayerNorm(nn.module):
+class LayerNorm(nn.Module):
     
     @nn.compact
     def __call__(self, feature_array: Union[Float[Array, '... 1 (max_ell+1)**2 nfeatures'],
@@ -20,9 +20,9 @@ class LayerNorm(nn.module):
         irrepwise_scaling = jnp.take(irrepwise_scaling,idx_l,axis=-2)
 
         # normalization
-        normalized_feature_array = jnp.zeros(self.shape)
+        normalized_feature_array = jnp.zeros(feature_array.shape)
         for i in range(max_ell+1):
-            indices = jnp.where(idx_l == i)
+            indices = jnp.where(idx_l == i, size = 2*i+1)
             feature_array_slice = feature_array[...,indices,:]
             # indexing along the angular momentum direction for l = 0 destroys relative magnitudes, so we normalize across the feature direction.
             # this is still equivariant for scalars only.
