@@ -1,6 +1,5 @@
 import e3x
 import flax.linen as nn
-import jax
 import jax.numpy as jnp
 from jaxtyping import Array, Float, Int
 
@@ -16,11 +15,11 @@ class LayerNorm(nn.module):
                                        nn.initializers.constant(1.0),
                                        shape = (1, 1, max_ell+1, nfeatures)
                                       )
-        irrepwise_scaling = jnp.take(self.irrepwise_scaling,idx_l,axis=-2)
+        irrepwise_scaling = jnp.take(irrepwise_scaling,idx_l,axis=-2)
         # normalization
         normalized_feature_array = jnp.zeros(self.shape)
-        for i in range(self.max_ell+1):
-            indices = jnp.where(self.idx_l == i)
+        for i in range(max_ell+1):
+            indices = jnp.where(idx_l == i)
             feature_array_slice = feature_array[...,indices,:]
             if i == 0:
                 feature_array_slice = feature_array_slice - jnp.mean(feature_array_slice)
