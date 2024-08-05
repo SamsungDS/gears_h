@@ -166,7 +166,7 @@ class TDSAAtomCenteredDescriptor(nn.Module):
             y: Array = e3x.ops.normalize(y, axis=-2)
 
         y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y
-        y = LayerNorm(y.shape)(y)
+        y = LayerNorm()(y)
         y = e3x.nn.mish(y)
         y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y
 
