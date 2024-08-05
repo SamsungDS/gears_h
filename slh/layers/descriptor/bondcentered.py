@@ -1,12 +1,11 @@
 from functools import partial
-from typing import Optional, Union
+from typing import Union
 
 import e3x
 import flax.linen as nn
-import jax
 import jax.numpy as jnp
 
-from slh.layers.descriptor.radial_basis import jinclike
+from slh.layers.layer_norm import LayerNorm
 
 
 class BondCenteredTensorMomentDescriptor(nn.Module):
@@ -32,7 +31,7 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
         # atomcentered
         y = e3x.nn.add(atom1_desc, atom2_desc)
         y = e3x.nn.Dense(num_radial_features)(y)
-        y = e3x.ops.normalize(y, axis=-2)
+        y = LayerNorm()(y)
         y = e3x.nn.mish(y)
         y = e3x.nn.Dense(num_radial_features)(y) + y
 

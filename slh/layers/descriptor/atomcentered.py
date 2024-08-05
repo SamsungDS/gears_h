@@ -4,11 +4,11 @@ from functools import partial
 import e3x
 import flax.linen as nn
 import jax.numpy as jnp
-import jax
 from jaxtyping import Array, Float, Int
 from typing import Literal
 
 from slh.layers.descriptor.radial_basis import SpeciesAwareRadialBasis
+from slh.layers.layer_norm import LayerNorm
 # from slh.utilities.functions import soft_abs
 
 
@@ -162,10 +162,10 @@ class TDSAAtomCenteredDescriptor(nn.Module):
             y = e3x.nn.add(
                 y, self.embedding_transformation(self.embedding(atomic_numbers))
             )
-            y: Array = e3x.ops.normalize(y, axis=-2)
+            y = LayerNorm()(y)
 
         y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y
-        y = e3x.ops.normalize(y, axis=-2)
+        y = LayerNorm()(y)
         y = e3x.nn.mish(y)
         y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y
 
