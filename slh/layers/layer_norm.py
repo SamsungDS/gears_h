@@ -1,12 +1,14 @@
 import e3x
 import flax.linen as nn
 import jax.numpy as jnp
-from jaxtyping import Array, Float, Int
+from jaxtyping import Array, Float
+from typing import Union
 
 class LayerNorm(nn.module):
     
     @nn.compact
-    def __call__(self, feature_array: Float[Array, '... 1 (max_ell+1)**2 nfeatures']):
+    def __call__(self, feature_array: Union[Float[Array, '... 1 (max_ell+1)**2 nfeatures'],
+                                            Float[Array, '... 2 (max_ell+1)**2 nfeatures']]):
         max_ell = e3x.nn.features._extract_max_degree_and_check_shape(feature_array.shape)
         nfeatures = feature_array.shape[-1]
         idx_l = e3x.nn.modules._duplication_indices_for_max_degree(max_ell)
