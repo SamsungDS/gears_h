@@ -88,9 +88,21 @@ class TDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
     mp_degree: int = 4
     mp_options: dict = {}
 
+class ShallowTDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
+    descriptor_name: Literal["ShallowTDSAAtomCenteredDescriptor"] = "ShallowTDSAAtomCenteredDescriptor"
+    max_tensordense_degree: int = 4
+    num_tensordense_features: int = 32
+    use_fused_tensor: bool = False
+    embedding_residual_connection: bool = False
+    mp_steps: int = 2
+    mp_degree: int = 4
+    mp_options: dict = {}
+
 class AtomCenteredConfig(BaseModel, extra="forbid"):
     descriptor: Union[SAAtomCenteredDescriptorConfig, 
-                      TDSAAtomCenteredDescriptorConfig] = Field(SAAtomCenteredDescriptorConfig(), 
+                      TDSAAtomCenteredDescriptorConfig,
+                      ShallowTDSAAtomCenteredDescriptorConfig,
+                     ] = Field(SAAtomCenteredDescriptorConfig(), 
                                                                 discriminator='descriptor_name')
     radial_basis: RadialBasisConfig
 
