@@ -125,26 +125,27 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
     ):
 
         idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
-        _, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
+        Z_i, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
 
         # This is aware of the Z_j's
-        y = self.radial_basis(
-            neighbour_displacements=neighbour_displacements, Z_j=Z_j
+        y_2b = self.radial_basis(
+            neighbour_displacements=neighbour_displacements, Z_i=Z_i, Z_j=Z_j
         ).astype(jnp.float32)
         y1 = e3x.nn.TensorDense(
             self.num_tensordense_features,
             self.max_tensordense_degree,
             cartesian_order=False,
             use_fused_tensor=self.use_fused_tensor,
-            )(y)
+            )(y_2b)
         y2 = e3x.nn.TensorDense(
             self.num_tensordense_features,
             self.max_tensordense_degree,
             cartesian_order=False,
             use_fused_tensor=self.use_fused_tensor,
             )(y1)
-        y = e3x.nn.features.change_max_degree_or_type(y, self.max_tensordense_degree, include_pseudotensors=True)
+        y = e3x.nn.features.change_max_degree_or_type(y_2b, self.max_tensordense_degree, include_pseudotensors=True)
         y = jnp.concatenate([y, y1, y2], axis=-1)
+        y = y * self.embedding_transformation(self.embedding(Z_i) + self.embedding(Z_j))
 
         # num_atoms x 1 x L x F
         y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
@@ -168,12 +169,9 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
                 num_segments=len(atomic_numbers),
                 cutoff_value=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff)(jnp.linalg.norm(neighbour_displacements, axis=1)),
             )
-            y = e3x.nn.add(
-                y, self.embedding_transformation(self.embedding(atomic_numbers))
-            )
             y = LayerNorm()(y)
 
-        y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y
+        y = e3x.nn.Dense(self.embedding_transformation.features)(y)
         y = LayerNorm()(y)
         y = e3x.nn.mish(y)
         y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y

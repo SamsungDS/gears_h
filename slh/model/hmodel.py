@@ -23,7 +23,7 @@ class HamiltonianModel(nn.Module):
     readout: Readout
 
     @nn.compact
-    def __call__(self, atomic_numbers, neighbour_indices, neighbour_displacements):
+    def __call__(self, atomic_numbers, neighbour_indices, neighbour_displacements, bond_indices=None):
         atom_centered_descriptors = self.atom_centered(
             atomic_numbers, neighbour_indices, neighbour_displacements
         )
@@ -32,7 +32,7 @@ class HamiltonianModel(nn.Module):
         # assert atom_centered_descriptors.dtype == jnp.float32
 
         bc_features = self.bond_centered(
-            atom_centered_descriptors, neighbour_indices, neighbour_displacements
+            atom_centered_descriptors, neighbour_indices.at[bond_indices].get(), neighbour_displacements.at[bond_indices].get()
         )
 
         bc_features = bc_features.astype(jnp.float32)

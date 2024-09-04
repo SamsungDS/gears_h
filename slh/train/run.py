@@ -86,7 +86,7 @@ def run(user_config, log_level="error"):
     model = model_builder.build_lcao_hamiltonian_model(readout_nfeatures, max_ell)
 
     batched_model = jax.vmap(
-        model.apply, in_axes=(None, 0, 0, 0), axis_name="batch"
+        model.apply, in_axes=(None, 0, 0, 0, 0), axis_name="batch"
     )
 
     params, rng_key = create_params(model, rng_key, sample_input, 1)
