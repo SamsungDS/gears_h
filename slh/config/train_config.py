@@ -142,11 +142,11 @@ class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
                                                discriminator="name")
     
 class LossConfig(BaseModel, frozen=True, extra="forbid"):
-    name: str = "weighted_huber_and_mae"
+    name: str = "weighted_mse_and_rmse"
     loss_parameters: dict[str, float] = {"off_diagonal_weight" : 4.0,
                                          "on_diagonal_weight" : 1.0,
-                                         "huber_weight" : 1.0,
-                                         "mae_weight" : 1.0,
+                                         "mse_wweight" : 1.0,
+                                         "rmse_weight" : 1.0,
                                          "loss_multiplier" : 5.0
                                         }
 
