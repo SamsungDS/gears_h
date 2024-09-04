@@ -105,7 +105,7 @@ def run(user_config, log_level="error"):
                                                                         **lr_options)
     opt = getattr(optax,optimizer_config['name'])(learning_rate, 
                                                **optimizer_config["opt_kwargs"])
-    opt = optax.chain(opt, optax.zero_nans())
+    opt = optax.chain(opt, optax.zero_nans(), optax.clip(2))
     # state = create_train_state(batched_model, params, optax.adam(1e-3))
     state = create_train_state(batched_model, params, opt)
 
