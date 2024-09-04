@@ -200,6 +200,7 @@ def calculate_loss(params, batch_full, loss_function, apply_function):
         batch["numbers"],
         batch["idx_ij"],
         batch["idx_D"],
+        batch["idx_bonds"]
     )
 
     # TODO Remove this when we make the readout layer size automatically calculated.

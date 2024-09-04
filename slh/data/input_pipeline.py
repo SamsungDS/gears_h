@@ -351,6 +351,8 @@ class InMemoryDataset:
             dataset_as_list
         )
 
+        self.n_bonds = self.max_nneighbours
+
         self.dataset_mask_dict = get_mask_dict(
             self.max_ell, self.readout_nfeatures, self.hmap
         )
@@ -366,24 +368,6 @@ class InMemoryDataset:
                 self.max_ell,
                 self.readout_nfeatures,
             )
-
-        # atoms_list = [x[0] for x in dataset_as_list]
-        # neighbour_indices_list = [x[-1][0] for x in dataset_as_list]
-        # neighbour_vectors_list = [x[-1][1] for x in dataset_as_list]
-        # hblocks_list = [x[-1][2] for x in dataset_as_list]
-
-        # atomic_numbers_padded = pad_atomic_numbers(atoms_list, self.max_natoms)
-        # neighbour_indices_padded, neighbour_vectors_padded = pad_neighbour_data(
-        #     neighbour_indices_list, neighbour_vectors_list
-        # )
-        # self.h_irreps_padded, self.h_mask = get_padded_h_irreps_and_mask(
-        #     self.dataset_mask_dict,
-        #     atomic_numbers_padded,
-        #     neighbour_indices_list,
-        #     self.max_nneighbours,
-        #     hblocks_list,
-        #     self.hmap,
-        # )
 
         self.enqueue(min(self.buffer_size, self.n_data))
 
@@ -419,14 +403,17 @@ class InMemoryDataset:
         if self.is_inference:
             return input_signature
 
+        input_signature["idx_bonds"] = tf.TensorSpec(
+            (self.n_bonds,), dtype=tf.int32, name="idx_bonds"
+        )
         label_signature = {}
         label_signature["h_irreps_off_diagonal"] = tf.TensorSpec(
-            (self.max_nneighbours, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
+            (self.n_bonds, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
             dtype=tf.float64,
             name="h_irreps_off_diagonal",
         )
         label_signature["mask_off_diagonal"] = tf.TensorSpec(
-            (self.max_nneighbours, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
+            (self.n_bonds, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
             dtype=tf.int16,
             name="mask_off_diagonal",
         )
@@ -475,7 +462,8 @@ class InMemoryDataset:
 
         if self.is_inference:
             return inputs
-
+        
+        inputs["idx_bonds"] = np.random.choice(self.max_nneighbours, size=self.n_bonds, replace=False)
         labels = self.labels
         labels = {k: v[i] for k, v in labels.items()}
         # log.debug(f"{i}, {labels['h_irreps']}")
@@ -488,7 +476,7 @@ class InMemoryDataset:
                 (0, 0),
             ),  # Feature dim
             "constant",
-        ).astype(np.float32)
+        ).astype(np.float32)[inputs["idx_bonds"]]
         labels["mask_off_diagonal"] = np.pad(
             labels["mask_off_diagonal"],
             (
@@ -498,7 +486,7 @@ class InMemoryDataset:
                 (0, 0),  # Feature dim
             ),
             "constant",
-        ).astype(np.int8)
+        ).astype(np.int8)[inputs["idx_bonds"]]
 
         labels["h_irreps_on_diagonal"] = np.pad(
             labels["h_irreps_on_diagonal"],
