@@ -54,12 +54,12 @@ optimizer:
     transition_steps: 1
 
 loss:
-  name: weighted_huber_and_mae
+  name: weighted_mse_and_rmse
   loss_parameters:
     off_diagonal_weight: 4.0
     on_diagonal_weight : 1.0
-    huber_weight       : 1.0
-    mae_weight         : 1.0
+    mse_weight         : 1.0
+    rmse_weight        : 1.0
     loss_multiplier    : 5.0
 
 patience: null
