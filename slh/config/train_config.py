@@ -118,7 +118,9 @@ class BondCenteredConfig(BaseModel, extra="forbid"):
 class MLPConfig(BaseModel, extra="forbid"):
     mlp_layer_widths: List[PositiveInt] = [128]
     mlp_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
-    mlp_activation_function: Literal["shifted_softplus", "mish"] = "shifted_softplus"
+    mlp_activation_function: Literal["shifted_softplus", 
+                                     "mish",
+                                     "bent_identity"] = "shifted_softplus"
 
 
 class ModelConfig(BaseModel, extra="forbid"):
