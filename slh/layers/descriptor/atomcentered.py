@@ -221,11 +221,11 @@ class TDSAAtomCenteredDescriptor(nn.Module):
     ):
 
         idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
-        _, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
+        Z_i, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
 
         # This is aware of the Z_j's
         y = self.radial_basis(
-            neighbour_displacements=neighbour_displacements, Z_j=Z_j
+            neighbour_displacements=neighbour_displacements, Z_i=Z_i, Z_j=Z_j
         ).astype(jnp.float32)
 
         # num_atoms x 1 x L x F
