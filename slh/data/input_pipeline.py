@@ -37,12 +37,19 @@ def initialize_dataset_from_list(
     batch_size: int,
     val_batch_size: int,
     n_epochs: int,
+    bond_fraction: float
 ):
     train_idx, val_idx = split_idxs(len(dataset_as_list), num_train, num_val)
     train_ds_list, val_ds_list = split_dataset(dataset_as_list, train_idx, val_idx)
-    train_ds, val_ds = PureInMemoryDataset(
-        train_ds_list, batch_size=batch_size, n_epochs=n_epochs
-    ), PureInMemoryDataset(val_ds_list, batch_size=val_batch_size, n_epochs=n_epochs)
+    train_ds, val_ds = (PureInMemoryDataset(train_ds_list,
+                                            batch_size = batch_size,
+                                            n_epochs = n_epochs,
+                                            bond_fraction = bond_fraction),
+                        PureInMemoryDataset(val_ds_list,
+                                            batch_size = val_batch_size,
+                                            n_epochs = n_epochs,
+                                            bond_fraction = bond_fraction)
+                       )
     return train_ds, val_ds
 
 # TODO Need not be a json specifically, we'll see
