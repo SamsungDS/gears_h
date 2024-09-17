@@ -37,12 +37,19 @@ def initialize_dataset_from_list(
     batch_size: int,
     val_batch_size: int,
     n_epochs: int,
+    bond_fraction: float
 ):
     train_idx, val_idx = split_idxs(len(dataset_as_list), num_train, num_val)
     train_ds_list, val_ds_list = split_dataset(dataset_as_list, train_idx, val_idx)
-    train_ds, val_ds = PureInMemoryDataset(
-        train_ds_list, batch_size=batch_size, n_epochs=n_epochs
-    ), PureInMemoryDataset(val_ds_list, batch_size=val_batch_size, n_epochs=n_epochs)
+    train_ds, val_ds = (PureInMemoryDataset(train_ds_list,
+                                            batch_size = batch_size,
+                                            n_epochs = n_epochs,
+                                            bond_fraction = bond_fraction),
+                        PureInMemoryDataset(val_ds_list,
+                                            batch_size = val_batch_size,
+                                            n_epochs = n_epochs,
+                                            bond_fraction = bond_fraction)
+                       )
     return train_ds, val_ds
 
 # TODO Need not be a json specifically, we'll see
@@ -327,12 +334,14 @@ class InMemoryDataset:
         dataset_as_list: DatasetList,
         batch_size: int,
         n_epochs: int,
+        bond_fraction: float = 1.0,
         is_inference: bool = False,
         buffer_size=100,
         cache_path=".",
     ):
         self.n_data = len(dataset_as_list)
         self.n_epochs = n_epochs
+        self.bond_fraction = bond_fraction
         self.batch_size = min(self.n_data, batch_size)
         self.is_inference = is_inference
 
@@ -351,7 +360,7 @@ class InMemoryDataset:
             dataset_as_list
         )
 
-        self.n_bonds = self.max_nneighbours
+        self.n_bonds = int(self.bond_fraction*self.max_nneighbours)
 
         self.dataset_mask_dict = get_mask_dict(
             self.max_ell, self.readout_nfeatures, self.hmap

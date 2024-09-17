@@ -35,6 +35,8 @@ class DataConfig(BaseModel, extra="forbid"):
     shuffle_buffer_size: PositiveInt = 1000
     additional_properties_info: dict[str, str] = {}
 
+    bond_fraction: PositiveFloat = 1.0
+
     pos_unit: Optional[str] = "Ang"
     energy_unit: Optional[str] = "eV"
 
