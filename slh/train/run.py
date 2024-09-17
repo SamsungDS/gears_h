@@ -75,6 +75,7 @@ def run(user_config, log_level="error"):
         batch_size=config.data.batch_size,
         val_batch_size=config.data.valid_batch_size,
         n_epochs=config.n_epochs,
+        bond_fraction=config.data.bond_fraction
     )
     max_ell = train_ds.max_ell
     readout_nfeatures = train_ds.readout_nfeatures
