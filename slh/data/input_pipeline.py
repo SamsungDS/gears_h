@@ -327,12 +327,14 @@ class InMemoryDataset:
         dataset_as_list: DatasetList,
         batch_size: int,
         n_epochs: int,
+        bond_fraction: float = 1.0,
         is_inference: bool = False,
         buffer_size=100,
         cache_path=".",
     ):
         self.n_data = len(dataset_as_list)
         self.n_epochs = n_epochs
+        self.bond_fraction = bond_fraction
         self.batch_size = min(self.n_data, batch_size)
         self.is_inference = is_inference
 
@@ -351,7 +353,7 @@ class InMemoryDataset:
             dataset_as_list
         )
 
-        self.n_bonds = self.max_nneighbours
+        self.n_bonds = int(self.bond_fraction*self.max_nneighbours)
 
         self.dataset_mask_dict = get_mask_dict(
             self.max_ell, self.readout_nfeatures, self.hmap
