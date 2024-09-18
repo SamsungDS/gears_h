@@ -40,11 +40,11 @@ class SAAtomCenteredDescriptor(nn.Module):
     @nn.compact
     def __call__(
         self,
-        atomic_numbers: Int[Array, "num_atoms"],  # noqa: F821
-        neighbour_indices: Int[Array, "... num_neighbours 2"],  # noqa: F722
-        neighbour_displacements: Float[Array, "... num_neighbours 3"],  # noqa: F722
+        atomic_numbers: Int[Array, " num_atoms"],
+        neighbour_indices: Int[Array, "... num_neighbours 2"],
+        neighbour_displacements: Float[Array, "... num_neighbours 3"],
     ):
-
+        
         idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
         Z_i, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
 
@@ -119,9 +119,9 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
     @nn.compact
     def __call__(
         self,
-        atomic_numbers: Int[Array, "num_atoms"], # noqa: F821
-        neighbour_indices: Int[Array, "... num_neighbours 2"],  # noqa: F722
-        neighbour_displacements: Float[Array, "... num_neighbours 3"],  # noqa: F722
+        atomic_numbers: Int[Array, " num_atoms"],
+        neighbour_indices: Int[Array, "... num_neighbours 2"],        
+        neighbour_displacements: Float[Array, "... num_neighbours 3"],
     ):
 
         idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
@@ -215,9 +215,9 @@ class TDSAAtomCenteredDescriptor(nn.Module):
     @nn.compact
     def __call__(
         self,
-        atomic_numbers: Int[Array, "num_atoms"],  # noqa: F821
-        neighbour_indices: Int[Array, "... num_neighbours 2"],  # noqa: F722
-        neighbour_displacements: Float[Array, "... num_neighbours 3"],  # noqa: F722
+        atomic_numbers: Int[Array, " num_atoms"],
+        neighbour_indices: Int[Array, "... num_neighbours 2"],
+        neighbour_displacements: Float[Array, "... num_neighbours 3"],
     ):
 
         idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
@@ -320,9 +320,9 @@ class MBSAAtomCenteredDescriptor(nn.Module):
     @nn.compact
     def __call__(
         self,
-        atomic_numbers: Int[Array, "num_atoms"],  # noqa: F821
-        neighbour_indices: Int[Array, "... num_neighbours 2"],  # noqa: F722
-        neighbour_displacements: Float[Array, "... num_neighbours 3"],  # noqa: F722
+        atomic_numbers: Int[Array, " num_atoms"],
+        neighbour_indices: Int[Array, "... num_neighbours 2"],
+        neighbour_displacements: Float[Array, "... num_neighbours 3"],
     ):
 
         idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
