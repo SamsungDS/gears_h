@@ -34,3 +34,8 @@ sphinx-book-theme = "^1.1.2"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff.lint]
+# Skip warning that doesn't play nice with jaxtyping  
+# array size hints for multidimensional arrays (`F722`).
+ignore = ["F722"]
