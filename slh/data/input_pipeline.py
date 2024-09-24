@@ -472,7 +472,7 @@ class InMemoryDataset:
         if self.is_inference:
             return inputs
         
-        inputs["idx_bonds"] = np.random.choice(self.max_nneighbours, size=self.n_bonds, replace=False) if self.n_bonds != self.max_nneighbours else np.arange(np.max_nneighbours)
+        inputs["idx_bonds"] = np.random.choice(self.max_nneighbours, size=self.n_bonds, replace=False) if self.n_bonds != self.max_nneighbours else np.arange(self.max_nneighbours)
         labels = self.labels
         labels = {k: v[i] for k, v in labels.items()}
         # log.debug(f"{i}, {labels['h_irreps']}")
