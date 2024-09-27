@@ -99,13 +99,20 @@ class ShallowTDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
     mp_steps: int = 2
     mp_degree: int = 4
     mp_options: dict = {}
+    mp_basis_options: dict[str, str | int | dict] = {"radial_fn" : "basic_fourier",
+                                                     "radial_kwargs" : {},
+                                                     "max_degree" : 2,
+                                                     "num" : 8,
+                                                     "cutoff_fn" : "smooth_cutoff",
+                                                     "cutoff_kwargs" : {}
+                                                    }
 
 class AtomCenteredConfig(BaseModel, extra="forbid"):
     descriptor: Union[SAAtomCenteredDescriptorConfig, 
                       TDSAAtomCenteredDescriptorConfig,
                       ShallowTDSAAtomCenteredDescriptorConfig,
-                     ] = Field(SAAtomCenteredDescriptorConfig(), 
-                                                                discriminator='descriptor_name')
+                     ] = Field(SAAtomCenteredDescriptorConfig(),
+                               discriminator='descriptor_name')
     radial_basis: RadialBasisConfig
 
 class BondCenteredConfig(BaseModel, extra="forbid"):
