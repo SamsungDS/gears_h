@@ -116,6 +116,13 @@ class AtomCenteredConfig(BaseModel, extra="forbid"):
     radial_basis: RadialBasisConfig
 
 class BondCenteredConfig(BaseModel, extra="forbid"):
+    bond_expansion_options: dict[str, str | int | dict] = {"radial_fn" : "basic_fourier",
+                                                           "radial_kwargs" : {},
+                                                           "cutoff_fn" : "smooth_cutoff",
+                                                           "cutoff_kwargs" : {},
+                                                           "max_degree" : 2,
+                                                           "num" : 8
+                                                          }
     cutoff: PositiveFloat
     max_basis_degree: NonNegativeInt = 2
     max_degree: NonNegativeInt = 4
