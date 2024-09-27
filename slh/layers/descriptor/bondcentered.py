@@ -1,3 +1,4 @@
+from dataclasses import field
 from functools import partial
 from typing import Union
 
@@ -14,10 +15,27 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
     max_basis_degree: int = 2
     max_degree: int = 4
     tensor_module: Union[e3x.nn.Tensor, e3x.nn.FusedTensor] = e3x.nn.FusedTensor
+    bond_expansion_options: dict = field(default_factory=lambda: {})
     # radial_function = e3x.nn.basic_fourier
+
+    def setup(self):
+        radial_kwargs = self.bond_expansion_options.pop("radial_kwargs")
+        cutoff_kwargs = self.bond_expansion_options.pop("cutoff_kwargs")
+        radial_function = self.bond_expansion_options.pop("radial_fn")
+        cutoff_function = self.bond_expansion_options.pop("cutoff_fn")
+        self.bond_expansion_options['max_degree'] = self.max_basis_degree
+        self.bond_expansion = partial(e3x.nn.basis,
+                                      radial_fn = partial(getattr(e3x.nn, radial_function),
+                                                          **radial_kwargs),
+                                      cutoff_fn = partial(getattr(e3x.nn, cutoff_function),
+                                                          **cutoff_kwargs),
+                                      cartesian_order = False,
+                                      **self.bond_expansion_options
+                                     )
 
     @nn.compact
     def __call__(self, atomic_descriptors, neighbour_indices, neighbour_displacements):
+        
         neighbours_i, neighbours_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
         num_radial_features = atomic_descriptors.shape[-1]
 
@@ -36,17 +54,7 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
         y = e3x.nn.Dense(num_radial_features)(y) + y
 
         # We put in information about the orientation/length of the bond vector here
-        bond_expansion = e3x.nn.basis(
-            neighbour_displacements,
-            num=num_radial_features,
-            max_degree=self.max_basis_degree,
-            radial_fn=partial(
-                        e3x.nn.basic_fourier,
-                        limit=self.cutoff,
-                    ),
-                    cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.cutoff),
-            cartesian_order=False,
-        ).astype(jnp.float32)
+        bond_expansion = self.bond_expansion(neighbour_displacements).astype(jnp.float32)
         bond_expanded_dense = e3x.nn.Dense(num_radial_features)(bond_expansion)
 
         # num_pairs x 2 x (max_degree + 1)^2 x num_radial_features
