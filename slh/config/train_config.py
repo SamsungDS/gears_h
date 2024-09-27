@@ -126,7 +126,6 @@ class BondCenteredConfig(BaseModel, extra="forbid"):
     cutoff: PositiveFloat
     max_basis_degree: NonNegativeInt = 2
     max_degree: NonNegativeInt = 4
-    max_actp_degree : NonNegativeInt = 4
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
     tensor_module_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
 

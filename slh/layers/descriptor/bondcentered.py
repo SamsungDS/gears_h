@@ -11,7 +11,6 @@ from slh.layers.layer_norm import LayerNorm
 
 class BondCenteredTensorMomentDescriptor(nn.Module):
     cutoff: float
-    max_actp_degree: int = 4
     max_basis_degree: int = 2
     max_degree: int = 4
     tensor_module: Union[e3x.nn.Tensor, e3x.nn.FusedTensor] = e3x.nn.FusedTensor
