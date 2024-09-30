@@ -30,7 +30,7 @@ model:
         radial_fn: basic_fourier
         radial_kwargs: {}
         max_degree: 2
-        num: 2
+        num: 8
     radial_basis:
       cutoff: <CUTOFF>
       num_radial: 8
