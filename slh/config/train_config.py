@@ -99,20 +99,31 @@ class ShallowTDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
     mp_steps: int = 2
     mp_degree: int = 4
     mp_options: dict = {}
+    mp_basis_options: dict[str, str | int | dict] = {"radial_fn" : "basic_fourier",
+                                                     "radial_kwargs" : {},
+                                                     "max_degree" : 2,
+                                                     "num" : 8,
+                                                     "cutoff_fn" : "smooth_cutoff"
+                                                    }
 
 class AtomCenteredConfig(BaseModel, extra="forbid"):
     descriptor: Union[SAAtomCenteredDescriptorConfig, 
                       TDSAAtomCenteredDescriptorConfig,
                       ShallowTDSAAtomCenteredDescriptorConfig,
-                     ] = Field(SAAtomCenteredDescriptorConfig(), 
-                                                                discriminator='descriptor_name')
+                     ] = Field(SAAtomCenteredDescriptorConfig(),
+                               discriminator='descriptor_name')
     radial_basis: RadialBasisConfig
 
 class BondCenteredConfig(BaseModel, extra="forbid"):
+    bond_expansion_options: dict[str, str | int | dict] = {"radial_fn" : "basic_fourier",
+                                                           "radial_kwargs" : {},
+                                                           "cutoff_fn" : "smooth_cutoff",
+                                                           "max_degree" : 2,
+                                                           "num" : 8
+                                                          }
     cutoff: PositiveFloat
     max_basis_degree: NonNegativeInt = 2
     max_degree: NonNegativeInt = 4
-    max_actp_degree : NonNegativeInt = 4
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
     tensor_module_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
 

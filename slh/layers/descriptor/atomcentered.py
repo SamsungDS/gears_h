@@ -97,6 +97,7 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
     mp_steps: int = 2
     mp_degree: int = 4
     mp_options: dict = field(default_factory=lambda: {})
+    mp_basis_options: dict = field(default_factory=lambda: {})
 
     def setup(self):
         self.embedding = self.radial_basis.embedding
@@ -115,6 +116,21 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
             use_fused_tensor=self.use_fused_tensor,
             **self.mp_options,
         )
+
+        options = self.mp_basis_options
+
+        options, radial_kwargs = options.pop("radial_kwargs")
+        options, radial_function = options.pop("radial_fn")
+        options, cutoff_function = options.pop("cutoff_fn")
+
+        self.mp_basis = partial(e3x.nn.basis,
+                                radial_fn = partial(getattr(e3x.nn, radial_function),
+                                                    **radial_kwargs),
+                                cutoff_fn = partial(getattr(e3x.nn, cutoff_function),
+                                                    cutoff=self.radial_basis.cutoff),
+                                cartesian_order = False,
+                                **options
+                                )
 
     @nn.compact
     def __call__(
@@ -153,17 +169,7 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
         for _ in range(self.mp_steps):
             y = self.mp_block(
                 inputs=y,
-                basis=partial(
-                    e3x.nn.basis,
-                    max_degree=2,
-                    num=8,
-                    radial_fn=partial(
-                        e3x.nn.basic_fourier,
-                        limit=self.radial_basis.cutoff,
-                    ),
-                    cutoff_fn=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff),
-                    cartesian_order=False,
-                )(neighbour_displacements),
+                basis=self.mp_basis(neighbour_displacements),
                 src_idx=idx_j,
                 dst_idx=idx_i,
                 num_segments=len(atomic_numbers),
