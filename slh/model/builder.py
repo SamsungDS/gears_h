@@ -53,10 +53,10 @@ class ModelBuilder:
             tensor_module = partial(e3x.nn.FusedTensor,
                                     param_dtype=getattr(jnp,bc_config["tensor_module_dtype"]))
         bcd = BondCenteredTensorMomentDescriptor(cutoff=bc_config["cutoff"],
-                                                 max_actp_degree=bc_config["max_actp_degree"],
                                                  max_basis_degree=bc_config["max_basis_degree"],
                                                  max_degree=bc_config["max_degree"],
-                                                 tensor_module=tensor_module)
+                                                 tensor_module=tensor_module,
+                                                 bond_expansion_options=bc_config["bond_expansion_options"])
         return bcd
     
     def build_mlp(self):

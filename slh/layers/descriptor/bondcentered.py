@@ -18,18 +18,20 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
     # radial_function = e3x.nn.basic_fourier
 
     def setup(self):
-        radial_kwargs = self.bond_expansion_options.pop("radial_kwargs")
-        cutoff_kwargs = self.bond_expansion_options.pop("cutoff_kwargs")
-        radial_function = self.bond_expansion_options.pop("radial_fn")
-        cutoff_function = self.bond_expansion_options.pop("cutoff_fn")
-        self.bond_expansion_options['max_degree'] = self.max_basis_degree
+        options = self.bond_expansion_options
+        options, radial_kwargs = options.pop("radial_kwargs")
+        options, cutoff_kwargs = options.pop("cutoff_kwargs")
+        options, radial_function = options.pop("radial_fn")
+        options, cutoff_function = options.pop("cutoff_fn")
+        options = options.copy({"max_degree": self.max_basis_degree})
         self.bond_expansion = partial(e3x.nn.basis,
                                       radial_fn = partial(getattr(e3x.nn, radial_function),
                                                           **radial_kwargs),
                                       cutoff_fn = partial(getattr(e3x.nn, cutoff_function),
+                                                          cutoff=self.cutoff,
                                                           **cutoff_kwargs),
                                       cartesian_order = False,
-                                      **self.bond_expansion_options
+                                      **options
                                      )
 
     @nn.compact
