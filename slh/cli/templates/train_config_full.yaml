@@ -26,7 +26,6 @@ model:
       mp_options: {}
       mp_basis_options:
         cutoff_fn: smooth_cutoff
-        cutoff_kwargs: {}
         radial_fn: basic_fourier
         radial_kwargs: {}
         max_degree: 2
@@ -46,7 +45,6 @@ model:
     tensor_module_dtype: float32
     bond_expansion_options:
       cutoff_fn: smooth_cutoff
-      cutoff_kwargs: {}
       radial_fn: basic_fourier
       radial_kwargs: {}
       max_degree: 2

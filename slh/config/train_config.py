@@ -103,8 +103,7 @@ class ShallowTDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
                                                      "radial_kwargs" : {},
                                                      "max_degree" : 2,
                                                      "num" : 8,
-                                                     "cutoff_fn" : "smooth_cutoff",
-                                                     "cutoff_kwargs" : {}
+                                                     "cutoff_fn" : "smooth_cutoff"
                                                     }
 
 class AtomCenteredConfig(BaseModel, extra="forbid"):
@@ -119,7 +118,6 @@ class BondCenteredConfig(BaseModel, extra="forbid"):
     bond_expansion_options: dict[str, str | int | dict] = {"radial_fn" : "basic_fourier",
                                                            "radial_kwargs" : {},
                                                            "cutoff_fn" : "smooth_cutoff",
-                                                           "cutoff_kwargs" : {},
                                                            "max_degree" : 2,
                                                            "num" : 8
                                                           }

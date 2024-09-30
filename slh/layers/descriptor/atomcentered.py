@@ -120,7 +120,6 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
         options = self.mp_basis_options
 
         options, radial_kwargs = options.pop("radial_kwargs")
-        options, cutoff_kwargs = options.pop("cutoff_kwargs")
         options, radial_function = options.pop("radial_fn")
         options, cutoff_function = options.pop("cutoff_fn")
 
@@ -128,8 +127,7 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
                                 radial_fn = partial(getattr(e3x.nn, radial_function),
                                                     **radial_kwargs),
                                 cutoff_fn = partial(getattr(e3x.nn, cutoff_function),
-                                                    cutoff=self.radial_basis.cutoff,
-                                                    **cutoff_kwargs),
+                                                    cutoff=self.radial_basis.cutoff),
                                 cartesian_order = False,
                                 **options
                                 )
