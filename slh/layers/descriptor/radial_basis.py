@@ -34,6 +34,7 @@ class SpeciesAwareRadialBasis(nn.Module):
     def __call__(
         self,
         neighbour_displacements: Float[Array, "... num_neighbours 3"],
+        Z_i: Float[Array, "... num_neighbours"],
         Z_j: Float[Array, "... num_neighbours"],
     ):
         """_summary_
@@ -67,9 +68,9 @@ class SpeciesAwareRadialBasis(nn.Module):
         # so we can product meaningfully
         transformed_embedding = e3x.nn.Dense(
             self.num_radial, dtype=jnp.float32, name="embed_transform"
-        )(self.embedding(Z_j))
+        )(self.embedding(Z_j) + self.embedding(Z_i))
 
-        y = basis_expansion
+        y = basis_expansion * transformed_embedding
 
         # y = self.tensor_module(
         #     max_degree=self.max_degree,

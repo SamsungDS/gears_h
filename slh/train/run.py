@@ -75,6 +75,7 @@ def run(user_config, log_level="error"):
         batch_size=config.data.batch_size,
         val_batch_size=config.data.valid_batch_size,
         n_epochs=config.n_epochs,
+        bond_fraction=config.data.bond_fraction
     )
     max_ell = train_ds.max_ell
     readout_nfeatures = train_ds.readout_nfeatures
@@ -86,7 +87,7 @@ def run(user_config, log_level="error"):
     model = model_builder.build_lcao_hamiltonian_model(readout_nfeatures, max_ell)
 
     batched_model = jax.vmap(
-        model.apply, in_axes=(None, 0, 0, 0), axis_name="batch"
+        model.apply, in_axes=(None, 0, 0, 0, 0), axis_name="batch"
     )
 
     params, rng_key = create_params(model, rng_key, sample_input, 1)
@@ -105,7 +106,7 @@ def run(user_config, log_level="error"):
                                                                         **lr_options)
     opt = getattr(optax,optimizer_config['name'])(learning_rate, 
                                                **optimizer_config["opt_kwargs"])
-    opt = optax.chain(opt, optax.zero_nans())
+    opt = optax.chain(opt, optax.zero_nans(), optax.clip(1))
     # state = create_train_state(batched_model, params, optax.adam(1e-3))
     state = create_train_state(batched_model, params, opt)
 

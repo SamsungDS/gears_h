@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "surrogatelcaohamiltonians"
-version = "0.3.0"
+version = "0.5.0"
 description = "Package to learn electronic structure hamiltonians in an LCAO basis"
 authors = ["Anubhab Haldar <a.haldar@samsung.com>", "Ali Hamze <ali.hamze@samsung.com>"]
 keywords=["machine-learning", "hamiltonians", "electronic-structure"]
@@ -31,6 +31,16 @@ myst-parser = "^2.0.0"
 sphinx-autodoc2 = "^0.5.0"
 sphinx-book-theme = "^1.1.2"
 
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.3.3"
+pytest-cov = "^5.0.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff.lint]
+# Skip warning that doesn't play nice with jaxtyping  
+# array size hints for multidimensional arrays (`F722`).
+ignore = ["F722"]

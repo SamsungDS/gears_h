@@ -35,6 +35,8 @@ class DataConfig(BaseModel, extra="forbid"):
     shuffle_buffer_size: PositiveInt = 1000
     additional_properties_info: dict[str, str] = {}
 
+    bond_fraction: PositiveFloat = 1.0
+
     pos_unit: Optional[str] = "Ang"
     energy_unit: Optional[str] = "eV"
 
@@ -88,17 +90,40 @@ class TDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
     mp_degree: int = 4
     mp_options: dict = {}
 
+class ShallowTDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
+    descriptor_name: Literal["ShallowTDSAAtomCenteredDescriptor"] = "ShallowTDSAAtomCenteredDescriptor"
+    max_tensordense_degree: int = 4
+    num_tensordense_features: int = 32
+    use_fused_tensor: bool = False
+    embedding_residual_connection: bool = False
+    mp_steps: int = 2
+    mp_degree: int = 4
+    mp_options: dict = {}
+    mp_basis_options: dict[str, str | int | dict] = {"radial_fn" : "basic_fourier",
+                                                     "radial_kwargs" : {},
+                                                     "max_degree" : 2,
+                                                     "num" : 8,
+                                                     "cutoff_fn" : "smooth_cutoff"
+                                                    }
+
 class AtomCenteredConfig(BaseModel, extra="forbid"):
     descriptor: Union[SAAtomCenteredDescriptorConfig, 
-                      TDSAAtomCenteredDescriptorConfig] = Field(SAAtomCenteredDescriptorConfig(), 
-                                                                discriminator='descriptor_name')
+                      TDSAAtomCenteredDescriptorConfig,
+                      ShallowTDSAAtomCenteredDescriptorConfig,
+                     ] = Field(SAAtomCenteredDescriptorConfig(),
+                               discriminator='descriptor_name')
     radial_basis: RadialBasisConfig
 
 class BondCenteredConfig(BaseModel, extra="forbid"):
+    bond_expansion_options: dict[str, str | int | dict] = {"radial_fn" : "basic_fourier",
+                                                           "radial_kwargs" : {},
+                                                           "cutoff_fn" : "smooth_cutoff",
+                                                           "max_degree" : 2,
+                                                           "num" : 8
+                                                          }
     cutoff: PositiveFloat
     max_basis_degree: NonNegativeInt = 2
     max_degree: NonNegativeInt = 4
-    max_actp_degree : NonNegativeInt = 4
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
     tensor_module_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
 
@@ -106,7 +131,9 @@ class BondCenteredConfig(BaseModel, extra="forbid"):
 class MLPConfig(BaseModel, extra="forbid"):
     mlp_layer_widths: List[PositiveInt] = [128]
     mlp_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
-    mlp_activation_function: Literal["shifted_softplus", "mish"] = "shifted_softplus"
+    mlp_activation_function: Literal["shifted_softplus", 
+                                     "mish",
+                                     "bent_identity"] = "shifted_softplus"
 
 
 class ModelConfig(BaseModel, extra="forbid"):
@@ -142,11 +169,11 @@ class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
                                                discriminator="name")
     
 class LossConfig(BaseModel, frozen=True, extra="forbid"):
-    name: str = "weighted_huber_and_mae"
+    name: str = "weighted_mse_and_rmse"
     loss_parameters: dict[str, float] = {"off_diagonal_weight" : 4.0,
                                          "on_diagonal_weight" : 1.0,
-                                         "huber_weight" : 1.0,
-                                         "mae_weight" : 1.0,
+                                         "mse_wweight" : 1.0,
+                                         "rmse_weight" : 1.0,
                                          "loss_multiplier" : 5.0
                                         }
 
