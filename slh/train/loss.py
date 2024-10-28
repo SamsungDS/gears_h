@@ -45,7 +45,8 @@ def weighted_mse_and_rmse(h_irreps_off_diagonal_predicted,
 def _normalize_error(error_array: Union[Float[Array, '... 1 (max_ell+1)**2 nfeatures'],
                                         Float[Array, '... 2 (max_ell+1)**2 nfeatures']], 
                      reference_array: Union[Float[Array, '... 1 (max_ell+1)**2 nfeatures'],
-                                            Float[Array, '... 2 (max_ell+1)**2 nfeatures']]):
+                                            Float[Array, '... 2 (max_ell+1)**2 nfeatures']],
+                     alpha: Float):
     max_ell = e3x.nn.features._extract_max_degree_and_check_shape(reference_array.shape)
     normalized_error = jnp.zeros(error_array.shape)
     for ell in range(max_ell + 1):
@@ -57,7 +58,6 @@ def _normalize_error(error_array: Union[Float[Array, '... 1 (max_ell+1)**2 nfeat
                                                reference_array_slice_norm,
                                                1)
         # Regularize norms: large ones -> 1, small ones -> 1-alpha
-        alpha = 0.9
         reference_array_slice_norm = alpha*jnp.tanh(reference_array_slice_norm) + (1-alpha)
         normalized_error = normalized_error.at[..., ell**2 : (ell + 1)**2 ,:].set(error_array_slice / reference_array_slice_norm)
     
@@ -68,6 +68,7 @@ def irrep_scaled_loss(h_irreps_off_diagonal_predicted,
                       batch_labels,
                       loss_parameters
                      ):
+    alpha = loss_parameters['alpha']
     off_diagonal_weight = loss_parameters['off_diagonal_weight']
     on_diagonal_weight = loss_parameters['on_diagonal_weight']
     mse_weight = loss_parameters['mse_weight']
@@ -76,9 +77,13 @@ def irrep_scaled_loss(h_irreps_off_diagonal_predicted,
     loss_weight_sum = off_diagonal_weight + on_diagonal_weight
 
     off_diagonal_error = h_irreps_off_diagonal_predicted - batch_labels['h_irreps_off_diagonal']
-    normalized_off_diagonal_error = _normalize_error(off_diagonal_error, batch_labels['h_irreps_off_diagonal'])
+    normalized_off_diagonal_error = _normalize_error(off_diagonal_error, 
+                                                     batch_labels['h_irreps_off_diagonal'],
+                                                     alpha)
     on_diagonal_error = h_irreps_on_diagonal_predicted - batch_labels['h_irreps_on_diagonal']
-    normalized_on_diagonal_error = _normalize_error(on_diagonal_error, batch_labels['h_irreps_on_diagonal'])
+    normalized_on_diagonal_error = _normalize_error(on_diagonal_error, 
+                                                    batch_labels['h_irreps_on_diagonal'],
+                                                    alpha)
 
     off_diagonal_mse = jnp.mean(optax.squared_error(normalized_off_diagonal_error),
                                 where=batch_labels["mask_off_diagonal"])

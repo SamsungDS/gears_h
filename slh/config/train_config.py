@@ -174,7 +174,8 @@ class LossConfig(BaseModel, frozen=True, extra="forbid"):
                                          "on_diagonal_weight" : 1.0,
                                          "mse_wweight" : 1.0,
                                          "rmse_weight" : 1.0,
-                                         "loss_multiplier" : 5.0
+                                         "loss_multiplier" : 5.0,
+                                         "alpha" : 0.9
                                         }
 
 class TrainConfig(BaseModel, frozen=True, extra="forbid"):
