@@ -56,7 +56,9 @@ def _normalize_error(error_array: Union[Float[Array, '... 1 (max_ell+1)**2 nfeat
         reference_array_slice_norm = jnp.where(reference_array_slice_norm*reference_array_slice_norm > jnp.finfo(error_array.dtype).tiny,
                                                reference_array_slice_norm,
                                                1)
-        reference_array_slice_norm = jnp.clip(reference_array_slice_norm, min = 1e-2, max = 1.0)
+        # Regularize norms: large ones -> 1, small ones -> 1-alpha
+        alpha = 0.9
+        reference_array_slice_norm = alpha*jnp.tanh(reference_array_slice_norm) + (1-alpha)
         normalized_error = normalized_error.at[..., ell**2 : (ell + 1)**2 ,:].set(error_array_slice / reference_array_slice_norm)
     
     return normalized_error
