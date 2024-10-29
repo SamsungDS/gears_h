@@ -73,6 +73,7 @@ loss:
     mse_weight         : 1.0
     rmse_weight        : 1.0
     loss_multiplier    : 5.0
+    alpha              : 0.9
 
 patience: null
 seed: 2465
