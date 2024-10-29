@@ -375,3 +375,135 @@ class TanhThrMultiHeadAttention(_Conv):
     )(attention)
 
     return outputs
+  
+class TanhThrSelfAttention(TanhThrMultiHeadAttention):
+  r"""Equivariant self-attention.
+
+  Attributes:
+    max_degree: Maximum degree of the output. If not given, the max_degree is
+      chosen as the maximum of the max_degree of inputs and basis.
+    use_basis_bias: Whether to add a bias to the linear combination of basis
+      functions.
+    include_pseudotensors: If False, all coupling paths that produce
+      pseudotensors are omitted.
+    cartesian_order: If True, Cartesian order is assumed.
+    use_fused_tensor: If True, :class:`FusedTensor` is used instead of
+      :class:`Tensor` for computing the tensor product.
+    dtype: The dtype of the computation.
+    param_dtype: The dtype passed to parameter initializers.
+    precision: Numerical precision of the computation, see `jax.lax.Precision`
+      for details.
+    dense_kernel_init: Initializer function for the weight matrix of the Dense
+      layer.
+    dense_bias_init: Initializer function for the bias of the Dense layer.
+    tensor_kernel_init: Initializer function for the weight matrix of the Tensor
+      layer.
+    num_heads: Number of attention heads.
+    qkv_features: Number of features used for queries, keys and values. If this
+      is `None`, the same number of features as in `inputs_q` is used.
+    out_features: Number of features for the output. If this is `None`, the same
+      number of features as in `inputs_q` is used.
+    use_relative_positional_encoding_qk: If this is `True`, relative positional
+      encodings are used for computing the dot product between queries and keys.
+    use_relative_positional_encoding_v: If this is `True`, a relative positional
+      encoding (with respect to the queries) is used for computing the values.
+    query_kernel_init: Initializer function for the weight matrix of the
+      :class:`Dense` layer for computing queries.
+    query_bias_init: Initializer function for the bias terms of the
+      :class:`Dense` layer for computing queries.
+    query_use_bias: Whether to use bias terms in the :class:`Dense` layer for
+      computing queries.
+    key_kernel_init: Initializer function for the weight matrix of the
+      :class:`Dense` layer for computing keys.
+    key_bias_init: Initializer function for the bias terms of the :class:`Dense`
+      layer for computing keys.
+    key_use_bias: Whether to use bias terms in the :class:`Dense` layer for
+      computing keys.
+    value_kernel_init: Initializer function for the weight matrix of the
+      :class:`Dense` layer for computing values.
+    value_bias_init: Initializer function for the bias terms of the
+      :class:`Dense` layer for computing values.
+    value_use_bias: Whether to use bias terms in the :class:`Dense` layer for
+      computing values.
+    output_kernel_init: Initializer function for the weight matrix of the
+      :class:`Dense` layer for computing outputs.
+    output_bias_init: Initializer function for the bias terms of the
+      :class:`Dense` layer for computing outputs.
+    output_use_bias: Whether to use bias terms in the :class:`Dense` layer for
+      computing outputs.
+  """
+
+  @nn.compact
+  def __call__(
+      self,
+      inputs: Union[
+          Float[Array, '... N 1 (max_degree+1)**2 num_features'],
+          Float[Array, '... N 2 (max_degree+1)**2 num_features'],
+      ],
+      basis: Optional[
+          Union[
+              Float[Array, '... N M 1 (basis_max_degree+1)**2 num_basis'],
+              Float[Array, '... P 1 (basis_max_degree+1)**2 num_basis'],
+          ]
+      ] = None,
+      cutoff_value: Optional[
+          Union[
+              Float[Array, '... N M 1 #(basis_max_degree+1)**2 #num_basis'],
+              Float[Array, '... P 1 #(basis_max_degree+1)**2 #num_basis'],
+          ]
+      ] = None,
+      *,
+      adj_idx: Optional[Integer[Array, '... N M']] = None,
+      where: Optional[Bool[Array, '... N M']] = None,
+      dst_idx: Optional[Integer[Array, '... P']] = None,
+      src_idx: Optional[Integer[Array, '... P']] = None,
+      num_segments: Optional[int] = None,
+      indices_are_sorted: bool = False,
+  ) -> Union[
+      Float[Array, '... N 1 (max_degree+1)**2 num_features'],
+      Float[Array, '... N 2 (max_degree+1)**2 num_features'],
+  ]:
+    """Applies self-attention.
+
+    In principle, self-attention is very similar to message-passing, but
+    with an
+    additional weight factor for each summand, with the weights summing up
+    to 1.
+    In contrast, in ordinary message-passing, all summands have an implicit
+    weight of 1.
+
+    Args:
+      inputs: A set of :math:`N` input features.
+      basis: Basis functions for all relevant interactions between pairs
+        :math:`i` and :math:`j` from the :math:`N` inputs (either in dense or
+        sparse indexed format).
+      cutoff_value: Multiplicative cutoff values that are applied to the "raw"
+        softmax values (before normalization), can be used for smooth cutoffs.
+      adj_idx: Adjacency indices (dense index list), or `None`.
+      where:  Mask to specify which values to sum over (only for dense index
+        lists). If this is `None`, the `where` mask is auto-determined from
+        `inputs`.
+      dst_idx:  Destination indices (sparse index list), or `None`.
+      src_idx: Source indices (sparse index list), or `None`.
+      num_segments: Number of segments after summation (only for sparse index
+        lists). If this is `None`, `num_segments` is auto-determined from
+        `inputs`.
+      indices_are_sorted: If `True`, `dst_idx` is assumed to be sorted, which
+        may increase performance (only used for sparse index lists).
+
+    Returns:
+      The output of self-attention.
+    """
+    return super().__call__(
+        inputs_q=inputs,
+        inputs_kv=inputs,
+        basis=basis,
+        cutoff_value=cutoff_value,
+        adj_idx=adj_idx,
+        where=where,
+        dst_idx=dst_idx,
+        src_idx=src_idx,
+        num_segments=num_segments,
+        indices_are_sorted=indices_are_sorted,
+    )
+  
