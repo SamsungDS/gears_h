@@ -170,12 +170,12 @@ class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     
 class LossConfig(BaseModel, frozen=True, extra="forbid"):
     name: str = "weighted_mse_and_rmse"
-    loss_parameters: dict[str, float] = {"off_diagonal_weight" : 4.0,
+    loss_parameters: dict[str, NonNegativeFloat] = {"off_diagonal_weight" : 4.0,
                                          "on_diagonal_weight" : 1.0,
                                          "mse_wweight" : 1.0,
                                          "rmse_weight" : 1.0,
                                          "loss_multiplier" : 5.0,
-                                         "alpha" : 0.9
+                                         "alpha" : Field(default=0.9, le=1, ge=0)
                                         }
 
 class TrainConfig(BaseModel, frozen=True, extra="forbid"):
