@@ -307,6 +307,8 @@ class TanhThrMultiHeadAttention(_Conv):
           precision=self.precision,
           optimize='optimal',
       )
+      max_attention_val = jnp.array(3.5, dtype = dot.dtype)
+      dot = max_attention_val * jnp.tanh(dot / max_attention_val)
     else:
       # Normal dot product.
       dot = jnp.einsum(
@@ -316,6 +318,8 @@ class TanhThrMultiHeadAttention(_Conv):
           precision=self.precision,
           optimize='optimal',
       )
+      max_attention_val = jnp.array(3.5, dtype = dot.dtype)
+      dot = max_attention_val * jnp.tanh(dot / max_attention_val)
 
     # Auto-determine num segments and where mask for indexed ops (if not given).
     if num_segments is None:
