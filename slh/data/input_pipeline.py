@@ -101,7 +101,7 @@ def snapshot_tuple_from_directory(
 
 def read_dataset_as_list(
     directory: Path,
-    marker_filename: str = "atoms.extxyz",
+    marker_filename: str = "orbital_ells.json",
     num_snapshots=-1,
 ) -> DatasetList:
     dataset_dirlist = [
