@@ -1,0 +1,116 @@
+# zi: {class: empty
+#      label: ""
+#      label.near: bottom-center
+#      equation: |latex 
+#                 \\large{Z_i}
+#                |
+#     }
+zi: Zi {class: empty}
+zj: Zj {class: empty}
+r: rij {class: empty}
+f: "2-body features \{f\}" {class: empty;label.near: outside-top-center}
+# ins.class: input
+sarb: Species-aware radial basis {
+    class: sarb
+    embedding: Embedding {class: in_module}
+    basis: Basis expansion {class: in_module}
+    transformed_embedding: Transformed embedding {class: in_module}
+    ⊗: {class: operator}
+    ⊕: {class: operator}
+
+
+    embedding -> transformed_embedding: Dense ⭙ (Embedding(Zi) + \nEmbedding(Zj)) {style: {stroke: "#000000"; font-color: black}}
+
+    transformed_embedding -> ⊗: {style: {stroke: "#000000"}}
+    basis -> ⊗: {style: {stroke: "#000000"}}
+    ⊗ -> ⊕: {style: {stroke: "#000000"}}
+    transformed_embedding -> ⊕: Residual connection {style: {stroke: "#000000"; font-color: black}}
+}
+
+zi -> sarb.embedding: {style: {stroke: "#000000"}}
+zj -> sarb.embedding: {style: {stroke: "#000000"}}
+r -> sarb.basis: {style: {stroke: "#000000"}}
+sarb.⊕ -> f: {style: {stroke: "#000000"}}
+
+
+classes: {
+    operator: {shape: circle
+               width: 35
+               height: 35
+               style: {fill: "#FFFFFF"
+                       stroke: "#000000"
+                    #    font: mono
+                      }
+    }
+    empty: {
+            # label: ""
+            width: 50
+            height: 50
+            style: {
+                fill: transparent
+                stroke: transparent
+                font-size: 24
+            }
+    }
+    sarb: {
+        style: {
+            fill: "#44BB99"
+            stroke: "#000000"
+        }
+    }
+    in_module: {
+        style: {
+            fill: "#FFFFFF"
+            stroke: "#000000"
+            # opacity: 0.5
+        }
+    }
+    ac: {
+        style: {
+            fill: "#BBCC33"
+            stroke: "#000000"
+        }
+    }
+    bc: {
+        style: {
+            fill: "#EEDD88"
+            stroke: "#000000"
+        }
+    }
+    rd: {
+        style: {
+            fill: "#EE8866"
+            stroke: "#000000"
+        }
+    }
+    ro: {
+        style: {
+            fill: "#FFAABB"
+            stroke: "#000000"
+        }
+    }
+    outs: {
+        style: {
+            fill: "#DDDDDD"
+            stroke: "#000000"
+            multiple: true
+        }
+    }
+    input : {
+        # label: ""
+        width: 50
+        height: 50
+        style: {
+            fill: "#99DDFF"
+            stroke: "#000000"
+            multiple: true
+        }
+    }
+}
+
+vars: {
+    d2-config: {
+      layout-engine: elk
+    #   theme-id: 101
+    }
+}

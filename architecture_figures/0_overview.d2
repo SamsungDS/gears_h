@@ -1,0 +1,101 @@
+vars: {
+    d2-config: {
+      layout-engine: elk
+      theme-id: 200
+    }
+}
+
+# ins: {equation: |latex 
+#         Z_i, Z_j, r_{ij}|
+# }
+ins: Z, r
+ins.class: input
+sarb: Species-aware Radial Basis {class: sarb}
+ac: Atom-centered descriptor {class: ac}
+bc: Bond-centered descriptor {class: bc}
+rd: Residual dense layer {class: rd}
+ro: TensorDense readout {class: ro}
+outs: H irreps. {class: outs}
+# sarb.class: sarb
+
+ins -> sarb -> ac -> bc -> rd -> ro -> outs: {style: {stroke: "#000000"}}
+# sarb -> ac: {style: {stroke: "#000000"}}
+# ac -> bc: {style: {stroke: "#000000"}}
+# bc -> rd
+
+
+
+classes: {
+    empty: {
+            label: ""
+            width: 50
+            height: 50
+            style: {
+                fill: transparent
+                stroke: transparent
+            }
+    }
+    sarb: {
+        style: {
+            fill: "#44BB99"
+            stroke: "#000000"
+        }
+    }
+    ac: {
+        style: {
+            fill: "#BBCC33"
+            stroke: "#000000"
+        }
+    }
+    bc: {
+        style: {
+            fill: "#EEDD88"
+            stroke: "#000000"
+        }
+    }
+    rd: {
+        style: {
+            fill: "#EE8866"
+            stroke: "#000000"
+        }
+    }
+    ro: {
+        style: {
+            fill: "#FFAABB"
+            stroke: "#000000"
+        }
+    }
+    outs: {
+        style: {
+            fill: "#DDDDDD"
+            stroke: "#000000"
+            multiple: true
+        }
+    }
+    input : {
+        # label: ""
+        width: 50
+        height: 50
+        style: {
+            fill: "#99DDFF"
+            stroke: "#000000"
+            multiple: true
+        }
+    }
+}
+
+
+
+# if colorset == 'light':
+#     cset = namedtuple('Lcset',
+#                     'light_blue orange    light_yellow pink    light_cyan 
+#                      mint      pear       olive      pale_grey black')
+#         return cset('#77AADD', '#EE8866', '#EEDD88', '#FFAABB', '#99DDFF',
+#                     '#44BB99', '#BBCC33', '#AAAA00', '#DDDDDD', '#000000')
+
+# if colorset == 'bright':
+#         cset = namedtuple('Bcset',
+#                     'blue      red        green      yellow     cyan
+#                     purple     grey       black')
+#         return cset('#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE',
+#                     '#AA3377', '#BBBBBB', '#000000')
