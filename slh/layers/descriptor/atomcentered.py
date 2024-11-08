@@ -109,7 +109,7 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
             param_dtype=jnp.float32,
         )
 
-        self.mp_block: e3x.nn.SelfAttention = e3x.nn.SelfAttention(
+        self.mp_block: e3x.nn.SelfAttention = partial(e3x.nn.SelfAttention,
             max_degree=self.mp_degree,
             cartesian_order=False,
             use_basis_bias=False,
@@ -167,7 +167,7 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
         y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
 
         for _ in range(self.mp_steps):
-            y = self.mp_block(
+            y = self.mp_block()(
                 inputs=y,
                 basis=self.mp_basis(neighbour_displacements),
                 src_idx=idx_j,
