@@ -248,7 +248,7 @@ class SlightlyDifferentShallowTDSAAtomCenteredDescriptor(nn.Module):
 
         # This is aware of the Z_j's
         y_2b = self.radial_basis(
-            neighbour_displacements=neighbour_displacements, Z_i=Z_i, Z_j=Z_j
+            neighbour_displacements=neighbour_displacements, Z_j=Z_j
         ).astype(jnp.float32)
         y1 = e3x.nn.TensorDense(
             self.num_tensordense_features,
