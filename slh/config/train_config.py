@@ -106,10 +106,27 @@ class ShallowTDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
                                                      "cutoff_fn" : "smooth_cutoff"
                                                     }
 
+class SlightlyDifferentShallowTDSAAtomCenteredDescriptor(BaseModel, extra="forbid"):
+    descriptor_name: Literal["SlightlyDifferentShallowTDSAAtomCenteredDescriptor"] = "SlightlyDifferentShallowTDSAAtomCenteredDescriptor"
+    max_tensordense_degree: int = 4
+    num_tensordense_features: int = 32
+    use_fused_tensor: bool = False
+    embedding_residual_connection: bool = False
+    mp_steps: int = 2
+    mp_degree: int = 4
+    mp_options: dict = {}
+    mp_basis_options: dict[str, str | int | dict] = {"radial_fn" : "basic_fourier",
+                                                     "radial_kwargs" : {},
+                                                     "max_degree" : 2,
+                                                     "num" : 8,
+                                                     "cutoff_fn" : "smooth_cutoff"
+                                                    }
+
 class AtomCenteredConfig(BaseModel, extra="forbid"):
     descriptor: Union[SAAtomCenteredDescriptorConfig, 
                       TDSAAtomCenteredDescriptorConfig,
                       ShallowTDSAAtomCenteredDescriptorConfig,
+                      SlightlyDifferentShallowTDSAAtomCenteredDescriptor
                      ] = Field(ShallowTDSAAtomCenteredDescriptorConfig(),
                                discriminator='descriptor_name')
     radial_basis: RadialBasisConfig
