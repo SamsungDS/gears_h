@@ -18,12 +18,16 @@ data:
 model:
   atom_centered:
     descriptor: 
-      descriptor_name: SAAtomCenteredDescriptor
+      descriptor_name: ShallowTDSAAtomCenteredDescriptor
       use_fused_tensor: False
       embedding_residual_connection: True
+      max_tensordense_degree: 4
+      num_tensordense_features: 12
       mp_steps: 2
       mp_degree: 4
-      mp_options: {}
+      mp_options:
+        num_heads: 4
+        qkv_features: 32
       mp_basis_options:
         cutoff_fn: smooth_cutoff
         radial_fn: basic_fourier
@@ -32,9 +36,9 @@ model:
         num: 8
     radial_basis:
       cutoff: <CUTOFF>
-      num_radial: 8
+      num_radial: 16
       max_degree: 2
-      num_elemental_embedding: 8
+      num_elemental_embedding: 32
       tensor_module: tensor
       tensor_module_dtype: float32
   bond_centered:
@@ -50,9 +54,9 @@ model:
       max_degree: 2
       num: 8
   mlp:
-    mlp_layer_widths: [128]
+    mlp_layer_widths: [32,16,32]
     mlp_dtype: float32
-    mlp_activation_function: shifted_softplus
+    mlp_activation_function: bent_identity
 
 optimizer:
   name: "adam"

@@ -7,7 +7,7 @@ from functools import partial
 
 import slh
 from slh.config.common import parse_config
-from slh.config.train_config import TrainConfig
+from slh.data import PureInMemoryDataset
 from slh.data.input_pipeline import initialize_dataset_from_list, read_dataset_as_list
 from slh.model.builder import ModelBuilder
 
@@ -59,24 +59,48 @@ def run(user_config, log_level="error"):
 
     num_train = config.data.n_train
     num_val = config.data.n_valid
-    ds_list = read_dataset_as_list(
-        Path(config.data.data_path),
-        num_snapshots=num_train + num_val,
-    )
-    if len(ds_list) == 0:
-        raise FileNotFoundError(
-            f"Did not find any snapshots at {Path(config.data.directory)}"
-        )
 
-    train_ds, val_ds = initialize_dataset_from_list(
-        dataset_as_list=ds_list,
-        num_train=num_train,
-        num_val=num_val,
-        batch_size=config.data.batch_size,
-        val_batch_size=config.data.valid_batch_size,
-        n_epochs=config.n_epochs,
-        bond_fraction=config.data.bond_fraction
-    )
+    if config.data.data_path is not None:
+        assert config.data.train_data_path is None, "train_data_path must not be provided when data_path is."
+        assert config.data.val_data_path is None, "val_data_path must not be provided when data_path is."
+        ds_list = read_dataset_as_list(
+            Path(config.data.data_path),
+            num_snapshots=num_train + num_val,
+        )
+        if len(ds_list) == 0:
+            raise FileNotFoundError(
+                f"Did not find any snapshots at {Path(config.data.directory)}"
+            )
+    
+        train_ds, val_ds = initialize_dataset_from_list(
+            dataset_as_list=ds_list,
+            num_train=num_train,
+            num_val=num_val,
+            batch_size=config.data.batch_size,
+            val_batch_size=config.data.valid_batch_size,
+            n_epochs=config.n_epochs,
+            bond_fraction=config.data.bond_fraction
+        )
+    elif config.data.data_path is None:
+        assert config.data.train_data_path is not None, "train_data_path must be provided when data_path is not."
+        assert config.data.val_data_path is not None, "val_data_path must be provided when data_path is not."
+        train_ds_list = read_dataset_as_list(
+            Path(config.data.train_data_path),
+            num_snapshots=num_train,
+        )
+        val_ds_list = read_dataset_as_list(
+            Path(config.data.val_data_path),
+            num_snapshots=num_val,
+        )
+        train_ds, val_ds = (PureInMemoryDataset(train_ds_list,
+                                                batch_size = config.data.batch_size,
+                                                n_epochs = config.n_epochs,
+                                                bond_fraction = config.data.bond_fraction),
+                            PureInMemoryDataset(val_ds_list,
+                                                batch_size = config.data.valid_batch_size,
+                                                n_epochs = config.n_epochs,
+                                                bond_fraction = config.data.bond_fraction)
+                           )
     max_ell = train_ds.max_ell
     readout_nfeatures = train_ds.readout_nfeatures
 

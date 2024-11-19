@@ -65,9 +65,9 @@ class DataConfig(BaseModel, extra="forbid"):
 
 class RadialBasisConfig(BaseModel, extra="forbid"):
     cutoff: PositiveFloat
-    num_radial: PositiveInt = 8
+    num_radial: PositiveInt = 16
     max_degree: NonNegativeInt = 2
-    num_elemental_embedding: PositiveInt = 8
+    num_elemental_embedding: PositiveInt = 32
     embedding_residual_connection: bool = False
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
     tensor_module_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
@@ -127,7 +127,7 @@ class AtomCenteredConfig(BaseModel, extra="forbid"):
                       TDSAAtomCenteredDescriptorConfig,
                       ShallowTDSAAtomCenteredDescriptorConfig,
                       SlightlyDifferentShallowTDSAAtomCenteredDescriptor
-                     ] = Field(SAAtomCenteredDescriptorConfig(),
+                     ] = Field(ShallowTDSAAtomCenteredDescriptorConfig(),
                                discriminator='descriptor_name')
     radial_basis: RadialBasisConfig
 
@@ -146,11 +146,9 @@ class BondCenteredConfig(BaseModel, extra="forbid"):
 
 
 class MLPConfig(BaseModel, extra="forbid"):
-    mlp_layer_widths: List[PositiveInt] = [128]
+    mlp_layer_widths: List[PositiveInt] = [32,16,32]
     mlp_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
-    mlp_activation_function: Literal["shifted_softplus", 
-                                     "mish",
-                                     "bent_identity"] = "shifted_softplus"
+    mlp_activation_function: str = "bent_identity"
 
 
 class ModelConfig(BaseModel, extra="forbid"):

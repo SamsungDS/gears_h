@@ -13,7 +13,7 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
     cutoff: float
     max_basis_degree: int = 2
     max_degree: int = 4
-    tensor_module: Union[e3x.nn.Tensor, e3x.nn.FusedTensor] = e3x.nn.FusedTensor
+    tensor_module: Union[e3x.nn.Tensor, e3x.nn.FusedTensor] = e3x.nn.Tensor
     bond_expansion_options: dict = field(default_factory=lambda: {})
     # radial_function = e3x.nn.basic_fourier
 
@@ -47,10 +47,10 @@ class BondCenteredTensorMomentDescriptor(nn.Module):
         # TODO also residual on the first dense so we're consistent with
         # atomcentered
         y = e3x.nn.add(atom1_desc, atom2_desc)
-        y = e3x.nn.Dense(num_radial_features)(y)
-        y = LayerNorm()(y)
+        y0 = e3x.nn.Dense(num_radial_features)(y)
+        y = LayerNorm()(y0)
         y = e3x.nn.mish(y)
-        y = e3x.nn.Dense(num_radial_features)(y) + y
+        y = e3x.nn.Dense(num_radial_features)(y) + y0
 
         # We put in information about the orientation/length of the bond vector here
         bond_expansion = self.bond_expansion(neighbour_displacements).astype(jnp.float32)
