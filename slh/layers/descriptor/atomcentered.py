@@ -265,7 +265,7 @@ class SlightlyDifferentShallowTDSAAtomCenteredDescriptor(nn.Module):
 
         y_2btilde = e3x.nn.Dense(self.num_tensordense_features)(y_2b)
         tensor_module = e3x.nn.Tensor if not self.use_fused_tensor else e3x.nn.FusedTensor
-        y2 = tensor_module(self.max_tensordense_degree, cartesian_order=False)(y_2btilde)
+        y2 = tensor_module(self.max_tensordense_degree, cartesian_order=False)(y_2btilde,y1)
         
         y = e3x.nn.features.change_max_degree_or_type(y_2b, self.max_tensordense_degree, include_pseudotensors=True)
         y = jnp.concatenate([y, y1, y2], axis=-1)
