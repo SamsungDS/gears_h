@@ -147,12 +147,16 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
         y_2b = self.radial_basis(
             neighbour_displacements=neighbour_displacements, Z_j=Z_j
         ).astype(jnp.float32)
+        
+        y_2b = e3x.ops.indexed_sum(y_2b, dst_idx=idx_i, num_segments=len(atomic_numbers))
+
         y1 = e3x.nn.TensorDense(
             self.num_tensordense_features,
             self.max_tensordense_degree,
             cartesian_order=False,
             use_fused_tensor=self.use_fused_tensor,
             )(y_2b)
+        
         y2 = e3x.nn.TensorDense(
             self.num_tensordense_features,
             self.max_tensordense_degree,
@@ -161,10 +165,10 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
             )(y1)
         y = e3x.nn.features.change_max_degree_or_type(y_2b, self.max_tensordense_degree, include_pseudotensors=True)
         y = jnp.concatenate([y, y1, y2], axis=-1)
-        y = y * self.embedding_transformation(self.embedding(Z_i))
+        # y = y * self.embedding_transformation(self.embedding(Z_i))
 
         # num_atoms x 1 x L x F
-        y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
+        # y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
 
         for _ in range(self.mp_steps):
             y = self.mp_block()(
