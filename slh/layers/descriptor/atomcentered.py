@@ -141,7 +141,7 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
     ):
 
         idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
-        Z_i, Z_j = atomic_numbers[idx_i], atomic_numbers[idx_j]
+        Z_j = atomic_numbers[idx_j]
 
         # This is aware of the Z_j's
         y_2b = self.radial_basis(
