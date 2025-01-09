@@ -195,6 +195,7 @@ class LossConfig(BaseModel, frozen=True, extra="forbid"):
 
 class TrainConfig(BaseModel, frozen=True, extra="forbid"):
     n_epochs: PositiveInt
+    disable_pbar: bool = False
     patience: Optional[PositiveInt] = None
     seed: int = 2465
 

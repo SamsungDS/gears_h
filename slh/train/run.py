@@ -145,4 +145,5 @@ def run(user_config, log_level="error"):
         n_epochs=config.n_epochs,
         ckpt_dir=config.data.model_version_path,
         ckpt_interval=1,
+        disable_pbar=config.disable_pbar
     )

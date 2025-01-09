@@ -81,3 +81,4 @@ loss:
 
 patience: null
 seed: 2465
+disable_pbar: False
