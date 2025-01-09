@@ -1,0 +1,109 @@
+acfi: "Atom-centered features \{Fi\}" {class: empty;}# label.near: outside-top-center}
+acfj: "Atom-centered features \{Fj\}" {class: empty;}# label.near: outside-top-center}
+r: rij {class: empty}
+bcf: "Bond-centered features \{F\}" {class: empty; label.near: outside-top-center}
+
+bc: Bond-centered descriptor {
+    class: bc
+    s1: ⊕ {class: operator}
+    d1: Dense {class: in_module}
+    ln: Layer Norm {class: in_module}
+    mish: Mish Activation {class: in_module}
+    d2: Dense {class: in_module}
+    s1 -> d1 -> ln -> mish -> d2: {style: {stroke: "#000000"; font-color: black}}
+    s2: ⊕ {class: operator}
+    d1 -> s2: Residual connection {style: {stroke: "#000000"; font-color: black}}
+    d2 -> s2: {style: {stroke: "#000000"; font-color: black}}
+    bond_exp: Bond expansion {class: in_module}
+    d3be: Dense {class: in_module}
+    bond_exp -> d3be: {style: {stroke: "#000000"; font-color: black}}
+    tm: Tensor module {class: in_module}
+    s2 -> tm: {style: {stroke: "#000000"; font-color: black}}
+    d3be -> tm: {style: {stroke: "#000000"; font-color: black}}
+}
+acfi -> bc.s1: {style: {stroke: "#000000"; font-color: black}}
+acfj -> bc.s1: {style: {stroke: "#000000"; font-color: black}}
+r -> bc.bond_exp: {style: {stroke: "#000000"; font-color: black}}
+bc.tm -> bcf: {style: {stroke: "#000000"; font-color: black}}
+
+classes: {
+    operator: {shape: circle
+               width: 35
+               height: 35
+               style: {fill: "#FFFFFF"
+                       stroke: "#000000"
+                    #    font: mono
+                      }
+    }
+    empty: {
+            # label: ""
+            width: 50
+            height: 50
+            style: {
+                fill: transparent
+                stroke: transparent
+                font-size: 24
+            }
+    }
+    sarb: {
+        style: {
+            fill: "#44BB99"
+            stroke: "#000000"
+        }
+    }
+    in_module: {
+        style: {
+            fill: "#FFFFFF"
+            stroke: "#000000"
+            # opacity: 0.5
+        }
+    }
+    ac: {
+        style: {
+            fill: "#BBCC33"
+            stroke: "#000000"
+        }
+    }
+    bc: {
+        style: {
+            fill: "#EEDD88"
+            stroke: "#000000"
+        }
+    }
+    rd: {
+        style: {
+            fill: "#EE8866"
+            stroke: "#000000"
+        }
+    }
+    ro: {
+        style: {
+            fill: "#FFAABB"
+            stroke: "#000000"
+        }
+    }
+    outs: {
+        style: {
+            fill: "#DDDDDD"
+            stroke: "#000000"
+            multiple: true
+        }
+    }
+    input : {
+        # label: ""
+        width: 50
+        height: 50
+        style: {
+            fill: "#99DDFF"
+            stroke: "#000000"
+            multiple: true
+        }
+    }
+}
+
+vars: {
+    d2-config: {
+      layout-engine: elk
+    #   theme-id: 101
+    }
+}

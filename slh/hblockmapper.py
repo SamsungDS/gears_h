@@ -2,13 +2,12 @@ import logging
 from dataclasses import dataclass
 from itertools import product
 
+import e3x
 import numpy as np
 
 from slh.utilities.mapmaker import get_mapping_spec
 
 log = logging.getLogger(__name__)
-
-import e3x
 
 
 @dataclass(frozen=True)
@@ -31,20 +30,6 @@ class BlockIrrepMappingSpec:
 class MultiElementPairHBlockMapper:
     # We keep atomic_number_pairs to map onto the hamiltonian block mappers
     mapper: dict[tuple[int, int], BlockIrrepMappingSpec]
-
-    def hblock_to_irrep(self, hblock, irreps_array, Z_i, Z_j):
-        mapping_spec = self.mapper[(Z_i, Z_j)]
-
-        ms = mapping_spec
-        for block_slice, cgc_slice, irreps_slice in zip(
-            ms.block_slices, ms.cgc_slices, ms.irreps_slices, strict=True
-        ):
-            np.einsum(
-                "mn,mnl->l",
-                hblock[block_slice],
-                ms.cgc[cgc_slice],
-                out=irreps_array[irreps_slice],
-            )
 
     def hblocks_to_irreps(self, hblocks, irreps_array, Z_i, Z_j):
         assert len(hblocks) == len(irreps_array)
@@ -75,9 +60,11 @@ class MultiElementPairHBlockMapper:
         ):
             block_slice = (slice(0, len(hblocks)),) + block_slice
             irreps_slice = (slice(0, len(hblocks)),) + irreps_slice
-            hblocks[block_slice] = np.einsum(
-                "...l,mnl->...mn", irreps_array[irreps_slice], ms.cgc[cgc_slice]
-            )
+            hblocks[block_slice] = np.einsum("...l,mnl->...mn", 
+                                             irreps_array[irreps_slice], 
+                                             ms.cgc[cgc_slice],
+                                             optimize = True
+                                            )
 
 
 def make_mapper_from_elements(species_ells_dict: dict[int, list[int]]):

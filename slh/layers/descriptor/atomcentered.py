@@ -109,7 +109,114 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
             param_dtype=jnp.float32,
         )
 
-        self.mp_block: e3x.nn.SelfAttention = e3x.nn.SelfAttention(
+        self.mp_block: e3x.nn.SelfAttention = partial(e3x.nn.SelfAttention,
+            max_degree=self.mp_degree,
+            cartesian_order=False,
+            use_basis_bias=False,
+            use_fused_tensor=self.use_fused_tensor,
+            **self.mp_options,
+        )
+
+        options = self.mp_basis_options
+
+        options, radial_kwargs = options.pop("radial_kwargs")
+        options, radial_function = options.pop("radial_fn")
+        options, cutoff_function = options.pop("cutoff_fn")
+
+        self.mp_basis = partial(e3x.nn.basis,
+                                radial_fn = partial(getattr(e3x.nn, radial_function),
+                                                    **radial_kwargs),
+                                cutoff_fn = partial(getattr(e3x.nn, cutoff_function),
+                                                    cutoff=self.radial_basis.cutoff),
+                                cartesian_order = False,
+                                **options
+                                )
+
+    @nn.compact
+    def __call__(
+        self,
+        atomic_numbers: Int[Array, " num_atoms"],
+        neighbour_indices: Int[Array, "... num_neighbours 2"],        
+        neighbour_displacements: Float[Array, "... num_neighbours 3"],
+    ):
+
+        idx_i, idx_j = neighbour_indices[:, 0], neighbour_indices[:, 1]
+        Z_j = atomic_numbers[idx_j]
+
+        # This is aware of the Z_j's
+        y_2b = self.radial_basis(
+            neighbour_displacements=neighbour_displacements, Z_j=Z_j
+        ).astype(jnp.float32)
+        
+        y_2b = e3x.ops.indexed_sum(y_2b, dst_idx=idx_i, num_segments=len(atomic_numbers))
+
+        y1 = e3x.nn.TensorDense(
+            self.num_tensordense_features,
+            self.max_tensordense_degree,
+            cartesian_order=False,
+            use_fused_tensor=self.use_fused_tensor,
+            )(y_2b)
+        
+        y2 = e3x.nn.TensorDense(
+            self.num_tensordense_features,
+            self.max_tensordense_degree,
+            cartesian_order=False,
+            use_fused_tensor=self.use_fused_tensor,
+            )(y1)
+        y = e3x.nn.features.change_max_degree_or_type(y_2b, self.max_tensordense_degree, include_pseudotensors=True)
+        y = jnp.concatenate([y, y1, y2], axis=-1)
+        # y = y * self.embedding_transformation(self.embedding(Z_i))
+
+        # num_atoms x 1 x L x F
+        # y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
+
+        for _ in range(self.mp_steps):
+            y = self.mp_block()(
+                inputs=y,
+                basis=self.mp_basis(neighbour_displacements),
+                src_idx=idx_j,
+                dst_idx=idx_i,
+                num_segments=len(atomic_numbers),
+                cutoff_value=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff)(jnp.linalg.norm(neighbour_displacements, axis=1)),
+            )
+            y = LayerNorm()(y)
+
+        y0 = e3x.nn.Dense(self.embedding_transformation.features)(y)
+        y = LayerNorm()(y0)
+        y = e3x.nn.mish(y)
+        y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y0
+
+        if self.embedding_residual_connection:
+            y = e3x.nn.add(
+                y, self.embedding_transformation(self.embedding(atomic_numbers))
+            )
+
+        return y
+    
+
+class SlightlyDifferentShallowTDSAAtomCenteredDescriptor(nn.Module):
+    radial_basis: SpeciesAwareRadialBasis
+    max_tensordense_degree: int
+    num_tensordense_features: int
+    use_fused_tensor: bool = False
+    embedding_residual_connection: bool = True
+
+    mp_steps: int = 2
+    mp_degree: int = 4
+    mp_options: dict = field(default_factory=lambda: {})
+    mp_basis_options: dict = field(default_factory=lambda: {})
+
+    def setup(self):
+        self.embedding = self.radial_basis.embedding
+        self.embedding_transformation = e3x.nn.Dense(
+            # This is just because it's currently hardcoded to num_radial + 2 tensordenses
+            self.radial_basis.num_radial + 2 * self.num_tensordense_features,
+            name="embed_transform",
+            dtype=jnp.float32,
+            param_dtype=jnp.float32,
+        )
+
+        self.mp_block: e3x.nn.SelfAttention = partial(e3x.nn.SelfAttention,
             max_degree=self.mp_degree,
             cartesian_order=False,
             use_basis_bias=False,
@@ -145,7 +252,7 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
 
         # This is aware of the Z_j's
         y_2b = self.radial_basis(
-            neighbour_displacements=neighbour_displacements, Z_i=Z_i, Z_j=Z_j
+            neighbour_displacements=neighbour_displacements, Z_j=Z_j
         ).astype(jnp.float32)
         y1 = e3x.nn.TensorDense(
             self.num_tensordense_features,
@@ -153,12 +260,17 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
             cartesian_order=False,
             use_fused_tensor=self.use_fused_tensor,
             )(y_2b)
-        y2 = e3x.nn.TensorDense(
-            self.num_tensordense_features,
-            self.max_tensordense_degree,
-            cartesian_order=False,
-            use_fused_tensor=self.use_fused_tensor,
-            )(y1)
+        # y2 = e3x.nn.TensorDense(
+        #     self.num_tensordense_features,
+        #     self.max_tensordense_degree,
+        #     cartesian_order=False,
+        #     use_fused_tensor=self.use_fused_tensor,
+        #     )(y1)
+
+        y_2btilde = e3x.nn.Dense(self.num_tensordense_features)(y_2b)
+        tensor_module = e3x.nn.Tensor if not self.use_fused_tensor else e3x.nn.FusedTensor
+        y2 = tensor_module(self.max_tensordense_degree, cartesian_order=False)(y_2btilde,y1)
+        
         y = e3x.nn.features.change_max_degree_or_type(y_2b, self.max_tensordense_degree, include_pseudotensors=True)
         y = jnp.concatenate([y, y1, y2], axis=-1)
         y = y * self.embedding_transformation(self.embedding(Z_i) + self.embedding(Z_j))
@@ -167,7 +279,7 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
         y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
 
         for _ in range(self.mp_steps):
-            y = self.mp_block(
+            y = self.mp_block()(
                 inputs=y,
                 basis=self.mp_basis(neighbour_displacements),
                 src_idx=idx_j,
