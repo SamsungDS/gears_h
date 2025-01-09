@@ -1,23 +1,27 @@
-zi: Zi {class: empty}
-zj: Zj {class: empty}
+# direction: right
+
+# zi: Zi {class: empty}
+# zj: Zj {class: empty}
 sarb_emb: Embedding (from species-\naware radial basis) {class: empty;label.near: top-center}
 f: "2-body features \{f\}" {class: empty;}#label.near: outside-top-center}
 acf: "Atom-centered features \{F\}" {class: empty; label.near: outside-top-center}
 
 ac: Atom-centered descriptor {
     class: ac
+    sum_j: ∑j {class: operator}
+    sum_j -> 3b: TensorDense {style: {stroke: "#000000"; font-color: black}}
     3b: 3-body {class: in_module}
-    4b: 4-body {class: in_module}
-    3b -> 4b: TensorDense {style: {stroke: "#000000"; font-color: black}}
+    5b: 5-body {class: in_module}
+    3b -> 5b: TensorDense {style: {stroke: "#000000"; font-color: black}}
     c: Concatenate  {class: in_module}
+    sum_j  -> c: {style: {stroke: "#000000"; font-color: black}}
     3b -> c: {style: {stroke: "#000000"; font-color: black}}
-    4b -> c: {style: {stroke: "#000000"; font-color: black}}
+    5b -> c: {style: {stroke: "#000000"; font-color: black}}
     transformed_embedding: Transformed Embedding {class: in_module}
     p1: ⊗ {class: operator}
     c -> p1: {style: {stroke: "#000000"; font-color: black}}
     transformed_embedding -> p1: {style: {stroke: "#000000"; font-color: black}}
-    sum_j: ∑j {class: operator}
-    p1 -> sum_j: {style: {stroke: "#000000"; font-color: black}}
+    # p1 -> sum_j: {style: {stroke: "#000000"; font-color: black}}
     mp_block:  Message-passing block {
         class: in_module
         # direction: right
@@ -27,7 +31,7 @@ ac: Atom-centered descriptor {
         # mpln -> sa: x number of message-passing steps {style: {stroke: "#000000"; font-color: black}}
     }
     # sum_j -> mp_block.sa: {style: {stroke: "#000000"; font-color: black}}
-    sum_j -> mp_block: {style: {stroke: "#000000"; font-color: black}}
+    p1 -> mp_block: {style: {stroke: "#000000"; font-color: black}}
     nl_block: Non-linear block {
         class: in_module
         # nld1: Dense {class: in_module}
@@ -44,10 +48,10 @@ ac: Atom-centered descriptor {
     # transformed_embedding -> nl_block.nlrescon: Residual connection {style: {stroke: "#000000"; font-color: black}}
 }
 
-zi -> sarb_emb: {style: {stroke: "#000000"; font-color: black}}
-zj -> sarb_emb: {style: {stroke: "#000000"; font-color: black}}
-f -> ac.3b: TensorDense {style: {stroke: "#000000"; font-color: black}}
-f -> ac.c: {style: {stroke: "#000000"; font-color: black}}
+# zi -> sarb_emb: {style: {stroke: "#000000"; font-color: black}}
+# zj -> sarb_emb: {style: {stroke: "#000000"; font-color: black}}
+f -> ac.sum_j: {style: {stroke: "#000000"; font-color: black}} #ac.3b: TensorDense {style: {stroke: "#000000"; font-color: black}}
+# f -> ac.c: {style: {stroke: "#000000"; font-color: black}}
 sarb_emb -> ac.transformed_embedding: Dense {style: {stroke: "#000000"; font-color: black}}
 # ac.nl_block.nlrescon -> acf: {style: {stroke: "#000000"; font-color: black}}
 ac.nl_block -> acf: {style: {stroke: "#000000"; font-color: black}}
