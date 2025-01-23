@@ -576,8 +576,6 @@ class PureInMemoryDataset(InMemoryDataset):
     #     return ds
 
     def cleanup(self):
-        for p in self.cache_file.parent.glob(f"{self.cache_file.name}.data*"):
+        for p in self.cache_file.parent.glob(f"{self.cache_file.name}.*"):
             p.unlink()
-
-        index_file = self.cache_file.parent / f"{self.cache_file.name}.index"
-        index_file.unlink()
+            
