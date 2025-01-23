@@ -188,6 +188,8 @@ def fit(state: TrainState,
         epoch_pbar.update()
     epoch_pbar.close()
     callbacks.on_train_end()
+    train_dataset.cleanup()
+    val_dataset.cleanup()
 
 
     return
