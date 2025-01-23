@@ -458,28 +458,37 @@ class InMemoryDataset:
         ).astype(np.int16)
 
 
-        neigbour_zeros_to_add = self.max_nneighbours - len(inputs["idx_ij"])
+        neighbour_zeros_to_add = self.max_nneighbours - len(inputs["idx_ij"])
         inputs["idx_ij"] = np.pad(
             inputs["idx_ij"],
-            ((0, neigbour_zeros_to_add), (0, 0)),
+            ((0, neighbour_zeros_to_add), (0, 0)),
             "constant",
             constant_values=self.max_natoms + 1,
         ).astype(np.int16)
         inputs["idx_D"] = np.pad(
-            inputs["idx_D"], ((0, neigbour_zeros_to_add), (0, 0)), "constant"
+            inputs["idx_D"], ((0, neighbour_zeros_to_add), (0, 0)), "constant"
         ).astype(np.float32)
 
         if self.is_inference:
             return inputs
         
-        inputs["idx_bonds"] = np.random.choice(self.max_nneighbours, size=self.n_bonds, replace=False) if self.n_bonds != self.max_nneighbours else np.arange(self.max_nneighbours)
+        if self.n_bonds != self.max_nneighbours:
+            unpadded_neighbour_count = self.max_nneighbours - neighbour_zeros_to_add
+            d_unpadded = np.linalg.norm(inputs["idx_D"][:unpadded_neighbour_count], axis=-1)
+            inverse_d = np.reciprocal(d_unpadded, where = d_unpadded > 0.1)
+            dprobs = (inverse_d ** 2) / np.sum(inverse_d ** 2)
+            inputs["idx_bonds"] = np.random.choice(unpadded_neighbour_count, size=self.n_bonds, replace=False, p=dprobs)
+        else:
+            inputs["idx_bonds"] = np.arange(self.max_nneighbours)
+
+        
         labels = self.labels
         labels = {k: v[i] for k, v in labels.items()}
         # log.debug(f"{i}, {labels['h_irreps']}")
         labels["h_irreps_off_diagonal"] = np.pad(
             labels["h_irreps_off_diagonal"],
             (
-                (0, neigbour_zeros_to_add),
+                (0, neighbour_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),
@@ -489,7 +498,7 @@ class InMemoryDataset:
         labels["mask_off_diagonal"] = np.pad(
             labels["mask_off_diagonal"],
             (
-                (0, neigbour_zeros_to_add),
+                (0, neighbour_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),  # Feature dim
