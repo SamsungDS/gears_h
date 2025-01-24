@@ -340,12 +340,18 @@ class InMemoryDataset:
         cache_path=".",
     ):
         self.n_data = len(dataset_as_list)
+        
+        dataset_as_list = dataset_as_list[:self.n_data]
+        
         self.n_epochs = n_epochs
         self.bond_fraction = bond_fraction
         self.batch_size = min(self.n_data, batch_size)
         self.is_inference = is_inference
 
         self.count = 0
+        # self.maxcount = self.n_epochs * self.steps_per_epoch
+        # self.current_gencount = 0
+
         self.buffer = deque()
         self.buffer_size = min(buffer_size, self.n_data)
         self.cache_file = Path(cache_path) / str(uuid.uuid4())
@@ -384,11 +390,12 @@ class InMemoryDataset:
         """Returns first batch of inputs and labels to init the model."""
         inputs, _ = self.prepare_single_snapshot(0)
         return inputs
-
+    
+    @property
     def steps_per_epoch(self):
         # This throws away a bit of the training data, but at most 1 batch worth.
         # A typical batch is 1-16 large so this is fine.
-        return self.n_data // (self.batch_size)
+        return self.n_data // self.batch_size
 
     def make_signature(self) -> tf.TensorSpec:
         # Taken from https://github.com/apax-hub/apax/blob/dev/apax/data/input_pipeline.py#L135C1-L167C25
@@ -441,10 +448,10 @@ class InMemoryDataset:
 
     def enqueue(self, num_snapshots):
         for _ in range(num_snapshots):
-            data = self.prepare_single_snapshot(self.count)
+            data = self.prepare_single_snapshot(self.count % self.n_data)
             self.buffer.append(data)
             self.count += 1
-            self.count %= self.n_data
+            # self.count %= self.n_data
 
     def prepare_single_snapshot(self, i):
         inputs = self.inputs
@@ -477,7 +484,8 @@ class InMemoryDataset:
             unpadded_neighbour_count = self.max_nneighbours - neighbour_zeros_to_add
             d_unpadded = np.linalg.norm(inputs["idx_D"][:unpadded_neighbour_count], axis=-1)
             inverse_d = np.reciprocal(d_unpadded, where = d_unpadded > 0.1)
-            dprobs = (inverse_d ** 2) / np.sum(inverse_d ** 2)
+            alpha = 4.0 # np.random.rand() * 3 + 1.0
+            dprobs = (inverse_d ** alpha) / np.sum(inverse_d ** alpha)
             inputs["idx_bonds"] = np.random.choice(unpadded_neighbour_count, size=self.n_bonds, replace=False, p=dprobs)
         else:
             inputs["idx_bonds"] = np.arange(self.max_nneighbours)
@@ -546,15 +554,24 @@ class InMemoryDataset:
 
 
 class PureInMemoryDataset(InMemoryDataset):
-    def __iter__(self):
-        while True: # self.count < self.n_data or len(self.buffer) > 0:
-            yield self.buffer.popleft()
+    # def __iter__(self):
+    #     while self.current_gencount < self.maxcount or len(self.buffer) > 0: # self.count < self.n_data or len(self.buffer) > 0:
+    #         yield self.buffer.popleft()
 
+    #         space = self.buffer_size - len(self.buffer)
+    #         # if self.count + space > self.n_data:
+    #         #     space = self.n_data - self.count
+    #         self.enqueue(space)
+    #         self.current_gencount += 1
+
+    def __iter__(self):
+        total_iterator_size = (self.n_data * self.n_epochs)
+        while self.count < total_iterator_size or len(self.buffer) > 0:
+            yield self.buffer.popleft()
             space = self.buffer_size - len(self.buffer)
-            # if self.count + space > self.n_data:
-            #     space = self.n_data - self.count
+            if self.count + space > total_iterator_size:
+                space = total_iterator_size - self.count
             self.enqueue(space)
-            break
 
     def shuffle_and_batch(self):
         ds = (

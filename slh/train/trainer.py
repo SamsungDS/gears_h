@@ -57,8 +57,11 @@ def fit(state: TrainState,
     # best_ckpt_manager = CheckpointManager(path = best_dir, options = best_ckpt_manager_options)
 
     # Dataset batching and shuffling
-    train_batches_per_epoch = train_dataset.steps_per_epoch()
-    val_batches_per_epoch = val_dataset.steps_per_epoch()
+    train_batches_per_epoch = train_dataset.steps_per_epoch
+    val_batches_per_epoch = val_dataset.steps_per_epoch 
+
+    batch_train_dataset = train_dataset.shuffle_and_batch()
+    batch_val_dataset = val_dataset.shuffle_and_batch()
 
     # Create train_step and val_step functions
     train_step, val_step = make_step_functions(logging_metrics,
@@ -82,20 +85,20 @@ def fit(state: TrainState,
     )
     for epoch in range(start_epoch, n_epochs):
         # TODO nuke all of this
-        if epoch == 0:
-            batch_train_dataset = train_dataset.shuffle_and_batch()
-            batch_val_dataset = val_dataset.shuffle_and_batch()
-        elif epoch % 200 == 0: # TODO make this controllable
-            train_dataset.cleanup()
-            val_dataset.cleanup()
-            train_dataset.buffer = deque()
-            val_dataset.buffer = deque()
-            train_dataset.count = 0
-            val_dataset.count = 0
-            train_dataset.enqueue(min(train_dataset.buffer_size, train_dataset.n_data))
-            val_dataset.enqueue(min(val_dataset.buffer_size, val_dataset.n_data))
-            batch_train_dataset = train_dataset.shuffle_and_batch()
-            batch_val_dataset = val_dataset.shuffle_and_batch()
+        # if epoch == 0:
+        #     batch_train_dataset = train_dataset.shuffle_and_batch()
+        #     batch_val_dataset = val_dataset.shuffle_and_batch()
+        # elif epoch % 200 == 0: # TODO make this controllable
+        #     train_dataset.cleanup()
+        #     val_dataset.cleanup()
+        #     train_dataset.buffer = deque()
+        #     val_dataset.buffer = deque()
+        #     train_dataset.count = 0
+        #     val_dataset.count = 0
+        #     train_dataset.enqueue(min(train_dataset.buffer_size, train_dataset.n_data))
+        #     val_dataset.enqueue(min(val_dataset.buffer_size, val_dataset.n_data))
+        #     batch_train_dataset = train_dataset.shuffle_and_batch()
+        #     batch_val_dataset = val_dataset.shuffle_and_batch()
 
         epoch_start_time = time.time()
         callbacks.on_epoch_begin(epoch=epoch + 1)
