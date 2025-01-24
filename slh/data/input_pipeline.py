@@ -444,6 +444,7 @@ class InMemoryDataset:
             data = self.prepare_single_snapshot(self.count)
             self.buffer.append(data)
             self.count += 1
+            self.count %= self.n_data
 
     def prepare_single_snapshot(self, i):
         inputs = self.inputs
@@ -546,22 +547,23 @@ class InMemoryDataset:
 
 class PureInMemoryDataset(InMemoryDataset):
     def __iter__(self):
-        while self.count < self.n_data or len(self.buffer) > 0:
+        while True: # self.count < self.n_data or len(self.buffer) > 0:
             yield self.buffer.popleft()
 
             space = self.buffer_size - len(self.buffer)
-            if self.count + space > self.n_data:
-                space = self.n_data - self.count
+            # if self.count + space > self.n_data:
+            #     space = self.n_data - self.count
             self.enqueue(space)
+            break
 
     def shuffle_and_batch(self):
         ds = (
             tf.data.Dataset.from_generator(
                 lambda: self, output_signature=self.make_signature()
             )
-            .cache(
-                self.cache_file.as_posix()
-            )  # This is required to cache the generator so a successful repeat can happen.
+            # .cache(
+            #     self.cache_file.as_posix()
+            # )  # This is required to cache the generator so a successful repeat can happen.
             .repeat(self.n_epochs)
         )
 
