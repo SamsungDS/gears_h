@@ -79,7 +79,8 @@ def run(user_config, log_level="error"):
             batch_size=config.data.batch_size,
             val_batch_size=config.data.valid_batch_size,
             n_epochs=config.n_epochs,
-            bond_fraction=config.data.bond_fraction
+            bond_fraction=config.data.bond_fraction,
+            sampling_alpha = config.data.sampling_alpha
         )
     elif config.data.data_path is None:
         assert config.data.train_data_path is not None, "train_data_path must be provided when data_path is not."
@@ -95,11 +96,13 @@ def run(user_config, log_level="error"):
         train_ds, val_ds = (PureInMemoryDataset(train_ds_list,
                                                 batch_size = config.data.batch_size,
                                                 n_epochs = config.n_epochs,
-                                                bond_fraction = config.data.bond_fraction),
+                                                bond_fraction = config.data.bond_fraction,
+                                                sampling_alpha = config.data.sampling_alpha),
                             PureInMemoryDataset(val_ds_list,
                                                 batch_size = config.data.valid_batch_size,
                                                 n_epochs = config.n_epochs,
-                                                bond_fraction = config.data.bond_fraction)
+                                                bond_fraction = config.data.bond_fraction,
+                                                sampling_alpha = config.data.sampling_alpha)
                            )
     max_ell = train_ds.max_ell
     readout_nfeatures = train_ds.readout_nfeatures
