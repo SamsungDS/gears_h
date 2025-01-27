@@ -36,6 +36,7 @@ class DataConfig(BaseModel, extra="forbid"):
     additional_properties_info: dict[str, str] = {}
 
     bond_fraction: PositiveFloat = 1.0
+    sampling_alpha: NonNegativeFloat = 0.0
 
     pos_unit: Optional[str] = "Ang"
     energy_unit: Optional[str] = "eV"

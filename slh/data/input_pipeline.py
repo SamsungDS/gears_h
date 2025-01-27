@@ -37,18 +37,21 @@ def initialize_dataset_from_list(
     batch_size: int,
     val_batch_size: int,
     n_epochs: int,
-    bond_fraction: float
+    bond_fraction: float,
+    sampling_alpha: float
 ):
     train_idx, val_idx = split_idxs(len(dataset_as_list), num_train, num_val)
     train_ds_list, val_ds_list = split_dataset(dataset_as_list, train_idx, val_idx)
     train_ds, val_ds = (PureInMemoryDataset(train_ds_list,
                                             batch_size = batch_size,
                                             n_epochs = n_epochs,
-                                            bond_fraction = bond_fraction),
+                                            bond_fraction = bond_fraction,
+                                            sampling_alpha = sampling_alpha),
                         PureInMemoryDataset(val_ds_list,
                                             batch_size = val_batch_size,
                                             n_epochs = n_epochs,
-                                            bond_fraction = bond_fraction)
+                                            bond_fraction = bond_fraction,
+                                            sampling_alpha = sampling_alpha)
                        )
     return train_ds, val_ds
 
@@ -335,6 +338,7 @@ class InMemoryDataset:
         batch_size: int,
         n_epochs: int,
         bond_fraction: float = 1.0,
+        sampling_alpha: float = 0.0,
         is_inference: bool = False,
         buffer_size=100,
         cache_path=".",
@@ -345,6 +349,7 @@ class InMemoryDataset:
         
         self.n_epochs = n_epochs
         self.bond_fraction = bond_fraction
+        self.sampling_alpha = sampling_alpha
         self.batch_size = min(self.n_data, batch_size)
         self.is_inference = is_inference
 
@@ -484,8 +489,8 @@ class InMemoryDataset:
             unpadded_neighbour_count = self.max_nneighbours - neighbour_zeros_to_add
             d_unpadded = np.linalg.norm(inputs["idx_D"][:unpadded_neighbour_count], axis=-1)
             inverse_d = np.reciprocal(d_unpadded, where = d_unpadded > 0.1)
-            alpha = 0.0 # np.random.rand() * 3 + 1.0
-            dprobs = (inverse_d ** alpha) / np.sum(inverse_d ** alpha)
+            # alpha = np.random.rand() * 3 + 1.0
+            dprobs = (inverse_d ** self.sampling_alpha) / np.sum(inverse_d ** self.sampling_alpha)
             inputs["idx_bonds"] = np.random.choice(unpadded_neighbour_count, size=self.n_bonds, replace=False, p=dprobs)
         else:
             inputs["idx_bonds"] = np.arange(self.max_nneighbours)
