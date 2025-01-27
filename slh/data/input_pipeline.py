@@ -484,7 +484,7 @@ class InMemoryDataset:
             unpadded_neighbour_count = self.max_nneighbours - neighbour_zeros_to_add
             d_unpadded = np.linalg.norm(inputs["idx_D"][:unpadded_neighbour_count], axis=-1)
             inverse_d = np.reciprocal(d_unpadded, where = d_unpadded > 0.1)
-            alpha = 4.0 # np.random.rand() * 3 + 1.0
+            alpha = 0.0 # np.random.rand() * 3 + 1.0
             dprobs = (inverse_d ** alpha) / np.sum(inverse_d ** alpha)
             inputs["idx_bonds"] = np.random.choice(unpadded_neighbour_count, size=self.n_bonds, replace=False, p=dprobs)
         else:
