@@ -14,7 +14,7 @@ class LinearSchedule(BaseModel, frozen=True, extra="forbid"):
         Final LR at the end of training.
     """
 
-    name: Literal["linear"] = "linear"
+    name: Literal["linear_schedule"] = "linear_schedule"
     transition_begin: int = 0
     end_value: NonNegativeFloat = 1e-4
 
