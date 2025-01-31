@@ -16,7 +16,8 @@ from pydantic import (
 from slh.config.lr_config import (LinearSchedule, 
                                   CyclicCosineSchedule, 
                                   ExponentialDecaySchedule,
-                                  WarmupCosineDecay
+                                  WarmupCosineDecay,
+                                  ReduceOnPlateau
 )
 
 class DataConfig(BaseModel, extra="forbid"):
@@ -181,8 +182,10 @@ class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     schedule: Union[LinearSchedule, 
                     CyclicCosineSchedule, 
                     ExponentialDecaySchedule,
-                    WarmupCosineDecay] = Field(ExponentialDecaySchedule(), 
-                                               discriminator="name")
+                    WarmupCosineDecay,
+                    ReduceOnPlateau
+                   ] = Field(ExponentialDecaySchedule(), 
+                             discriminator="name")
     
 class LossConfig(BaseModel, frozen=True, extra="forbid"):
     name: str = "weighted_mse_and_rmse"
