@@ -64,3 +64,4 @@ class ReduceOnPlateau(BaseModel, frozen = True, extra = "forbid"):
     atol: float = 0.0
     accumulation_size: NonNegativeInt = 1
     min_scale: NonNegativeFloat = 1e-5
+    cooldown: NonNegativeInt = 0
