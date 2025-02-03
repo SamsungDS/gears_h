@@ -1,6 +1,17 @@
 from typing import Literal
 from pydantic import BaseModel, NonNegativeFloat, NonNegativeInt
 
+
+class ConstantSchedule(BaseModel, frozen=True, extra="forbid"):
+    """
+    Constant LR scheduler.
+
+    Parameters
+    ----------
+    """
+
+    name: Literal["constant_schedule"] = "constant_schedule"
+
 class LinearSchedule(BaseModel, frozen=True, extra="forbid"):
     """
     Configuration of the optimizer.

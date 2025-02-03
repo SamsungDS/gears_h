@@ -17,7 +17,8 @@ from slh.config.lr_config import (LinearSchedule,
                                   CyclicCosineSchedule, 
                                   ExponentialDecaySchedule,
                                   WarmupCosineDecay,
-                                  ReduceOnPlateau
+                                  ReduceOnPlateau,
+                                  ConstantSchedule
 )
 
 class DataConfig(BaseModel, extra="forbid"):
@@ -183,7 +184,8 @@ class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
                     CyclicCosineSchedule, 
                     ExponentialDecaySchedule,
                     WarmupCosineDecay,
-                    ReduceOnPlateau
+                    ReduceOnPlateau,
+                    ConstantSchedule
                    ] = Field(ExponentialDecaySchedule(), 
                              discriminator="name")
     
