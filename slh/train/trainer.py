@@ -1,3 +1,4 @@
+from collections import deque
 import logging
 import time
 from functools import partial
@@ -56,8 +57,9 @@ def fit(state: TrainState,
     # best_ckpt_manager = CheckpointManager(path = best_dir, options = best_ckpt_manager_options)
 
     # Dataset batching and shuffling
-    train_batches_per_epoch = train_dataset.steps_per_epoch()
-    val_batches_per_epoch = val_dataset.steps_per_epoch()
+    train_batches_per_epoch = train_dataset.steps_per_epoch
+    val_batches_per_epoch = val_dataset.steps_per_epoch 
+
     batch_train_dataset = train_dataset.shuffle_and_batch()
     batch_val_dataset = val_dataset.shuffle_and_batch()
 
@@ -188,6 +190,8 @@ def fit(state: TrainState,
         epoch_pbar.update()
     epoch_pbar.close()
     callbacks.on_train_end()
+    train_dataset.cleanup()
+    val_dataset.cleanup()
 
 
     return

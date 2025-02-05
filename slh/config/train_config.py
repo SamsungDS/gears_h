@@ -16,7 +16,9 @@ from pydantic import (
 from slh.config.lr_config import (LinearSchedule, 
                                   CyclicCosineSchedule, 
                                   ExponentialDecaySchedule,
-                                  WarmupCosineDecay
+                                  WarmupCosineDecay,
+                                  ReduceOnPlateau,
+                                  ConstantSchedule
 )
 
 class DataConfig(BaseModel, extra="forbid"):
@@ -36,6 +38,7 @@ class DataConfig(BaseModel, extra="forbid"):
     additional_properties_info: dict[str, str] = {}
 
     bond_fraction: PositiveFloat = 1.0
+    sampling_alpha: NonNegativeFloat = 0.0
 
     pos_unit: Optional[str] = "Ang"
     energy_unit: Optional[str] = "eV"
@@ -180,8 +183,11 @@ class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     schedule: Union[LinearSchedule, 
                     CyclicCosineSchedule, 
                     ExponentialDecaySchedule,
-                    WarmupCosineDecay] = Field(ExponentialDecaySchedule(), 
-                                               discriminator="name")
+                    WarmupCosineDecay,
+                    ReduceOnPlateau,
+                    ConstantSchedule
+                   ] = Field(ExponentialDecaySchedule(), 
+                             discriminator="name")
     
 class LossConfig(BaseModel, frozen=True, extra="forbid"):
     name: str = "weighted_mse_and_rmse"

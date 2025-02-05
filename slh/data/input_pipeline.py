@@ -37,18 +37,21 @@ def initialize_dataset_from_list(
     batch_size: int,
     val_batch_size: int,
     n_epochs: int,
-    bond_fraction: float
+    bond_fraction: float,
+    sampling_alpha: float
 ):
     train_idx, val_idx = split_idxs(len(dataset_as_list), num_train, num_val)
     train_ds_list, val_ds_list = split_dataset(dataset_as_list, train_idx, val_idx)
     train_ds, val_ds = (PureInMemoryDataset(train_ds_list,
                                             batch_size = batch_size,
                                             n_epochs = n_epochs,
-                                            bond_fraction = bond_fraction),
+                                            bond_fraction = bond_fraction,
+                                            sampling_alpha = sampling_alpha),
                         PureInMemoryDataset(val_ds_list,
                                             batch_size = val_batch_size,
                                             n_epochs = n_epochs,
-                                            bond_fraction = bond_fraction)
+                                            bond_fraction = bond_fraction,
+                                            sampling_alpha = sampling_alpha)
                        )
     return train_ds, val_ds
 
@@ -335,17 +338,25 @@ class InMemoryDataset:
         batch_size: int,
         n_epochs: int,
         bond_fraction: float = 1.0,
+        sampling_alpha: float = 0.0,
         is_inference: bool = False,
         buffer_size=100,
         cache_path=".",
     ):
         self.n_data = len(dataset_as_list)
+        
+        dataset_as_list = dataset_as_list[:self.n_data]
+        
         self.n_epochs = n_epochs
         self.bond_fraction = bond_fraction
+        self.sampling_alpha = sampling_alpha
         self.batch_size = min(self.n_data, batch_size)
         self.is_inference = is_inference
 
         self.count = 0
+        # self.maxcount = self.n_epochs * self.steps_per_epoch
+        # self.current_gencount = 0
+
         self.buffer = deque()
         self.buffer_size = min(buffer_size, self.n_data)
         self.cache_file = Path(cache_path) / str(uuid.uuid4())
@@ -384,11 +395,12 @@ class InMemoryDataset:
         """Returns first batch of inputs and labels to init the model."""
         inputs, _ = self.prepare_single_snapshot(0)
         return inputs
-
+    
+    @property
     def steps_per_epoch(self):
         # This throws away a bit of the training data, but at most 1 batch worth.
         # A typical batch is 1-16 large so this is fine.
-        return self.n_data // (self.batch_size)
+        return self.n_data // self.batch_size
 
     def make_signature(self) -> tf.TensorSpec:
         # Taken from https://github.com/apax-hub/apax/blob/dev/apax/data/input_pipeline.py#L135C1-L167C25
@@ -441,9 +453,10 @@ class InMemoryDataset:
 
     def enqueue(self, num_snapshots):
         for _ in range(num_snapshots):
-            data = self.prepare_single_snapshot(self.count)
+            data = self.prepare_single_snapshot(self.count % self.n_data)
             self.buffer.append(data)
             self.count += 1
+            # self.count %= self.n_data
 
     def prepare_single_snapshot(self, i):
         inputs = self.inputs
@@ -458,28 +471,38 @@ class InMemoryDataset:
         ).astype(np.int16)
 
 
-        neigbour_zeros_to_add = self.max_nneighbours - len(inputs["idx_ij"])
+        neighbour_zeros_to_add = self.max_nneighbours - len(inputs["idx_ij"])
         inputs["idx_ij"] = np.pad(
             inputs["idx_ij"],
-            ((0, neigbour_zeros_to_add), (0, 0)),
+            ((0, neighbour_zeros_to_add), (0, 0)),
             "constant",
             constant_values=self.max_natoms + 1,
         ).astype(np.int16)
         inputs["idx_D"] = np.pad(
-            inputs["idx_D"], ((0, neigbour_zeros_to_add), (0, 0)), "constant"
+            inputs["idx_D"], ((0, neighbour_zeros_to_add), (0, 0)), "constant"
         ).astype(np.float32)
 
         if self.is_inference:
             return inputs
         
-        inputs["idx_bonds"] = np.random.choice(self.max_nneighbours, size=self.n_bonds, replace=False) if self.n_bonds != self.max_nneighbours else np.arange(self.max_nneighbours)
+        if self.n_bonds != self.max_nneighbours:
+            unpadded_neighbour_count = self.max_nneighbours - neighbour_zeros_to_add
+            d_unpadded = np.linalg.norm(inputs["idx_D"][:unpadded_neighbour_count], axis=-1)
+            inverse_d = np.reciprocal(d_unpadded, where = d_unpadded > 0.1)
+            # alpha = np.random.rand() * 3 + 1.0
+            dprobs = (inverse_d ** self.sampling_alpha) / np.sum(inverse_d ** self.sampling_alpha)
+            inputs["idx_bonds"] = np.random.choice(unpadded_neighbour_count, size=self.n_bonds, replace=False, p=dprobs)
+        else:
+            inputs["idx_bonds"] = np.arange(self.max_nneighbours)
+
+        
         labels = self.labels
         labels = {k: v[i] for k, v in labels.items()}
         # log.debug(f"{i}, {labels['h_irreps']}")
         labels["h_irreps_off_diagonal"] = np.pad(
             labels["h_irreps_off_diagonal"],
             (
-                (0, neigbour_zeros_to_add),
+                (0, neighbour_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),
@@ -489,7 +512,7 @@ class InMemoryDataset:
         labels["mask_off_diagonal"] = np.pad(
             labels["mask_off_diagonal"],
             (
-                (0, neigbour_zeros_to_add),
+                (0, neighbour_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),  # Feature dim
@@ -536,13 +559,23 @@ class InMemoryDataset:
 
 
 class PureInMemoryDataset(InMemoryDataset):
-    def __iter__(self):
-        while self.count < self.n_data or len(self.buffer) > 0:
-            yield self.buffer.popleft()
+    # def __iter__(self):
+    #     while self.current_gencount < self.maxcount or len(self.buffer) > 0: # self.count < self.n_data or len(self.buffer) > 0:
+    #         yield self.buffer.popleft()
 
+    #         space = self.buffer_size - len(self.buffer)
+    #         # if self.count + space > self.n_data:
+    #         #     space = self.n_data - self.count
+    #         self.enqueue(space)
+    #         self.current_gencount += 1
+
+    def __iter__(self):
+        total_iterator_size = (self.n_data * self.n_epochs)
+        while self.count < total_iterator_size or len(self.buffer) > 0:
+            yield self.buffer.popleft()
             space = self.buffer_size - len(self.buffer)
-            if self.count + space > self.n_data:
-                space = self.n_data - self.count
+            if self.count + space > total_iterator_size:
+                space = total_iterator_size - self.count
             self.enqueue(space)
 
     def shuffle_and_batch(self):
@@ -550,9 +583,9 @@ class PureInMemoryDataset(InMemoryDataset):
             tf.data.Dataset.from_generator(
                 lambda: self, output_signature=self.make_signature()
             )
-            .cache(
-                self.cache_file.as_posix()
-            )  # This is required to cache the generator so a successful repeat can happen.
+            # .cache(
+            #     self.cache_file.as_posix()
+            # )  # This is required to cache the generator so a successful repeat can happen.
             .repeat(self.n_epochs)
         )
 
@@ -576,8 +609,6 @@ class PureInMemoryDataset(InMemoryDataset):
     #     return ds
 
     def cleanup(self):
-        for p in self.cache_file.parent.glob(f"{self.cache_file.name}.data*"):
+        for p in self.cache_file.parent.glob(f"{self.cache_file.name}.*"):
             p.unlink()
-
-        index_file = self.cache_file.parent / f"{self.cache_file.name}.index"
-        index_file.unlink()
+            

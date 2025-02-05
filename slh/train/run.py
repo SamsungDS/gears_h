@@ -4,6 +4,7 @@ from pathlib import Path
 
 import jax
 from functools import partial
+import optax
 
 import slh
 from slh.config.common import parse_config
@@ -79,7 +80,8 @@ def run(user_config, log_level="error"):
             batch_size=config.data.batch_size,
             val_batch_size=config.data.valid_batch_size,
             n_epochs=config.n_epochs,
-            bond_fraction=config.data.bond_fraction
+            bond_fraction=config.data.bond_fraction,
+            sampling_alpha = config.data.sampling_alpha
         )
     elif config.data.data_path is None:
         assert config.data.train_data_path is not None, "train_data_path must be provided when data_path is not."
@@ -95,11 +97,13 @@ def run(user_config, log_level="error"):
         train_ds, val_ds = (PureInMemoryDataset(train_ds_list,
                                                 batch_size = config.data.batch_size,
                                                 n_epochs = config.n_epochs,
-                                                bond_fraction = config.data.bond_fraction),
+                                                bond_fraction = config.data.bond_fraction,
+                                                sampling_alpha = config.data.sampling_alpha),
                             PureInMemoryDataset(val_ds_list,
                                                 batch_size = config.data.valid_batch_size,
                                                 n_epochs = config.n_epochs,
-                                                bond_fraction = config.data.bond_fraction)
+                                                bond_fraction = config.data.bond_fraction,
+                                                sampling_alpha = config.data.sampling_alpha)
                            )
     max_ell = train_ds.max_ell
     readout_nfeatures = train_ds.readout_nfeatures
@@ -123,15 +127,29 @@ def run(user_config, log_level="error"):
     loss_function = partial(loss_function, loss_parameters = loss_parameters)
 
     # TODO Switch to using slh.optimize.get_optimizer and enable different LRs for each parameter group.
-    import optax
+    # Convenience variables to improve readability of this section
     optimizer_config = config.optimizer.model_dump()
-    lr_options = {key : val for key, val in optimizer_config['schedule'].items() if key != "name"}
-    learning_rate = getattr(optax,optimizer_config['schedule']['name'])(optimizer_config['lr'],
-                                                                        **lr_options)
-    opt = getattr(optax,optimizer_config['name'])(learning_rate, 
-                                               **optimizer_config["opt_kwargs"])
+    optimizer_name = optimizer_config['name']
+    schedule_name = optimizer_config['schedule'].pop('name')
+    initial_lr = optimizer_config['lr']
+    lr_options = optimizer_config['schedule']
+    # lr_options = {key : val for key, val in optimizer_config['schedule'].items() if key != "name"}
+    # learning_rate = getattr(optax,optimizer_config['schedule']['name'])(optimizer_config['lr'],
+    #                                                                     **lr_options)
+    # Define LR schedule.
+    if schedule_name == 'reduce_on_plateau': # TODO can we not have this if statement?
+        raise NotImplementedError
+        # learning_rate = getattr(optax.contrib,schedule_name)(**lr_options)
+    else:
+        learning_rate = getattr(optax,schedule_name)(initial_lr,
+                                                     **lr_options)
+    # Define optimizer
+    opt = getattr(optax,optimizer_name)(learning_rate, 
+                                        **optimizer_config["opt_kwargs"])
+    # Chain optimizer with zero_nans and clip.
     opt = optax.chain(opt, optax.zero_nans(), optax.clip(1))
     # state = create_train_state(batched_model, params, optax.adam(1e-3))
+
     state = create_train_state(batched_model, params, opt)
 
     fit(
