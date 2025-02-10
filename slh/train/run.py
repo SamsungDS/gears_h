@@ -133,22 +133,27 @@ def run(user_config, log_level="error"):
     schedule_name = optimizer_config['schedule'].pop('name')
     initial_lr = optimizer_config['lr']
     lr_options = optimizer_config['schedule']
-    # lr_options = {key : val for key, val in optimizer_config['schedule'].items() if key != "name"}
-    # learning_rate = getattr(optax,optimizer_config['schedule']['name'])(optimizer_config['lr'],
-    #                                                                     **lr_options)
+    
     # Define LR schedule.
-    if schedule_name == 'reduce_on_plateau': # TODO can we not have this if statement?
-        raise NotImplementedError
-        # learning_rate = getattr(optax.contrib,schedule_name)(**lr_options)
+    if schedule_name == 'reduce_on_plateau':
+        rop = getattr(optax.contrib,schedule_name)(**lr_options)
+        opt = optax.inject_hyperparams(getattr(optax,optimizer_name))(learning_rate=initial_lr, 
+                                                                      **optimizer_config["opt_kwargs"])
+        opt = optax.chain(opt,
+                          rop,
+                          optax.zero_nans(),
+                          optax.clip(1))
     else:
-        learning_rate = getattr(optax,schedule_name)(initial_lr,
-                                                     **lr_options)
-    # Define optimizer
-    opt = getattr(optax,optimizer_name)(learning_rate, 
-                                        **optimizer_config["opt_kwargs"])
-    # Chain optimizer with zero_nans and clip.
-    opt = optax.chain(opt, optax.zero_nans(), optax.clip(1))
-    # state = create_train_state(batched_model, params, optax.adam(1e-3))
+        lr_schedule = getattr(optax,schedule_name)(initial_lr,
+                                                   **lr_options)
+        # Define optimizer
+        opt = optax.inject_hyperparams(getattr(optax,optimizer_name))(
+                                       learning_rate=lr_schedule, 
+                                       **optimizer_config["opt_kwargs"])
+        opt = optax.with_extra_args_support(opt)
+        opt = optax.chain(opt,
+                          optax.zero_nans(),
+                          optax.clip(1))
 
     state = create_train_state(batched_model, params, opt)
 

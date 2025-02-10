@@ -3,13 +3,14 @@ import logging
 import time
 from functools import partial
 from pathlib import Path
-from typing import Union
+from typing import Any
 
 import jax
 import jax.numpy as jnp
 from clu import metrics
 from flax.training.train_state import TrainState
 # from orbax.checkpointing import CheckpointManager, CheckpointManagerOptions # for potential orbax migration
+from optax import tree_utils as otu
 from tensorflow.keras.callbacks import CallbackList
 from tqdm import trange
 
@@ -17,6 +18,9 @@ from slh.data.input_pipeline import PureInMemoryDataset
 from slh.train.checkpoints import CheckpointManager, load_state
 
 log = logging.getLogger(__name__)
+
+def lr_tree_filter(path, value: Any) -> bool:
+    return isinstance(value, jnp.ndarray)
 
 def fit(state: TrainState,
         train_dataset: PureInMemoryDataset,
@@ -74,6 +78,10 @@ def fit(state: TrainState,
         raise ValueError(
             f"n_epochs <= current epoch from checkpoint ({n_epochs} <= {start_epoch})"
         )
+    
+    # Initial LR
+    initial_lr = otu.tree_get(state.opt_state,key='learning_rate',
+                              filtering= lr_tree_filter)
 
     best_params = {} # TODO do we need this if we're saving the state?
     best_mae_loss = jnp.inf
@@ -95,6 +103,13 @@ def fit(state: TrainState,
         train_mae_loss_weighted = 0.0
         train_mae_loss_off = 0.0
         train_mae_loss_on = 0.0
+
+        # Get LR for epoch
+        scale = otu.tree_get(state.opt_state,key='scale',
+                             filtering= lr_tree_filter,
+                             default=1
+                             )
+        epoch_loss['zlr'] = float(scale*initial_lr)
 
         train_batch_pbar = trange(
             0,
@@ -229,7 +244,7 @@ def make_step_functions(logging_metrics, state, loss_function):
     def update_step(state, batch_full):
         (loss, aux), grads = grad_fn(state.params, batch_full)
         mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss = aux
-        state = state.apply_gradients(grads=grads)
+        state = state.apply_gradients(grads=grads, value = loss)
         return loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss, state
     
     # TODO add support for ensemble models.
