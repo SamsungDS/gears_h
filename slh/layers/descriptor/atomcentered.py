@@ -183,7 +183,7 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
 
         y0 = e3x.nn.Dense(self.embedding_transformation.features)(y)
         y = LayerNorm()(y0)
-        y = e3x.nn.mish(y)
+        y = e3x.nn.bent_identity(y)
         y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y0
 
         if self.embedding_residual_connection:
