@@ -1,4 +1,4 @@
-# Taken almost entirely from https://github.com/apax-hub/apax/blob/dev/apax/train/checkpoints.py
+# Based on https://github.com/apax-hub/apax/blob/dev/apax/train/checkpoints.py
 from collections.abc import Callable
 import logging
 from pathlib import Path
@@ -9,7 +9,7 @@ import jax.numpy as jnp
 from flax import core, struct
 from flax.core.frozen_dict import FrozenDict, freeze, unfreeze
 from flax.linen.fp8_ops import OVERWRITE_WITH_GRADIENT
-from flax.training import checkpoints#, train_state
+from flax.training import checkpoints
 from flax.traverse_util import flatten_dict, unflatten_dict
 import optax
 
