@@ -1,5 +1,4 @@
 from dataclasses import field
-from functools import partial
 from typing import Callable, Union
 
 import e3x
@@ -32,4 +31,4 @@ class DenseBlock(nn.Module):
             y = self.activation(y0 if i == 0 else y)
             y = self.dense_layer(features=width, name=f"dense_{i+1}")(y)
 
-        return y0 + y if len(self.layer_widths) > 1 else y0
+        return self.param("resid_weight", nn.initializers.constant(0.1, shape=(1,))) * y0 + y if len(self.layer_widths) > 1 else y0
