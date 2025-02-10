@@ -28,7 +28,7 @@ class DenseBlock(nn.Module):
         y0 = self.dense_layer(features=self.layer_widths[0], name="dense_0")(x)
 
         for i, width in enumerate(self.layer_widths[1:]):
-            y = self.activation(y0 if i == 0 else y)
+            y = self.activation(y0 if i == 0 else y)  # noqa: F821
             y = self.dense_layer(features=width, name=f"dense_{i+1}")(y)
 
-        return self.param("resid_weight", nn.initializers.constant(0.1, shape=(1,))) * y0 + y if len(self.layer_widths) > 1 else y0
+        return self.param("resid_weight", nn.initializers.constant(0.1), shape=(1,)) * y0 + y if len(self.layer_widths) > 1 else y0
