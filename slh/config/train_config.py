@@ -71,7 +71,6 @@ class RadialBasisConfig(BaseModel, extra="forbid"):
     num_radial: PositiveInt = 16
     max_degree: NonNegativeInt = 2
     num_elemental_embedding: PositiveInt = 32
-    embedding_residual_connection: bool = False
     tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
     tensor_module_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
 
