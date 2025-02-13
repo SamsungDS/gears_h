@@ -1,4 +1,3 @@
-from collections import deque
 import logging
 import time
 from functools import partial
@@ -78,10 +77,6 @@ def fit(state: TrainState,
         raise ValueError(
             f"n_epochs <= current epoch from checkpoint ({n_epochs} <= {start_epoch})"
         )
-    
-    # Initial LR
-    initial_lr = otu.tree_get(state.opt_state,key='learning_rate',
-                              filtering= lr_tree_filter)
 
     best_params = {} # TODO do we need this if we're saving the state?
     best_mae_loss = jnp.inf
@@ -105,11 +100,13 @@ def fit(state: TrainState,
         train_mae_loss_on = 0.0
 
         # Get LR for epoch
+        lr = otu.tree_get(state.opt_state,key='learning_rate',
+                          filtering= lr_tree_filter)
         scale = otu.tree_get(state.opt_state,key='scale',
                              filtering= lr_tree_filter,
                              default=1
                              )
-        epoch_loss['zlr'] = float(scale*initial_lr)
+        epoch_loss['zlr'] = float(scale*lr)
 
         train_batch_pbar = trange(
             0,
