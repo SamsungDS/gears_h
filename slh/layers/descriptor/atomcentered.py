@@ -92,7 +92,6 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
     max_tensordense_degree: int
     num_tensordense_features: int
     use_fused_tensor: bool = False
-    embedding_residual_connection: bool = True
 
     mp_steps: int = 2
     mp_degree: int = 4
@@ -185,11 +184,6 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
         y = LayerNorm()(y0)
         y = e3x.nn.bent_identity(y)
         y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y0
-
-        if self.embedding_residual_connection:
-            y = e3x.nn.add(
-                y, self.embedding_transformation(self.embedding(atomic_numbers))
-            )
 
         return y
     
