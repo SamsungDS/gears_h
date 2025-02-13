@@ -16,21 +16,20 @@ sarb: Species-aware radial basis {
     basis: Basis expansion {class: in_module}
     transformed_embedding: Transformed embedding {class: in_module}
     ⊗: {class: operator}
-    ⊕: {class: operator}
+    # ⊕: {class: operator}
 
 
-    embedding -> transformed_embedding: Dense ⭙ (Embedding(Zi) + \nEmbedding(Zj)) {style: {stroke: "#000000"; font-color: black}}
-
+    embedding -> transformed_embedding: Dense ⭙ Embedding(Zj) {style: {stroke: "#000000"; font-color: black}}
     transformed_embedding -> ⊗: {style: {stroke: "#000000"}}
     basis -> ⊗: {style: {stroke: "#000000"}}
-    ⊗ -> ⊕: {style: {stroke: "#000000"}}
-    transformed_embedding -> ⊕: Residual connection {style: {stroke: "#000000"; font-color: black}}
+    # ⊗ -> ⊕: {style: {stroke: "#000000"}}
+    # transformed_embedding -> ⊕: Residual connection {style: {stroke: "#000000"; font-color: black}}
 }
 
 zi -> sarb.embedding: {style: {stroke: "#000000"}}
 zj -> sarb.embedding: {style: {stroke: "#000000"}}
 r -> sarb.basis: {style: {stroke: "#000000"}}
-sarb.⊕ -> f: {style: {stroke: "#000000"}}
+sarb.⊗ -> f: {style: {stroke: "#000000"}}
 
 
 classes: {

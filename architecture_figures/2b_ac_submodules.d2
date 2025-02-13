@@ -13,11 +13,8 @@ ac: Atom-centered descriptor \n sub-modules {
         nld1: Dense {class: in_module}
         nld2: Dense {class: in_module}
         nlln: Layer Norm {class: in_module}
-        nlma: Mish Activation {class: in_module}
-        nld1 -> nlln -> nlma -> nld2: {style: {stroke: "#000000"; font-color: black}}
-        nlrescon: ⊕ {class: operator}
-        nld1 -> nlrescon: Residual connection {style: {stroke: "#000000"; font-color: black}}
-        nld2 -> nlrescon: {style: {stroke: "#000000"; font-color: black}}
+        nlbia: Bent Identity Activation {class: in_module}
+        nld1 -> nlln -> nlbia -> nld2: {style: {stroke: "#000000"; font-color: black}}
     }
     mp_block -> mp_block: x N {style: {stroke: "#000000"; font-color: black}}
 
@@ -26,6 +23,9 @@ ac: Atom-centered descriptor \n sub-modules {
 embedding_for_rescon: {class: empty; label: ""}
 indexed_sum_for_mp: {class: empty; label: ""}
 indexed_sum_for_mp -> ac.mp_block: {style: {stroke: "#000000"; font-color: black}}
+nlout: {class: empty; label: ""}
+ac.nl_block.nld2 -> nlout: {style: {stroke: "#000000"; font-color: black}}
+
 # embedding_for_rescon -> ac.nl_block.nlrescon: Reesidual connection {style: {stroke: "#000000"; font-color: black}}
 
 classes: {

@@ -14,11 +14,14 @@ sarb: Species-aware Radial Basis {class: sarb}
 ac: Atom-centered descriptor {class: ac}
 bc: Bond-centered descriptor {class: bc}
 rd: Residual dense layer {class: rd}
-ro: TensorDense readout {class: ro}
+ondro: On-diagonal \nTensorDense readout {class: ro}
+offdro: Off-diagonal \nTensorDense readout {class: ro}
 outs: H irreps. {class: outs}
 # sarb.class: sarb
 
-ins -> sarb -> ac -> bc -> rd -> ro -> outs: {style: {stroke: "#000000"}}
+ins -> sarb -> ac -> bc -> rd 
+rd -> ondro -> outs: {style: {stroke: "#000000"}}
+rd -> offdro -> outs: {style: {stroke: "#000000"}}
 # sarb -> ac: {style: {stroke: "#000000"}}
 # ac -> bc: {style: {stroke: "#000000"}}
 # bc -> rd
