@@ -12,7 +12,7 @@ rd: Residual dense block {
     da -> da: x N_layers {style: {stroke: "#000000"; font-color: black}}
     s1: ⊕ {class: operator}
     da -> s1: {style: {stroke: "#000000"; font-color: black}}
-    da -> s1: Residual connection\n(from first Dense, if > 1 layer): {style: {stroke: "#000000"; font-color: black}}
+    da -> s1: Weighted residual connection\n(from first Dense, if > 1 layer) {style: {stroke: "#000000"; font-color: black}}
 }
 
 bcf -> rd.da: {style: {stroke: "#000000"; font-color: black}}
