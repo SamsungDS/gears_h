@@ -1,5 +1,34 @@
-bcf: "Bond-centered features \{F\}" {class: empty;}# label.near: outside-top-center}
-mlpf: "MLP-processed features \{F\}" {class: empty; label.near: outside-top-center}
+acf: {
+    label: ""
+    class: empty
+    equation: |latex
+        \huge{\mathbf{x}^{\mathrm{AC}}}
+    |
+}
+
+bcf: {
+    label: ""
+    class: empty
+    equation: |latex
+        \huge{\mathbf{x}_{ij}^{\mathrm{BC}}}
+    |
+}
+acfo: {
+    label: ""
+    class: empty
+    equation: |latex
+        \huge{\mathbf{y}^{\mathrm{AC}}}
+    |
+}
+
+bcfo: {
+    label: ""
+    class: empty
+    equation: |latex
+        \huge{\mathbf{y}_{ij}^{\mathrm{BC}}}
+    |
+}
+# mlpf: "MLP-processed features \{F\}" {class: empty; label.near: outside-top-center}
 
 rd: Residual dense block {
     class: rd
@@ -9,14 +38,16 @@ rd: Residual dense block {
         # act: Activation {class: in_module}
         # d1 -> act: {style: {stroke: "#000000"; font-color: black}}
     }
-    da -> da: x N_layers {style: {stroke: "#000000"; font-color: black}}
+    da -> da: x N {style: {stroke: "#000000"; font-color: black}}
     s1: ⊕ {class: operator}
     da -> s1: {style: {stroke: "#000000"; font-color: black}}
-    da -> s1: Weighted residual connection\n(from first Dense, if > 1 layer) {style: {stroke: "#000000"; font-color: black}}
+    da -> s1: Learnable weighted residual\nconnection (from first Dense,\nif > 1 layer) {style: {stroke: "#000000"; font-color: black}}
 }
 
-bcf -> rd.da: {style: {stroke: "#000000"; font-color: black}}
-rd.s1 -> mlpf: {style: {stroke: "#000000"; font-color: black}}
+acf.equation -> rd.da: {style: {stroke: "#000000"; font-color: black}}
+bcf.equation -> rd.da: {style: {stroke: "#000000"; font-color: black}}
+rd.s1 -> acfo.equation: {style: {stroke: "#000000"; font-color: black}}
+rd.s1 -> bcfo.equation: {style: {stroke: "#000000"; font-color: black}}
 
 classes: {
     operator: {shape: circle
@@ -66,6 +97,7 @@ classes: {
         style: {
             fill: "#EE8866"
             stroke: "#000000"
+            bold: true
         }
     }
     ro: {
@@ -96,6 +128,7 @@ classes: {
 vars: {
     d2-config: {
       layout-engine: elk
+      pad: 10
     #   theme-id: 101
     }
 }

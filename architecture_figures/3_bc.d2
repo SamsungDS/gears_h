@@ -1,7 +1,32 @@
-acfi: "Atom-centered features \{Fi\}" {class: empty;}# label.near: outside-top-center}
-acfj: "Atom-centered features \{Fj\}" {class: empty;}# label.near: outside-top-center}
-r: rij {class: empty}
-bcf: "Bond-centered features \{F\}" {class: empty; label.near: outside-top-center}
+acfi: {
+    label: ""
+    class: empty
+    equation: |latex
+        \huge{\mathbf{x}_i^{\mathrm{AC}}}
+    |
+}
+acfj: {
+    label: ""
+    class: empty
+    equation: |latex
+        \huge{\mathbf{x}_j^{\mathrm{AC}}}
+    |
+}
+
+# acfi: "Atom-centered features \{Fi\}" {class: empty;}# label.near: outside-top-center}
+# acfj: "Atom-centered features \{Fj\}" {class: empty;}# label.near: outside-top-center}
+r: {label: ""
+    equation: |latex
+        \huge{\mathbf{r}_{ij}}
+    |
+    class: empty}
+bcf: {
+    label: ""
+    class: empty
+    equation: |latex
+        \huge{\mathbf{x}_{ij}^{\mathrm{BC}}}
+    |
+}
 
 bc: Bond-centered descriptor {
     class: bc
@@ -14,17 +39,17 @@ bc: Bond-centered descriptor {
     s2: ⊕ {class: operator}
     d1 -> s2: Residual connection {style: {stroke: "#000000"; font-color: black}}
     d2 -> s2: {style: {stroke: "#000000"; font-color: black}}
-    bond_exp: Bond expansion {class: in_module}
+    bond_exp: Basis expansion {class: in_module}
     d3be: Dense {class: in_module}
     bond_exp -> d3be: {style: {stroke: "#000000"; font-color: black}}
     tm: Tensor module {class: in_module}
     s2 -> tm: {style: {stroke: "#000000"; font-color: black}}
     d3be -> tm: {style: {stroke: "#000000"; font-color: black}}
 }
-acfi -> bc.s1: {style: {stroke: "#000000"; font-color: black}}
-acfj -> bc.s1: {style: {stroke: "#000000"; font-color: black}}
-r -> bc.bond_exp: {style: {stroke: "#000000"; font-color: black}}
-bc.tm -> bcf: {style: {stroke: "#000000"; font-color: black}}
+acfi.equation -> bc.s1: {style: {stroke: "#000000"; font-color: black}}
+acfj.equation -> bc.s1: {style: {stroke: "#000000"; font-color: black}}
+r.equation -> bc.bond_exp: {style: {stroke: "#000000"; font-color: black}}
+bc.tm -> bcf.equation: {style: {stroke: "#000000"; font-color: black}}
 
 classes: {
     operator: {shape: circle
@@ -68,6 +93,7 @@ classes: {
         style: {
             fill: "#EEDD88"
             stroke: "#000000"
+            bold: true
         }
     }
     rd: {
@@ -104,6 +130,7 @@ classes: {
 vars: {
     d2-config: {
       layout-engine: elk
+      pad: 10
     #   theme-id: 101
     }
 }

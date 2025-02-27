@@ -5,12 +5,26 @@
 #                 \\large{Z_i}
 #                |
 #     }
-zi: Zi {class: empty}
-zj: Zj {class: empty}
-r: rij {class: empty}
-f: "2-body features \{f\}" {class: empty;label.near: outside-top-center}
+# zi: Zi {class: empty}
+zj: {label: ""
+     equation: |latex
+         \large{Z_j}
+     |
+     class: input}
+r: {label: ""
+    equation: |latex
+        \large{\mathbf{r}_{ij}}
+    |
+    class: input}
+f: {label: ""
+    equation: |latex
+        \huge{\mathbf{x}^{2\mathrm{B}}_{ij}}
+    |
+    class: empty
+    label.near: outside-bottom-center
+    }
 # ins.class: input
-sarb: Species-aware radial basis {
+sarb: Species-Aware Radial Basis {
     class: sarb
     embedding: Embedding {class: in_module}
     basis: Basis expansion {class: in_module}
@@ -18,18 +32,19 @@ sarb: Species-aware radial basis {
     ⊗: {class: operator}
     # ⊕: {class: operator}
 
-
-    embedding -> transformed_embedding: Dense ⭙ Embedding(Zj) {style: {stroke: "#000000"; font-color: black}}
+    _.r -> basis: {style: {stroke: "#000000"}}
+    _.zj -> embedding: {style: {stroke: "#000000"}}
+    embedding -> transformed_embedding: Dense {style: {stroke: "#000000"; font-color: black}}
     transformed_embedding -> ⊗: {style: {stroke: "#000000"}}
     basis -> ⊗: {style: {stroke: "#000000"}}
+    ⊗ -> _.f.equation: {style: {stroke: "#000000"}}
     # ⊗ -> ⊕: {style: {stroke: "#000000"}}
     # transformed_embedding -> ⊕: Residual connection {style: {stroke: "#000000"; font-color: black}}
 }
 
-zi -> sarb.embedding: {style: {stroke: "#000000"}}
-zj -> sarb.embedding: {style: {stroke: "#000000"}}
-r -> sarb.basis: {style: {stroke: "#000000"}}
-sarb.⊗ -> f: {style: {stroke: "#000000"}}
+# zi -> sarb.embedding: {style: {stroke: "#000000"}}
+
+# sarb.⊗ -> f.equation: {style: {stroke: "#000000"}}
 
 
 classes: {
@@ -44,7 +59,7 @@ classes: {
     empty: {
             # label: ""
             width: 50
-            height: 50
+            height: 10
             style: {
                 fill: transparent
                 stroke: transparent
@@ -55,6 +70,7 @@ classes: {
         style: {
             fill: "#44BB99"
             stroke: "#000000"
+            bold: true
         }
     }
     in_module: {
@@ -111,5 +127,6 @@ vars: {
     d2-config: {
       layout-engine: elk
     #   theme-id: 101
+      pad: 10
     }
 }
