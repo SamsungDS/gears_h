@@ -2,7 +2,7 @@
 
 # zi: Zi {class: empty}
 # zj: Zj {class: empty}
-sarb_emb: Embedding (from Species-\nAware Radial Basis) {class: empty;label.near: top-center}
+# sarb_emb: Embedding (from Species-\nAware Radial Basis) {class: empty;label.near: top-center}
 # f: "2-body features \{f\}" {class: empty;}#label.near: outside-top-center}
 f: {label: ""
     equation: |latex
@@ -32,13 +32,15 @@ ac: Atom-Centered Descriptor {
     sum_j  -> c: {style: {stroke: "#000000"; font-color: black}}
     3b -> c: {style: {stroke: "#000000"; font-color: black}}
     5b -> c: {style: {stroke: "#000000"; font-color: black}}
-    transformed_embedding: Transformed Embedding {class: in_module}
-    p1: ⊗ {class: operator}
-    c -> p1: {style: {stroke: "#000000"; font-color: black}}
-    transformed_embedding -> p1: {style: {stroke: "#000000"; font-color: black}}
+    # transformed_embedding: Transformed Embedding {class: in_module}
+    # p1: ⊗ {class: operator}
+    # c -> p1: {style: {stroke: "#000000"; font-color: black}}
+    c -> mp_block: {style: {stroke: "#000000"; font-color: black}}
+    # transformed_embedding -> p1: {style: {stroke: "#000000"; font-color: black}}
     # p1 -> sum_j: {style: {stroke: "#000000"; font-color: black}}
     mp_block:  Message-passing block {
         class: in_module
+        style: {stroke-dash: 3}
         # direction: right
         # sa: Self-attention {class: in_module}
         # mpln: Layer norm{class: in_module}
@@ -46,7 +48,7 @@ ac: Atom-Centered Descriptor {
         # mpln -> sa: x number of message-passing steps {style: {stroke: "#000000"; font-color: black}}
     }
     # sum_j -> mp_block.sa: {style: {stroke: "#000000"; font-color: black}}
-    p1 -> mp_block: {style: {stroke: "#000000"; font-color: black}}
+    # p1 -> mp_block: {style: {stroke: "#000000"; font-color: black}}
     nl_block: Non-linear block {
         class: in_module
         # nld1: Dense {class: in_module}
@@ -67,7 +69,7 @@ ac: Atom-Centered Descriptor {
 # zj -> sarb_emb: {style: {stroke: "#000000"; font-color: black}}
 # f -> ac.sum_j: {style: {stroke: "#000000"; font-color: black}} #ac.3b: TensorDense {style: {stroke: "#000000"; font-color: black}}
 # f -> ac.c: {style: {stroke: "#000000"; font-color: black}}
-sarb_emb -> ac.transformed_embedding: Dense {style: {stroke: "#000000"; font-color: black}}
+# sarb_emb -> ac.transformed_embedding: Dense {style: {stroke: "#000000"; font-color: black}}
 # ac.nl_block.nlrescon -> acf: {style: {stroke: "#000000"; font-color: black}}
 ac.nl_block -> acf.equation: {style: {stroke: "#000000"; font-color: black}}
 

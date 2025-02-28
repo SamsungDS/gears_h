@@ -1,8 +1,11 @@
+# direction: right
+
 ac: Atom-centered descriptor \n sub-modules {
     class: ac
     mp_block:  Message-passing block {
         class: in_module
         direction: right
+        style: {stroke-dash: 3}
         sa: Self-attention {class: in_module}
         mpln: Layer norm{class: in_module}
         sa -> mpln: {style: {stroke: "#000000"; font-color: black}}
@@ -16,9 +19,9 @@ ac: Atom-centered descriptor \n sub-modules {
         nlbia: Bent Identity Activation {class: in_module}
         nld1 -> nlln -> nlbia -> nld2: {style: {stroke: "#000000"; font-color: black}}
     }
-    mp_block -> mp_block: x N {style: {stroke: "#000000"; font-color: black; bold: true}}
+    mp_block.mpln -> mp_block.sa: x N {style: {stroke: "#000000"; font-color: black; italic: true}}
 
-    mp_block.mpln -> nl_block.nld1: {style: {stroke: "#000000"; font-color: black}}
+    mp_block -> nl_block.nld1: {style: {stroke: "#000000"; font-color: black}}
 }
 embedding_for_rescon: {class: empty; label: ""}
 indexed_sum_for_mp: {class: empty; label: ""}
