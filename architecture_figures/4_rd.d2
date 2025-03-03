@@ -1,53 +1,52 @@
-acf: {
+f: {
     label: ""
     class: empty
     equation: |latex
-        \huge{\mathbf{x}^{\mathrm{AC}}}
+        \huge{\mathbf{x}^{\mathrm{AC}}\ \mathrm{or}\ \mathbf{x}_{ij}^{\mathrm{BC}}}
     |
 }
 
-bcf: {
+fo: {
     label: ""
     class: empty
     equation: |latex
-        \huge{\mathbf{x}_{ij}^{\mathrm{BC}}}
-    |
-}
-acfo: {
-    label: ""
-    class: empty
-    equation: |latex
-        \huge{\mathbf{y}^{\mathrm{AC}}}
+        \huge{\mathbf{y}^{\mathrm{AC}}\ \mathrm{or}\ \mathbf{y}_{ij}^{\mathrm{BC}}}
     |
 }
 
-bcfo: {
-    label: ""
-    class: empty
-    equation: |latex
-        \huge{\mathbf{y}_{ij}^{\mathrm{BC}}}
-    |
-}
 # mlpf: "MLP-processed features \{F\}" {class: empty; label.near: outside-top-center}
 
-rd: Residual dense block {
+rd: Residual Dense Block {
     class: rd
-    da: Multi-layer perceptron {
+    initial_dense: Dense {class: in_module}
+    optional_block: {
         class: in_module
-        # d1: Dense {class: in_module}
-        # act: Activation {class: in_module}
-        # d1 -> act: {style: {stroke: "#000000"; font-color: black}}
+        style: {stroke-dash: 3; multiple: true}
+        label: ""
+        ob_act: Nonlinear Activation {class: in_module}
+        ob_dense: Dense {class: in_module}
+        ob_act -> ob_dense: {style: {stroke: "#000000"; font-color: black}}
+
     }
-    da -> da: x N {style: {stroke: "#000000"; font-color: black}}
+    # da: Multi-layer perceptron {
+    #     class: in_module
+    #     style: {multiple: true}
+    #     # d1: Dense {class: in_module}
+    #     # act: Activation {class: in_module}
+    #     # d1 -> act: {style: {stroke: "#000000"; font-color: black}}
+    # }
+    # da -> da: x N {style: {stroke: "#000000"; font-color: black}}
     s1: ⊕ {class: operator}
-    da -> s1: {style: {stroke: "#000000"; font-color: black}}
-    da -> s1: Learnable weighted residual\nconnection (from first Dense,\nif > 1 layer) {style: {stroke: "#000000"; font-color: black}}
+    initial_dense -> optional_block: {style: {stroke: "#000000"; font-color: black}}
+    initial_dense -> s1: Learnable\nweight  {style: {stroke: "#000000"; font-color: black; font-size: 20}}
+    optional_block -> s1: {style: {stroke: "#000000"; font-color: black}}
+    # optional_block -> s1: Learnable weighted residual\nconnection (from first Dense,\nif > 1 layer) {style: {stroke: "#000000"; font-color: black}}
 }
 
-acf.equation -> rd.da: {style: {stroke: "#000000"; font-color: black}}
-bcf.equation -> rd.da: {style: {stroke: "#000000"; font-color: black}}
-rd.s1 -> acfo.equation: {style: {stroke: "#000000"; font-color: black}}
-rd.s1 -> bcfo.equation: {style: {stroke: "#000000"; font-color: black}}
+f.equation -> rd.initial_dense: {style: {stroke: "#000000"; font-color: black}}
+# bcf.equation -> rd.da: {style: {stroke: "#000000"; font-color: black}}
+rd.s1 -> fo.equation: {style: {stroke: "#000000"; font-color: black}}
+# rd.s1 -> bcfo.equation: {style: {stroke: "#000000"; font-color: black}}
 
 classes: {
     operator: {shape: circle
