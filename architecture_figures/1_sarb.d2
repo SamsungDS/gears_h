@@ -1,51 +1,48 @@
-# zi: {class: empty
-#      label: ""
-#      label.near: bottom-center
-#      equation: |latex 
-#                 \\large{Z_i}
-#                |
-#     }
-# zi: Zi {class: empty}
+# direction: right
+
+vars: {
+    d2-config: {
+      layout-engine: elk
+    #   theme-id: 101
+      pad: 10
+    }
+}
+
 zj: {label: ""
      equation: |latex
-         \large{Z_j}
+         \huge{Z_j}
      |
-     class: input}
+     class: empty
+}
 r: {label: ""
     equation: |latex
-        \large{\mathbf{r}_{ij}}
+        \huge{\mathbf{r}_{ij}}
     |
-    class: input}
+    class: empty
+}
 f: {label: ""
     equation: |latex
         \huge{\mathbf{x}^{2\mathrm{B}}_{ij}}
     |
     class: empty
     label.near: outside-bottom-center
-    }
-# ins.class: input
+}
+
 sarb: Species-Aware Radial Basis {
     class: sarb
     embedding: Embedding {class: in_module}
     basis: Basis expansion {class: in_module}
-    transformed_embedding: Transformed embedding {class: in_module}
+    dense: Dense {class: in_module}
     ⊗: {class: operator}
     # ⊕: {class: operator}
 
-    _.r -> basis: {style: {stroke: "#000000"}}
-    _.zj -> embedding: {style: {stroke: "#000000"}}
-    embedding -> transformed_embedding: Dense {style: {stroke: "#000000"; font-color: black}}
-    transformed_embedding -> ⊗: {style: {stroke: "#000000"}}
+    _.r.equation -> basis: {style: {stroke: "#000000"}}
+    _.zj.equation -> embedding: {style: {stroke: "#000000"}}
+    embedding -> dense: {style: {stroke: "#000000"; font-color: black}}
+    dense -> ⊗: {style: {stroke: "#000000"}}
     basis -> ⊗: {style: {stroke: "#000000"}}
     ⊗ -> _.f.equation: {style: {stroke: "#000000"}}
-    # ⊗ -> ⊕: {style: {stroke: "#000000"}}
-    # transformed_embedding -> ⊕: Residual connection {style: {stroke: "#000000"; font-color: black}}
 }
-
-# zi -> sarb.embedding: {style: {stroke: "#000000"}}
-
-# sarb.⊗ -> f.equation: {style: {stroke: "#000000"}}
-
 
 classes: {
     operator: {shape: circle
@@ -53,11 +50,9 @@ classes: {
                height: 35
                style: {fill: "#FFFFFF"
                        stroke: "#000000"
-                    #    font: mono
                       }
     }
     empty: {
-            # label: ""
             width: 50
             height: 10
             style: {
@@ -115,18 +110,11 @@ classes: {
         # label: ""
         width: 50
         height: 50
+        shape: parallelogram
         style: {
             fill: "#99DDFF"
             stroke: "#000000"
             multiple: true
         }
-    }
-}
-
-vars: {
-    d2-config: {
-      layout-engine: elk
-    #   theme-id: 101
-      pad: 10
     }
 }

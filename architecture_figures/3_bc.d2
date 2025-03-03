@@ -1,3 +1,13 @@
+# direction: right
+
+vars: {
+    d2-config: {
+      layout-engine: elk
+      pad: 10
+    #   theme-id: 101
+    }
+}
+
 acfi: {
     label: ""
     class: empty
@@ -13,8 +23,6 @@ acfj: {
     |
 }
 
-# acfi: "Atom-centered features \{Fi\}" {class: empty;}# label.near: outside-top-center}
-# acfj: "Atom-centered features \{Fj\}" {class: empty;}# label.near: outside-top-center}
 r: {label: ""
     equation: |latex
         \huge{\mathbf{r}_{ij}}
@@ -28,7 +36,7 @@ bcf: {
     |
 }
 
-bc: Bond-centered descriptor {
+bc: Bond-Centered Descriptor {
     class: bc
     s1: ⊕ {class: operator}
     d1: Dense {class: in_module}
@@ -37,12 +45,12 @@ bc: Bond-centered descriptor {
     d2: Dense {class: in_module}
     s1 -> d1 -> ln -> mish -> d2: {style: {stroke: "#000000"; font-color: black}}
     s2: ⊕ {class: operator}
-    d1 -> s2: Residual connection {style: {stroke: "#000000"; font-color: black}}
+    d1 -> s2: {style: {stroke: "#000000"; font-color: black}}
     d2 -> s2: {style: {stroke: "#000000"; font-color: black}}
     bond_exp: Basis expansion {class: in_module}
     d3be: Dense {class: in_module}
     bond_exp -> d3be: {style: {stroke: "#000000"; font-color: black}}
-    tm: Tensor module {class: in_module}
+    tm: Tensor Product {class: in_module}
     s2 -> tm: {style: {stroke: "#000000"; font-color: black}}
     d3be -> tm: {style: {stroke: "#000000"; font-color: black}}
 }
@@ -57,11 +65,9 @@ classes: {
                height: 35
                style: {fill: "#FFFFFF"
                        stroke: "#000000"
-                    #    font: mono
                       }
     }
     empty: {
-            # label: ""
             width: 50
             height: 50
             style: {
@@ -80,7 +86,6 @@ classes: {
         style: {
             fill: "#FFFFFF"
             stroke: "#000000"
-            # opacity: 0.5
         }
     }
     ac: {
@@ -116,7 +121,6 @@ classes: {
         }
     }
     input : {
-        # label: ""
         width: 50
         height: 50
         style: {
@@ -124,13 +128,5 @@ classes: {
             stroke: "#000000"
             multiple: true
         }
-    }
-}
-
-vars: {
-    d2-config: {
-      layout-engine: elk
-      pad: 10
-    #   theme-id: 101
     }
 }
