@@ -1,25 +1,28 @@
 # direction: right
 
-ac: Atom-centered descriptor \n sub-modules {
+ac: Atom-Centered Descriptor \n Sub-modules {
     class: ac
-    mp_block:  Message-passing block {
+    mp_block:  Message-Passing Blocks {
         class: in_module
         direction: right
-        style: {stroke-dash: 3}
+        style: {stroke-dash: 3; multiple: true}
         sa: Self-attention {class: in_module}
         mpln: Layer norm{class: in_module}
         sa -> mpln: {style: {stroke: "#000000"; font-color: black}}
         # mpln -> sa: x number of message-passing steps {style: {stroke: "#000000"; font-color: black}}
     }
-    nl_block: Non-linear block {
+    nl_block: Nonlinear Block {
         class: in_module
         nld1: Dense {class: in_module}
         nld2: Dense {class: in_module}
         nlln: Layer Norm {class: in_module}
-        nlbia: Bent Identity Activation {class: in_module}
+        nlbia: Bent Identity\nActivation {class: in_module}
+        nlrc: ⊕ {class: operator}
         nld1 -> nlln -> nlbia -> nld2: {style: {stroke: "#000000"; font-color: black}}
+        nld1 -> nlrc: {style: {stroke: "#000000"; font-color: black}}
+        nld2 -> nlrc: {style: {stroke: "#000000"; font-color: black}}
     }
-    mp_block.mpln -> mp_block.sa: x N {style: {stroke: "#000000"; font-color: black; italic: true}}
+    # mp_block.mpln -> mp_block.sa: x N {style: {stroke: "#000000"; font-color: black; italic: true}}
 
     mp_block -> nl_block.nld1: {style: {stroke: "#000000"; font-color: black}}
 }
@@ -27,7 +30,7 @@ embedding_for_rescon: {class: empty; label: ""}
 indexed_sum_for_mp: {class: empty; label: ""}
 indexed_sum_for_mp -> ac.mp_block: {style: {stroke: "#000000"; font-color: black}}
 nlout: {class: empty; label: ""}
-ac.nl_block.nld2 -> nlout: {style: {stroke: "#000000"; font-color: black}}
+ac.nl_block.nlrc -> nlout: {style: {stroke: "#000000"; font-color: black}}
 
 # embedding_for_rescon -> ac.nl_block.nlrescon: Reesidual connection {style: {stroke: "#000000"; font-color: black}}
 
