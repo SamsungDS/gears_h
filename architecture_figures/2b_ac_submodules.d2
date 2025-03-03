@@ -1,4 +1,12 @@
 # direction: right
+ 
+vars: {
+    d2-config: {
+      layout-engine: elk
+      pad: 10
+    #   theme-id: 101
+    }
+}
 
 ac: Atom-Centered Descriptor \n Sub-modules {
     class: ac
@@ -9,7 +17,6 @@ ac: Atom-Centered Descriptor \n Sub-modules {
         sa: Self-attention {class: in_module}
         mpln: Layer norm{class: in_module}
         sa -> mpln: {style: {stroke: "#000000"; font-color: black}}
-        # mpln -> sa: x number of message-passing steps {style: {stroke: "#000000"; font-color: black}}
     }
     nl_block: Nonlinear Block {
         class: in_module
@@ -22,7 +29,6 @@ ac: Atom-Centered Descriptor \n Sub-modules {
         nld1 -> nlrc: {style: {stroke: "#000000"; font-color: black}}
         nld2 -> nlrc: {style: {stroke: "#000000"; font-color: black}}
     }
-    # mp_block.mpln -> mp_block.sa: x N {style: {stroke: "#000000"; font-color: black; italic: true}}
 
     mp_block -> nl_block.nld1: {style: {stroke: "#000000"; font-color: black}}
 }
@@ -32,19 +38,15 @@ indexed_sum_for_mp -> ac.mp_block: {style: {stroke: "#000000"; font-color: black
 nlout: {class: empty; label: ""}
 ac.nl_block.nlrc -> nlout: {style: {stroke: "#000000"; font-color: black}}
 
-# embedding_for_rescon -> ac.nl_block.nlrescon: Reesidual connection {style: {stroke: "#000000"; font-color: black}}
-
 classes: {
     operator: {shape: circle
                width: 35
                height: 35
                style: {fill: "#FFFFFF"
                        stroke: "#000000"
-                    #    font: mono
                       }
     }
     empty: {
-            # label: ""
             width: 50
             height: 50
             style: {
@@ -64,7 +66,6 @@ classes: {
             fill: "#FFFFFF"
             stroke: "#000000"
             bold: true
-            # opacity: 0.5
         }
     }
     ac: {
@@ -100,7 +101,6 @@ classes: {
         }
     }
     input : {
-        # label: ""
         width: 50
         height: 50
         style: {
@@ -108,13 +108,5 @@ classes: {
             stroke: "#000000"
             multiple: true
         }
-    }
-}
-
-vars: {
-    d2-config: {
-      layout-engine: elk
-      pad: 10
-    #   theme-id: 101
     }
 }

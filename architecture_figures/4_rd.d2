@@ -1,3 +1,13 @@
+# direction: right
+
+vars: {
+    d2-config: {
+      layout-engine: elk
+      pad: 10
+    #   theme-id: 101
+    }
+}
+
 f: {
     label: ""
     class: empty
@@ -14,8 +24,6 @@ fo: {
     |
 }
 
-# mlpf: "MLP-processed features \{F\}" {class: empty; label.near: outside-top-center}
-
 rd: Residual Dense Block {
     class: rd
     initial_dense: Dense {class: in_module}
@@ -28,25 +36,16 @@ rd: Residual Dense Block {
         ob_act -> ob_dense: {style: {stroke: "#000000"; font-color: black}}
 
     }
-    # da: Multi-layer perceptron {
-    #     class: in_module
-    #     style: {multiple: true}
-    #     # d1: Dense {class: in_module}
-    #     # act: Activation {class: in_module}
-    #     # d1 -> act: {style: {stroke: "#000000"; font-color: black}}
-    # }
-    # da -> da: x N {style: {stroke: "#000000"; font-color: black}}
+
     s1: ⊕ {class: operator}
     initial_dense -> optional_block: {style: {stroke: "#000000"; font-color: black}}
     initial_dense -> s1: Learnable\nweight  {style: {stroke: "#000000"; font-color: black; font-size: 20}}
     optional_block -> s1: {style: {stroke: "#000000"; font-color: black}}
-    # optional_block -> s1: Learnable weighted residual\nconnection (from first Dense,\nif > 1 layer) {style: {stroke: "#000000"; font-color: black}}
+
 }
 
 f.equation -> rd.initial_dense: {style: {stroke: "#000000"; font-color: black}}
-# bcf.equation -> rd.da: {style: {stroke: "#000000"; font-color: black}}
 rd.s1 -> fo.equation: {style: {stroke: "#000000"; font-color: black}}
-# rd.s1 -> bcfo.equation: {style: {stroke: "#000000"; font-color: black}}
 
 classes: {
     operator: {shape: circle
@@ -54,11 +53,9 @@ classes: {
                height: 35
                style: {fill: "#FFFFFF"
                        stroke: "#000000"
-                    #    font: mono
                       }
     }
     empty: {
-            # label: ""
             width: 50
             height: 50
             style: {
@@ -77,7 +74,6 @@ classes: {
         style: {
             fill: "#FFFFFF"
             stroke: "#000000"
-            # opacity: 0.5
         }
     }
     ac: {
@@ -121,13 +117,5 @@ classes: {
             stroke: "#000000"
             multiple: true
         }
-    }
-}
-
-vars: {
-    d2-config: {
-      layout-engine: elk
-      pad: 10
-    #   theme-id: 101
     }
 }

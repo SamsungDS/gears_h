@@ -7,9 +7,6 @@ vars: {
   }
 }
 
-# ins: {equation: |latex 
-#         Z_i, Z_j, r_{ij}|
-# }
 z: {
   label: ""
   equation: |latex
@@ -21,8 +18,9 @@ r: {label: ""
     equation: |latex
         \large{\mathbf{r}_{ij}}
     |
-    class: input}
-# ins.class: input
+    class: input
+}
+
 sarb: Species-Aware Radial Basis {class: sarb}
 ac: Atom-Centered {class: ac}
 bc: Bond-Centered {class: bc}
@@ -30,7 +28,6 @@ rd: Residual Dense {class: rd}
 ondro: On-diagonal \nTensorDense Readout {class: ro}
 offdro: Off-diagonal \nTensorDense Readout {class: ro}
 outs: H Irreps. {class: outs}
-# sarb.class: sarb
 
 ac -> rd: {style: {stroke: "#000000"}}
 z -> sarb -> ac -> bc -> rd: {style: {stroke: "#000000"}}
@@ -38,9 +35,6 @@ r -> sarb: {style: {stroke: "#000000"}}
 r -> bc: {style: {stroke: "#000000"}}
 rd -> ondro -> outs: {style: {stroke: "#000000"}}
 rd -> offdro -> outs: {style: {stroke: "#000000"}}
-# sarb -> ac: {style: {stroke: "#000000"}}
-# ac -> bc: {style: {stroke: "#000000"}}
-# bc -> rd
 
 classes: {
   empty: {
@@ -91,7 +85,6 @@ classes: {
     shape: parallelogram
   }
   input: {
-    # label: ""
     width: 50
     height: 50
     shape: parallelogram
@@ -102,17 +95,3 @@ classes: {
     }
   }
 }
-
-# if colorset == 'light':
-#     cset = namedtuple('Lcset',
-#                     'light_blue orange    light_yellow pink    light_cyan 
-#                      mint      pear       olive      pale_grey black')
-#         return cset('#77AADD', '#EE8866', '#EEDD88', '#FFAABB', '#99DDFF',
-#                     '#44BB99', '#BBCC33', '#AAAA00', '#DDDDDD', '#000000')
-
-# if colorset == 'bright':
-#         cset = namedtuple('Bcset',
-#                     'blue      red        green      yellow     cyan
-#                     purple     grey       black')
-#         return cset('#4477AA', '#EE6677', '#228833', '#CCBB44', '#66CCEE',
-#                     '#AA3377', '#BBBBBB', '#000000')
