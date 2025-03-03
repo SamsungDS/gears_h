@@ -28,18 +28,18 @@ sarb: Species-Aware Radial Basis {
     class: sarb
     embedding: Embedding {class: in_module}
     basis: Basis expansion {class: in_module}
-    transformed_embedding: Transformed embedding {class: in_module}
+    dense: Dense {class: in_module}
     ⊗: {class: operator}
     # ⊕: {class: operator}
 
     _.r -> basis: {style: {stroke: "#000000"}}
     _.zj -> embedding: {style: {stroke: "#000000"}}
-    embedding -> transformed_embedding: Dense {style: {stroke: "#000000"; font-color: black}}
-    transformed_embedding -> ⊗: {style: {stroke: "#000000"}}
+    embedding -> dense: {style: {stroke: "#000000"; font-color: black}}
+    dense -> ⊗: {style: {stroke: "#000000"}}
     basis -> ⊗: {style: {stroke: "#000000"}}
     ⊗ -> _.f.equation: {style: {stroke: "#000000"}}
     # ⊗ -> ⊕: {style: {stroke: "#000000"}}
-    # transformed_embedding -> ⊕: Residual connection {style: {stroke: "#000000"; font-color: black}}
+    # dense -> ⊕: Residual connection {style: {stroke: "#000000"; font-color: black}}
 }
 
 # zi -> sarb.embedding: {style: {stroke: "#000000"}}
@@ -115,6 +115,7 @@ classes: {
         # label: ""
         width: 50
         height: 50
+        shape: parallelogram
         style: {
             fill: "#99DDFF"
             stroke: "#000000"
