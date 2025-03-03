@@ -28,7 +28,7 @@ bcf: {
     |
 }
 
-bc: Bond-centered descriptor {
+bc: Bond-Centered Descriptor {
     class: bc
     s1: ⊕ {class: operator}
     d1: Dense {class: in_module}
@@ -37,12 +37,12 @@ bc: Bond-centered descriptor {
     d2: Dense {class: in_module}
     s1 -> d1 -> ln -> mish -> d2: {style: {stroke: "#000000"; font-color: black}}
     s2: ⊕ {class: operator}
-    d1 -> s2: Residual connection {style: {stroke: "#000000"; font-color: black}}
+    d1 -> s2: {style: {stroke: "#000000"; font-color: black}}
     d2 -> s2: {style: {stroke: "#000000"; font-color: black}}
     bond_exp: Basis expansion {class: in_module}
     d3be: Dense {class: in_module}
     bond_exp -> d3be: {style: {stroke: "#000000"; font-color: black}}
-    tm: Tensor module {class: in_module}
+    tm: Tensor Product {class: in_module}
     s2 -> tm: {style: {stroke: "#000000"; font-color: black}}
     d3be -> tm: {style: {stroke: "#000000"; font-color: black}}
 }
