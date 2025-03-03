@@ -23,11 +23,11 @@ acf: {
 ac: Atom-Centered Descriptor {
     class: ac
     _.f.equation -> sum_j: {style: {stroke: "#000000"; font-color: black}}
-    sum_j: ∑j {class: operator}
-    sum_j -> 3b: TensorDense {style: {stroke: "#000000"; font-color: black}}
-    3b: 3-body {class: in_module}
-    5b: 5-body {class: in_module}
-    3b -> 5b: TensorDense {style: {stroke: "#000000"; font-color: black}}
+    sum_j: ∑ j {class: operator}
+    sum_j -> 3b: {style: {stroke: "#000000"; font-color: black}}
+    3b: TensorDense {class: in_module}
+    5b: TensorDense {class: in_module}
+    3b -> 5b: {style: {stroke: "#000000"; font-color: black}}
     c: Concatenate  {class: in_module}
     sum_j  -> c: {style: {stroke: "#000000"; font-color: black}}
     3b -> c: {style: {stroke: "#000000"; font-color: black}}
@@ -38,9 +38,9 @@ ac: Atom-Centered Descriptor {
     c -> mp_block: {style: {stroke: "#000000"; font-color: black}}
     # transformed_embedding -> p1: {style: {stroke: "#000000"; font-color: black}}
     # p1 -> sum_j: {style: {stroke: "#000000"; font-color: black}}
-    mp_block:  Message-passing block {
+    mp_block:  Message-Passing Blocks {
         class: in_module
-        style: {stroke-dash: 3}
+        style: {stroke-dash: 3; multiple: true}
         # direction: right
         # sa: Self-attention {class: in_module}
         # mpln: Layer norm{class: in_module}
@@ -49,7 +49,7 @@ ac: Atom-Centered Descriptor {
     }
     # sum_j -> mp_block.sa: {style: {stroke: "#000000"; font-color: black}}
     # p1 -> mp_block: {style: {stroke: "#000000"; font-color: black}}
-    nl_block: Non-linear block {
+    nl_block: Nonlinear Block {
         class: in_module
         # nld1: Dense {class: in_module}
         # nld2: Dense {class: in_module}
