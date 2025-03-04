@@ -47,8 +47,8 @@ def train(
 
 @app.command()
 def infer(
-    config_path: Path = typer.Argument(
-        ..., help="Training configuration YAML file."
+    model_path: Path = typer.Argument(
+        ..., help="Model path."
     ),
     structure_path: Path = typer.Argument(..., help="Structure to infer on."),
 ):
@@ -58,7 +58,7 @@ def infer(
 
     from slh.infer.infer import infer
 
-    infer(config_path, structure_path)
+    infer(model_path, structure_path)
 
 
 # @app.command()
