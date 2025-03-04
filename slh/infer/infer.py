@@ -49,6 +49,11 @@ def create_inference_state(model_path: Path | str):
 
     return state
 
+def infer_h_irreps(apply_fn, params, numbers, ij, D, B):
+    h_irreps_off_diagonal, h_irreps_on_diagonal = apply_fn(params, 
+                                                           numbers, ij, D, B)
+    return h_irreps_off_diagonal, h_irreps_on_diagonal
+
 def infer(model_path: Path| str, 
           structure_path: Path | str):
     # Set up logging
@@ -57,7 +62,16 @@ def infer(model_path: Path| str,
     os.environ["JAX_PLATFORMS"] = "cpu"
     # Create train state
     state = create_inference_state(model_path)
+    apply_fn = jax.jit(state.apply_fn)
     # Make H block mapper
     with open(model_path / "species_ells.yaml", "r") as f:
         species_ells_dict = yaml.load(f, yaml.SafeLoader)
     hmapper = make_mapper_from_elements(species_ells_dict)
+    # Read target structure
+    log.info("Reading target structure.")
+    config = parse_config(model_path / "config.yaml")
+    inputs = process_structure_for_inference(structure_path, 
+                                             config.model.bond_centered.cutoff)
+    # Infer H irreps
+    log.info("Inferring H irreps.")
+    h_irreps_off_diagonal, h_irreps_on_diagonal = infer_h_irreps(apply_fn, state.params, *inputs)
