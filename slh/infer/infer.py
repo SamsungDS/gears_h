@@ -10,6 +10,7 @@ import optax
 from slhtools.utils import get_neighbourlist_ijD
 
 from slh.config.common import parse_config
+from slh.hblockmapper import make_mapper_from_elements
 from slh.model.builder import ModelBuilder
 from slh.train.checkpoints import create_train_state, load_params
 from slh.train.run import setup_logging
@@ -56,4 +57,7 @@ def infer(model_path: Path| str,
     os.environ["JAX_PLATFORMS"] = "cpu"
     # Create train state
     state = create_inference_state(model_path)
-    
+    # Make H block mapper
+    with open(model_path / "species_ells.yaml", "r") as f:
+        species_ells_dict = yaml.load(f, yaml.SafeLoader)
+    hmapper = make_mapper_from_elements(species_ells_dict)
