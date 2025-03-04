@@ -147,7 +147,7 @@ def get_hamiltonian_mapper_from_dataset(dataset_as_list):
     )
     log.info(f"Orbital ells dictionary: {orbital_ells_across_dataset}")
 
-    return make_mapper_from_elements(orbital_ells_across_dataset)
+    return make_mapper_from_elements(orbital_ells_across_dataset), orbital_ells_across_dataset
 
 
 def get_max_ell_and_max_features(hmap: MultiElementPairHBlockMapper):
@@ -363,7 +363,7 @@ class InMemoryDataset:
 
         self.sample_data = dataset_as_list[0]
 
-        self.hmap = get_hamiltonian_mapper_from_dataset(dataset_as_list=dataset_as_list)
+        self.hmap, self.species_ells_dict = get_hamiltonian_mapper_from_dataset(dataset_as_list=dataset_as_list)
 
         self.max_ell, self.readout_nfeatures = get_max_ell_and_max_features(self.hmap)
 
