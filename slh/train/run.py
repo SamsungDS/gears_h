@@ -1,6 +1,7 @@
 import logging
 import sys
 from pathlib import Path
+import yaml
 
 import jax
 from functools import partial
@@ -107,6 +108,10 @@ def run(user_config, log_level="error"):
                            )
     max_ell = train_ds.max_ell
     readout_nfeatures = train_ds.readout_nfeatures
+    readout_parameters = {"max_ell" : max_ell,
+                          "readout_nfeatures" : readout_nfeatures}
+    with open(config.data.model_version_path / "readout_parameters.yaml", "w") as f:
+        yaml.dump(readout_parameters, f)
 
     log.info("Initializing Model")
     sample_input = train_ds.init_input()
