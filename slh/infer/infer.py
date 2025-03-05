@@ -56,14 +56,13 @@ def infer_h_irreps(apply_fn, params, numbers, ij, D, B):
     return h_irreps_off_diagonal, h_irreps_on_diagonal
 
 def get_h_blocks(
-    hirreps_off_diagonal,  # For one snapshot.
+    hirreps_off_diagonal,
     hirreps_on_diagonal,
     atomic_numbers: np.ndarray,
     neighbour_indices: np.ndarray,
     hmapper,
     species_basis_size_dict: dict[int, int],
 ):
-
     assert len(hirreps_off_diagonal) == len(neighbour_indices)
 
     atomic_number_pairs = atomic_numbers[neighbour_indices]
@@ -131,14 +130,13 @@ def make_hmatrix(numbers, offblocks, onblocks, species_basis_size_dict):
 
 def infer(model_path: Path| str, 
           structure_path: Path | str):
+    model_path = Path(model_path).resolve()
     structure_path = Path(structure_path)
     # Set up logging
     setup_logging(Path.cwd() / "inference.log", "info")
-    # Enforce CPU inference to prevent precision errors.
-    os.environ["JAX_PLATFORMS"] = "cpu"
     # Create train state
     state = create_inference_state(model_path)
-    apply_fn = jax.jit(state.apply_fn)
+    apply_fn = jax.jit(state.apply_fn, backend='cpu') # Enforce CPU inference to prevent GPU-induced precision errors.
     # Make H block mapper
     with open(model_path / "species_ells.yaml", "r") as f:
         species_ells_dict = yaml.load(f, yaml.SafeLoader)
@@ -159,8 +157,8 @@ def infer(model_path: Path| str,
 
     # Get H-blocks
     log.info("Converting irreps to H-blocks.")
-    h_blocks_off_diagonal, h_blocks_on_diagonal = get_h_blocks(h_irreps_off_diagonal,
-                                                               h_irreps_on_diagonal,
+    h_blocks_off_diagonal, h_blocks_on_diagonal = get_h_blocks(h_irreps_off_diagonal[0], # Remove batch dimension
+                                                               h_irreps_on_diagonal[0], # Remove batch dimension
                                                                atomic_numbers=inputs[0][0], # Remove batch dimension
                                                                neighbour_indices=inputs[1][0], # Remove batch dimension
                                                                hmapper=hmapper,
