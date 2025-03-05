@@ -54,6 +54,59 @@ def infer_h_irreps(apply_fn, params, numbers, ij, D, B):
                                                            numbers, ij, D, B)
     return h_irreps_off_diagonal, h_irreps_on_diagonal
 
+def get_h_blocks(
+    hirreps_off_diagonal,  # For one snapshot.
+    hirreps_on_diagonal,
+    atomic_numbers: np.ndarray,
+    neighbour_indices: np.ndarray,
+    hmapper,
+    species_basis_size_dict: dict[int, int],
+):
+
+    assert len(hirreps_off_diagonal) == len(neighbour_indices)
+
+    atomic_number_pairs = atomic_numbers[neighbour_indices]
+    assert atomic_number_pairs.shape[-1] == 2
+    unique_elementpairs = np.unique(atomic_number_pairs, axis=0)
+
+    spd = species_basis_size_dict
+
+    pair_hblocks_list = []
+    species_hblocks_list = []
+    
+    for pair in unique_elementpairs:
+        # Find all atom-pairs of this species-pair
+        boolean_indices_of_pairs = np.all(atomic_number_pairs == pair, axis=1)
+        hblocks_of_pair = np.zeros((sum(boolean_indices_of_pairs), *[spd[s] for s in pair])).astype(np.float32)
+
+        assert len(hblocks_of_pair) == len(hirreps_off_diagonal[boolean_indices_of_pairs])
+
+        hmapper.irreps_to_hblocks(
+            hblocks_of_pair,
+            hirreps_off_diagonal[boolean_indices_of_pairs],
+            pair[0],
+            pair[1],
+        )
+
+        pair_hblocks_list.append((hblocks_of_pair, neighbour_indices[boolean_indices_of_pairs]))
+
+    atom_number = np.arange(len(atomic_numbers))
+    for number in np.unique(atomic_numbers):
+        # Find all atoms of this species
+        boolean_indices_of_species = (number == atomic_numbers)
+        hblocks_of_specie = np.zeros((sum(boolean_indices_of_species), *[spd[number] for _ in range(2)])).astype(np.float32)
+
+        hmapper.irreps_to_hblocks(
+            hblocks_of_specie,
+            hirreps_on_diagonal[boolean_indices_of_species],
+            number,
+            number
+        )
+
+        species_hblocks_list.append((hblocks_of_specie, atom_number[boolean_indices_of_species]))
+    # TODO requires both on and off diagonal. Fix in future versions.
+    return pair_hblocks_list, species_hblocks_list
+
 def infer(model_path: Path| str, 
           structure_path: Path | str):
     # Set up logging
@@ -67,6 +120,11 @@ def infer(model_path: Path| str,
     with open(model_path / "species_ells.yaml", "r") as f:
         species_ells_dict = yaml.load(f, yaml.SafeLoader)
     hmapper = make_mapper_from_elements(species_ells_dict)
+    # Make species basis size dict
+    species_basis_size_dict = {}
+    for sp, ells in species_ells_dict.items():
+        basis_size = np.sum([2*ell+1 for ell in ells])
+        species_basis_size_dict[sp] = basis_size
     # Read target structure
     log.info("Reading target structure.")
     config = parse_config(model_path / "config.yaml")
@@ -75,3 +133,13 @@ def infer(model_path: Path| str,
     # Infer H irreps
     log.info("Inferring H irreps.")
     h_irreps_off_diagonal, h_irreps_on_diagonal = infer_h_irreps(apply_fn, state.params, *inputs)
+
+    # Get H-blocks
+    log.info("Converting irreps to H-blocks.")
+    h_blocks_off_diagonal, h_blocks_on_diagonal = get_h_blocks(h_irreps_off_diagonal,
+                                                               h_irreps_on_diagonal,
+                                                               atomic_numbers=inputs[0][0], # Remove batch dimension
+                                                               neighbour_indices=inputs[1][0], # Remove batch dimension
+                                                               hmapper=hmapper,
+                                                               species_basis_size_dict=species_basis_size_dict)
+    
