@@ -173,3 +173,5 @@ def infer(model_path: Path| str,
     
     # Write H matrix
     np.savez(structure_path.parent / "inferred_H.npz", H_MM = inferred_H, allow_pickle=True)
+    log.info("Inference complete! You can now read in the inferred Hamiltonian with the following command:")
+    log.info("infH = np.array(np.load('/path/to/inferred_H.npz', allow_pickle=True)['H_MM'][None][0])")
