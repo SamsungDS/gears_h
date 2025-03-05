@@ -7,6 +7,7 @@ from ase.io import read
 import jax
 import numpy as np
 import optax
+from scipy.sparse import block_array
 from slhtools.utils import get_neighbourlist_ijD
 
 from slh.config.common import parse_config
@@ -107,8 +108,30 @@ def get_h_blocks(
     # TODO requires both on and off diagonal. Fix in future versions.
     return pair_hblocks_list, species_hblocks_list
 
+def make_hmatrix(numbers, offblocks, onblocks, species_basis_size_dict):
+    spd = species_basis_size_dict
+
+    idxs = np.array([0] + [spd[i] for i in numbers], dtype=np.int32)
+    idxs = np.cumsum(idxs)
+
+    hmatrix = [[None] * len(numbers) for _ in range(len(numbers))]
+
+    for onblock_stack in onblocks:
+        for onblock, idx in zip(*onblock_stack):
+            hmatrix[idx][idx] = onblock
+
+    for offblock_stack in offblocks:
+        for i_, (offblock, pair_idx) in enumerate(zip(*offblock_stack)):
+            i, j = pair_idx
+            hmatrix[i][j] = offblock
+
+    hmatrix = block_array(hmatrix)
+
+    return (0.5 * (hmatrix + hmatrix.T.conj())).toarray()
+
 def infer(model_path: Path| str, 
           structure_path: Path | str):
+    structure_path = Path(structure_path)
     # Set up logging
     setup_logging(Path.cwd() / "inference.log", "info")
     # Enforce CPU inference to prevent precision errors.
@@ -143,3 +166,12 @@ def infer(model_path: Path| str,
                                                                hmapper=hmapper,
                                                                species_basis_size_dict=species_basis_size_dict)
     
+    # Make H matrix
+    log.info("Assembling H matrix.")
+    inferred_H = make_hmatrix(inputs[0][0], # Remove batch dimension
+                              h_blocks_off_diagonal,
+                              h_blocks_on_diagonal,
+                              species_basis_size_dict)
+    
+    # Write H matrix
+    np.savez(structure_path.parent / "inferred_H.npz", H_MM = inferred_H, allow_pickle=True)
