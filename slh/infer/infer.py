@@ -23,7 +23,7 @@ def process_structure_for_inference(structure_path: Path,
 
     atoms = read(structure_path)
     numbers = atoms.get_atomic_numbers()
-    ij, D = get_neighbourlist_ijD(atoms, cutoff)
+    ij, D = get_neighbourlist_ijD(atoms, cutoff, unique_pairs = False)
     bonds = np.arange(len(D))
     
     return numbers[None,...], ij[None,...], D[None,...], bonds[None,...]
@@ -154,7 +154,7 @@ def infer(model_path: Path| str,
     # Infer H irreps
     log.info("Inferring H irreps.")
     h_irreps_off_diagonal, h_irreps_on_diagonal = infer_h_irreps(apply_fn, state.params, *inputs)
-
+    
     # Get H-blocks
     log.info("Converting irreps to H-blocks.")
     h_blocks_off_diagonal, h_blocks_on_diagonal = get_h_blocks(h_irreps_off_diagonal[0], # Remove batch dimension
