@@ -120,9 +120,12 @@ def make_hmatrix(numbers, offblocks, onblocks, species_basis_size_dict):
             hmatrix[idx][idx] = onblock
 
     for offblock_stack in offblocks:
-        for i_, (offblock, pair_idx) in enumerate(zip(*offblock_stack)):
+        for offblock, pair_idx in zip(*offblock_stack):
             i, j = pair_idx
-            hmatrix[i][j] = offblock
+            if hmatrix[i][j] is None:
+                hmatrix[i][j] = offblock
+            else:
+                hmatrix[i][j] += offblock
 
     hmatrix = block_array(hmatrix)
 
