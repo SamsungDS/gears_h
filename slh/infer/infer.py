@@ -7,13 +7,13 @@ import jax
 import numpy as np
 import optax
 from scipy.sparse import block_array
-from slhtools.utils import get_neighbourlist_ijD
 
 from slh.config.common import parse_config
 from slh.hblockmapper import make_mapper_from_elements
 from slh.model.builder import ModelBuilder
 from slh.train.checkpoints import create_train_state, load_params
 from slh.train.run import setup_logging
+from slh.utilities.neighbours import get_neighbourlist_ijD
 
 log = logging.getLogger(__name__)
 
