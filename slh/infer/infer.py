@@ -1,5 +1,4 @@
 import logging
-import os
 from pathlib import Path
 import yaml
 
@@ -122,6 +121,7 @@ def make_hmatrix(numbers, offblocks, onblocks, species_basis_size_dict):
     for offblock_stack in offblocks:
         for offblock, pair_idx in zip(*offblock_stack):
             i, j = pair_idx
+            # TODO: replace this loop and these conditionals with a groupby and reduce
             if hmatrix[i][j] is None:
                 hmatrix[i][j] = offblock
             else:
