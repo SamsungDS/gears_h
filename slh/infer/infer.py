@@ -131,7 +131,7 @@ def make_hmatrix(numbers, offblocks, onblocks, species_basis_size_dict):
 
     return (0.5 * (hmatrix + hmatrix.T.conj())).toarray()
 
-def infer(model_path: Path| str, 
+def infer(model_path: Path | str, 
           structure_path: Path | str):
     model_path = Path(model_path).resolve()
     structure_path = Path(structure_path)
