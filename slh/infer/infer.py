@@ -127,9 +127,13 @@ def make_hmatrix(numbers, offblocks, onblocks, species_basis_size_dict):
             else:
                 hmatrix[i][j] += offblock
 
-    hmatrix = block_array(hmatrix)
-
-    return (0.5 * (hmatrix + hmatrix.T.conj())).toarray()
+    blocks = np.asarray(hmatrix, dtype='object')
+    if blocks.ndim == 2:
+        hmatrix = block_array(hmatrix)
+        return (0.5 * (hmatrix + hmatrix.T.conj())).toarray()
+    elif blocks.ndim == 4:
+        hmatrix = np.block(hmatrix)
+        return 0.5 * (hmatrix + hmatrix.T.conj())
 
 def infer(model_path: Path | str, 
           structure_path: Path | str):
@@ -166,7 +170,7 @@ def infer(model_path: Path | str,
                                                                neighbour_indices=inputs[1][0], # Remove batch dimension
                                                                hmapper=hmapper,
                                                                species_basis_size_dict=species_basis_size_dict)
-    
+
     # Make H matrix
     log.info("Assembling H matrix.")
     inferred_H = make_hmatrix(inputs[0][0], # Remove batch dimension
