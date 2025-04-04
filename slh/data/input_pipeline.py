@@ -273,11 +273,14 @@ def get_irreps_mask_on_diagonal(
 
 def prepare_input_dict(dataset_as_list: DatasetList):
     inputs_dict = {}
-    inputs_dict["numbers"] = [datatuple[0].numbers for datatuple in dataset_as_list]
-    inputs_dict["positions"] = [datatuple[0].positions for datatuple in dataset_as_list]
+    inputs_dict["numbers"] = [snapshot['atoms'].numbers for snapshot in dataset_as_list]
+    inputs_dict["positions"] = [snapshot['atoms'].positions for snapshot in dataset_as_list]
 
-    inputs_dict["idx_ij"] = [datatuple[2] for datatuple in dataset_as_list]
-    inputs_dict["idx_D"] = [datatuple[3] for datatuple in dataset_as_list]
+    inputs_dict["ac_ij"] = [snapshot['ac_ij'] for snapshot in dataset_as_list]
+    inputs_dict["ac_D"] = [snapshot['ac_D'] for snapshot in dataset_as_list]
+
+    inputs_dict["bc_ij"] = [snapshot['bc_ij'] for snapshot in dataset_as_list]
+    inputs_dict["bc_D"] = [snapshot['bc_D'] for snapshot in dataset_as_list]
 
     return inputs_dict
 
@@ -286,7 +289,6 @@ def prepare_label_dict(
     dataset_as_list: DatasetList,
     hmapper: MultiElementPairHBlockMapper,
     mask_dict: dict,
-    inputs_dict,
     max_ell,
     readout_nfeatures,
 ):
@@ -294,16 +296,16 @@ def prepare_label_dict(
 
     tmp_irrep_list = [
         get_h_irreps(
-            hblocks_off_diagonal=datatuple[4],
-            hblocks_on_diagonal=datatuple[5],
+            hblocks_off_diagonal=snapshot['off_diagonal_hblocks'],
+            hblocks_on_diagonal=snapshot['on_diagonal_hblocks'],
             hmapper=hmapper,
-            atomic_numbers=inputs_dict["numbers"][i],
-            neighbour_indices=datatuple[2],
+            atomic_numbers=snapshot["atoms"].numbers,
+            neighbour_indices=snapshot["bc_ij"],
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i, datatuple in tqdm(
-            enumerate(dataset_as_list),
+        for snapshot in tqdm(
+            dataset_as_list,
             desc="Converting H blocks to irreps",
             total=len(dataset_as_list),
             ncols=100
@@ -315,22 +317,22 @@ def prepare_label_dict(
     labels_dict["mask_off_diagonal"] = [
         get_irreps_mask_off_diagonal(
             mask_dict,
-            inputs_dict["numbers"][i],
-            inputs_dict["idx_ij"][i],
+            snapshot["atoms"].numbers,
+            snapshot["bc_ij"],
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i in trange(len(dataset_as_list), desc="Making off-diagonal irreps masks", ncols=100)
+        for snapshot in tqdm(dataset_as_list, desc="Making off-diagonal irreps masks", ncols=100)
     ]
 
     labels_dict["mask_on_diagonal"] = [
         get_irreps_mask_on_diagonal(
             mask_dict,
-            inputs_dict["numbers"][i],
+            snapshot["atoms"].numbers,
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i in trange(len(dataset_as_list), desc="Making on-diagonal irreps masks", ncols=100)
+        for snapshot in tqdm(dataset_as_list, desc="Making on-diagonal irreps masks", ncols=100)
     ]
 
     return labels_dict
