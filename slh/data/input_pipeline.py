@@ -74,6 +74,7 @@ def pairwise_off_diagonal_hamiltonian_from_file(
 
 def snapshot_tuple_from_directory(
     directory: Path,
+    ac_nl_rcut: float,
     atoms_filename: str = "atoms.extxyz",
     orbital_spec_filename: str = "orbital_ells.json",
     ijD_filename: str = "ijD.npz",
@@ -83,14 +84,20 @@ def snapshot_tuple_from_directory(
     snapshot = {}
     snapshot['atoms'] = read(directory / atoms_filename)
 
+    ac_nl = neighbour_list("ijD", 
+                           atoms=snapshot['atoms'], 
+                           cutoff=ac_nl_rcut)
+    snapshot['ac_ij'] = np.column_stack(ac_nl[0:2])
+    snapshot['ac_D'] = ac_nl[2]
+
     log.debug(f"Reading in atoms {snapshot['atoms']} from {directory}")
 
     snapshot['orbital_spec'] = orbital_spec_from_file(directory / orbital_spec_filename)
 
     log.debug(f"Orbital spec of: {snapshot['orbital_spec']}")
     (
-        snapshot['bond_pair_indices'],
-        snapshot['bond_vectors'],
+        snapshot['bc_ij'],
+        snapshot['bc_D'],
         snapshot['off_diagonal_hblocks'],
     ) = pairwise_off_diagonal_hamiltonian_from_file(
         directory, ijD_filename, off_diagonal_hamiltonian_dataset_filename
