@@ -92,6 +92,7 @@ class TDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
 
 class ShallowTDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
     descriptor_name: Literal["ShallowTDSAAtomCenteredDescriptor"] = "ShallowTDSAAtomCenteredDescriptor"
+    num_tensordenses: int = 2
     max_tensordense_degree: int = 4
     num_tensordense_features: int = 32
     use_fused_tensor: bool = False

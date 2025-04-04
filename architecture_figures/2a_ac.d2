@@ -27,14 +27,11 @@ ac: Atom-Centered Descriptor {
     class: ac
     _.f.equation -> sum_j: {style: {stroke: "#000000"; font-color: black}}
     sum_j: ∑ j {class: operator}
-    sum_j -> 3b: {style: {stroke: "#000000"; font-color: black}}
-    3b: TensorDense {class: in_module}
-    5b: TensorDense {class: in_module}
-    3b -> 5b: {style: {stroke: "#000000"; font-color: black}}
+    sum_j -> ntd: {style: {stroke: "#000000"; font-color: black}}
+    ntd: TensorDenses {class: in_module; style: {stroke-dash: 3; multiple: true}}
     c: Concatenate  {class: in_module}
     sum_j  -> c: {style: {stroke: "#000000"; font-color: black}}
-    3b -> c: {style: {stroke: "#000000"; font-color: black}}
-    5b -> c: {style: {stroke: "#000000"; font-color: black}}
+    ntd -> c: {style: {stroke: "#000000"; font-color: black}}
 
     c -> mp_block: {style: {stroke: "#000000"; font-color: black}}
 
