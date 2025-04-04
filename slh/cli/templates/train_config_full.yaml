@@ -21,6 +21,7 @@ model:
     descriptor: 
       descriptor_name: ShallowTDSAAtomCenteredDescriptor
       use_fused_tensor: False
+      num_tensordenses: 2
       max_tensordense_degree: 4
       num_tensordense_features: 12
       mp_steps: 2
