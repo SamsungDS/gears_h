@@ -72,7 +72,7 @@ def pairwise_off_diagonal_hamiltonian_from_file(
     return ij, D, hblocks
 
 
-def snapshot_tuple_from_directory(
+def snapshot_from_directory(
     directory: Path,
     ac_nl_rcut: float,
     atoms_filename: str = "atoms.extxyz",
@@ -121,7 +121,7 @@ def read_dataset_as_list(
     log.info(f"Using {len(dataset_dirlist)} snapshots.")
 
     dataset_as_list = [
-        snapshot_tuple_from_directory(fd, ac_nl_rcut=atomcentered_cutoff)
+        snapshot_from_directory(fd, ac_nl_rcut=atomcentered_cutoff)
         for fd in tqdm(dataset_dirlist, desc="Reading dataset", ncols=100)
     ]
     # with Pool(nprocs) as pool:
