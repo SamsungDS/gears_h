@@ -394,7 +394,6 @@ class InMemoryDataset:
                 dataset_as_list,
                 self.hmap,
                 self.dataset_mask_dict,
-                self.inputs,
                 self.max_ell,
                 self.readout_nfeatures,
             )
@@ -502,7 +501,7 @@ class InMemoryDataset:
         # TODO do this faster elsewhere maybe?
         if self.n_bonds != self.bc_max_nneighbours:
             unpadded_neighbour_count = self.bc_max_nneighbours - bc_neighbour_zeros_to_add
-            d_unpadded = np.linalg.norm(inputs["idx_D"][:unpadded_neighbour_count], axis=-1)
+            d_unpadded = np.linalg.norm(inputs["bc_D"][:unpadded_neighbour_count], axis=-1)
             inverse_d = np.reciprocal(d_unpadded, where = d_unpadded > 0.1)
             # alpha = np.random.rand() * 3 + 1.0
             dprobs = (inverse_d ** self.sampling_alpha) / np.sum(inverse_d ** self.sampling_alpha)
