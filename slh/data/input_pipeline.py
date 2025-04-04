@@ -84,22 +84,23 @@ def snapshot_tuple_from_directory(
     off_diagonal_hamiltonian_dataset_filename: str = "hblocks_off-diagonal.npz",
     diagonal_hamiltonian_dataset_filename: str = "hblocks_on-diagonal.npz",
 ):
-    atoms = read(directory / atoms_filename)
+    snapshot = {}
+    snapshot['atoms'] = read(directory / atoms_filename)
 
-    log.debug(f"Reading in atoms {atoms} from {directory}")
+    log.debug(f"Reading in atoms {snapshot['atoms']} from {directory}")
 
-    orbital_spec = orbital_spec_from_file(directory / orbital_spec_filename)
+    snapshot['orbital_spec'] = orbital_spec_from_file(directory / orbital_spec_filename)
 
-    log.debug(f"Orbital spec of: {orbital_spec}")
+    log.debug(f"Orbital spec of: {snapshot['orbital_spec']}")
     (
-        bond_atom_indices,
-        bond_vectors,
-        off_diagonal_hblocks,
+        snapshot['bond_pair_indices'],
+        snapshot['bond_vectors'],
+        snapshot['off_diagonal_hblocks'],
     ) = pairwise_off_diagonal_hamiltonian_from_file(
         directory, ijD_filename, off_diagonal_hamiltonian_dataset_filename
     )
-    on_diagonal_hblocks = diagonal_hamiltonian_from_file(directory, diagonal_hamiltonian_dataset_filename)
-    return atoms, orbital_spec, bond_atom_indices, bond_vectors, off_diagonal_hblocks, on_diagonal_hblocks
+    snapshot['on_diagonal_hblocks'] = diagonal_hamiltonian_from_file(directory, diagonal_hamiltonian_dataset_filename)
+    return snapshot
 
 
 def read_dataset_as_list(
