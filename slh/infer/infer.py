@@ -18,14 +18,21 @@ from slh.utilities.neighbours import get_neighbourlist_ijD
 log = logging.getLogger(__name__)
 
 def process_structure_for_inference(structure_path: Path, 
-                                    cutoff: float):
+                                    bc_cutoff: float,
+                                    ac_cutoff: float):
 
     atoms = read(structure_path)
     numbers = atoms.get_atomic_numbers()
-    ij, D = get_neighbourlist_ijD(atoms, cutoff, unique_pairs = False)
-    bonds = np.arange(len(D))
+    bc_ij, bc_D = get_neighbourlist_ijD(atoms, bc_cutoff, unique_pairs = False)
+    ac_ij, ac_D = get_neighbourlist_ijD(atoms, ac_cutoff, unique_pairs = False)
+    bonds = np.arange(len(bc_D))
     
-    return numbers[None,...], ij[None,...], D[None,...], bonds[None,...]
+    return (numbers[None,...], 
+            bc_ij[None,...], 
+            bc_D[None,...],
+            ac_ij[None,...], 
+            ac_D[None,...],  
+            bonds[None,...])
 
 def create_inference_state(model_path: Path | str):
     model_path = Path(model_path)
@@ -38,7 +45,7 @@ def create_inference_state(model_path: Path | str):
     model_builder = ModelBuilder(config.model.model_dump())
     model = model_builder.build_lcao_hamiltonian_model(**readout_parameters)
     batched_model = jax.vmap(
-        model.apply, in_axes=(None, 0, 0, 0, 0), axis_name="batch"
+        model.apply, in_axes=(None, 0, 0, 0, 0, 0, 0), axis_name="batch"
     )
 
     log.info("Loading model parameters")
