@@ -377,11 +377,11 @@ class InMemoryDataset:
 
         self.max_ell, self.readout_nfeatures = get_max_ell_and_max_features(self.hmap)
 
-        self.max_natoms, self.max_nneighbours = get_max_natoms_and_nneighbours(
+        self.max_natoms, self.bc_max_nneighbours, self.ac_max_nneighbours = get_max_natoms_and_nneighbours(
             dataset_as_list
         )
 
-        self.n_bonds = int(self.bond_fraction*self.max_nneighbours)
+        self.n_bonds = int(self.bond_fraction*self.bc_max_nneighbours)
 
         self.dataset_mask_dict = get_mask_dict(
             self.max_ell, self.readout_nfeatures, self.hmap
@@ -424,11 +424,18 @@ class InMemoryDataset:
             (self.max_natoms, 3), dtype=tf.float32, name="positions"
         )
         # input_signature["box"] = tf.TensorSpec((3, 3), dtype=tf.float64, name="box")
-        input_signature["idx_ij"] = tf.TensorSpec(
-            (self.max_nneighbours, 2), dtype=tf.int16, name="idx_ij"
+        input_signature["bc_ij"] = tf.TensorSpec(
+            (self.bc_max_nneighbours, 2), dtype=tf.int16, name="bc_ij"
         )
-        input_signature["idx_D"] = tf.TensorSpec(
-            (self.max_nneighbours, 3), dtype=tf.float32, name="idx_D"
+        input_signature["bc_D"] = tf.TensorSpec(
+            (self.bc_max_nneighbours, 3), dtype=tf.float32, name="bc_D"
+        )
+
+        input_signature["ac_ij"] = tf.TensorSpec(
+            (self.ac_max_nneighbours, 2), dtype=tf.int16, name="ac_ij"
+        )
+        input_signature["ac_D"] = tf.TensorSpec(
+            (self.ac_max_nneighbours, 3), dtype=tf.float32, name="ac_D"
         )
 
         if self.is_inference:
@@ -480,31 +487,42 @@ class InMemoryDataset:
             inputs["numbers"], (0, natoms_zeros_to_add), "constant"
         ).astype(np.int16)
 
-
-        neighbour_zeros_to_add = self.max_nneighbours - len(inputs["idx_ij"])
-        inputs["idx_ij"] = np.pad(
-            inputs["idx_ij"],
-            ((0, neighbour_zeros_to_add), (0, 0)),
+        bc_neighbour_zeros_to_add = self.bc_max_nneighbours - len(inputs["bc_ij"])
+        inputs["bc_ij"] = np.pad(
+            inputs["bc_ij"],
+            ((0, bc_neighbour_zeros_to_add), (0, 0)),
             "constant",
             constant_values=self.max_natoms + 1,
         ).astype(np.int16)
-        inputs["idx_D"] = np.pad(
-            inputs["idx_D"], ((0, neighbour_zeros_to_add), (0, 0)), "constant"
+        inputs["bc_D"] = np.pad(
+            inputs["bc_D"], ((0, bc_neighbour_zeros_to_add), (0, 0)), "constant"
         ).astype(np.float32)
 
-        if self.is_inference:
-            return inputs
-        
-        if self.n_bonds != self.max_nneighbours:
-            unpadded_neighbour_count = self.max_nneighbours - neighbour_zeros_to_add
+        # TODO rename idx_bonds
+        # TODO do this faster elsewhere maybe?
+        if self.n_bonds != self.bc_max_nneighbours:
+            unpadded_neighbour_count = self.bc_max_nneighbours - bc_neighbour_zeros_to_add
             d_unpadded = np.linalg.norm(inputs["idx_D"][:unpadded_neighbour_count], axis=-1)
             inverse_d = np.reciprocal(d_unpadded, where = d_unpadded > 0.1)
             # alpha = np.random.rand() * 3 + 1.0
             dprobs = (inverse_d ** self.sampling_alpha) / np.sum(inverse_d ** self.sampling_alpha)
             inputs["idx_bonds"] = np.random.choice(unpadded_neighbour_count, size=self.n_bonds, replace=False, p=dprobs)
         else:
-            inputs["idx_bonds"] = np.arange(self.max_nneighbours)
+            inputs["idx_bonds"] = np.arange(self.bc_max_nneighbours)
 
+        ac_neighbour_zeros_to_add = self.ac_max_nneighbours - len(inputs["ac_ij"])
+        inputs["ac_ij"] = np.pad(
+            inputs["ac_ij"],
+            ((0, ac_neighbour_zeros_to_add), (0, 0)),
+            "constant",
+            constant_values=self.max_natoms + 1,
+        ).astype(np.int16)
+        inputs["ac_D"] = np.pad(
+            inputs["ac_D"], ((0, ac_neighbour_zeros_to_add), (0, 0)), "constant"
+        ).astype(np.float32)
+
+        if self.is_inference:
+            return inputs
         
         labels = self.labels
         labels = {k: v[i] for k, v in labels.items()}
@@ -512,7 +530,7 @@ class InMemoryDataset:
         labels["h_irreps_off_diagonal"] = np.pad(
             labels["h_irreps_off_diagonal"],
             (
-                (0, neighbour_zeros_to_add),
+                (0, bc_neighbour_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),
@@ -522,7 +540,7 @@ class InMemoryDataset:
         labels["mask_off_diagonal"] = np.pad(
             labels["mask_off_diagonal"],
             (
-                (0, neighbour_zeros_to_add),
+                (0, bc_neighbour_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),  # Feature dim
