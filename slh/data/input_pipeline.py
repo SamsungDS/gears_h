@@ -3,17 +3,13 @@ import json
 import logging
 import uuid
 from collections import deque
-from multiprocessing import Pool
 from pathlib import Path
-from random import shuffle
-from typing import Dict, Iterator
 
-import jax
-import jax.numpy as jnp
-import numpy as np
-import tensorflow as tf
 from ase import Atoms
 from ase.io import read
+from matscipy.neighbours import neighbour_list
+import numpy as np
+import tensorflow as tf
 from tqdm import tqdm, trange
 
 from slh.data.preprocessing import prefetch_to_single_device
