@@ -108,6 +108,7 @@ def snapshot_tuple_from_directory(
 
 def read_dataset_as_list(
     directory: Path,
+    atomcentered_cutoff: float,
     marker_filename: str = "orbital_ells.json",
     num_snapshots=-1,
 ) -> DatasetList:
@@ -120,7 +121,7 @@ def read_dataset_as_list(
     log.info(f"Using {len(dataset_dirlist)} snapshots.")
 
     dataset_as_list = [
-        snapshot_tuple_from_directory(fd)
+        snapshot_tuple_from_directory(fd, ac_nl_rcut=atomcentered_cutoff)
         for fd in tqdm(dataset_dirlist, desc="Reading dataset", ncols=100)
     ]
     # with Pool(nprocs) as pool:

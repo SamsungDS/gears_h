@@ -62,12 +62,15 @@ def run(user_config, log_level="error"):
     num_train = config.data.n_train
     num_val = config.data.n_valid
 
+    atomcentered_cutoff = config.model.atom_centered.radial_basis.cutoff
+
     if config.data.data_path is not None:
         assert config.data.train_data_path is None, "train_data_path must not be provided when data_path is."
         assert config.data.val_data_path is None, "val_data_path must not be provided when data_path is."
         ds_list = read_dataset_as_list(
-            Path(config.data.data_path),
-            num_snapshots=num_train + num_val,
+            directory = Path(config.data.data_path),
+            atomcentered_cutoff = atomcentered_cutoff,
+            num_snapshots= num_train + num_val,
         )
         if len(ds_list) == 0:
             raise FileNotFoundError(
