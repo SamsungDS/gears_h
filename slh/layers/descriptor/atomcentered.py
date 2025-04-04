@@ -148,9 +148,7 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
         ).astype(jnp.float32)
         
         y_2b = e3x.ops.indexed_sum(y_2b, dst_idx=idx_i, num_segments=len(atomic_numbers))
-        y = [e3x.nn.features.change_max_degree_or_type(y_2b, 
-                                                       self.max_tensordense_degree, 
-                                                       include_pseudotensors=True)]
+        y = [y_2b]
 
         # Set max degree for the TD to the max achievable degree from the inputs.
         max_td_deg = min(self.max_tensordense_degree, 
@@ -166,11 +164,12 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
             deg = e3x.nn.features._extract_max_degree_and_check_shape(td.shape)
             max_td_deg = min(self.max_tensordense_degree,
                              deg)
-            # Pad TD
-            td = e3x.nn.features.change_max_degree_or_type(td, 
-                                                           self.max_tensordense_degree, 
-                                                           include_pseudotensors=True)
-            y = jnp.concatenate([y, td], axis=-1)
+            y.append(td)
+
+        y = [e3x.nn.features.change_max_degree_or_type(desc, 
+                                                       self.max_tensordense_degree, 
+                                                       include_pseudotensors=True) for desc in y]
+        y = jnp.concatenate(y, axis=-1)
 
         # y = y * self.embedding_transformation(self.embedding(Z_i))
 
