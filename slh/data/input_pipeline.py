@@ -137,16 +137,19 @@ def read_dataset_as_list(
 
 
 def get_max_natoms_and_nneighbours(dataset_as_list):
-    max_natoms = max([len(x[0]) for x in dataset_as_list])
-    max_nneighbours = max([len(x[2]) for x in dataset_as_list])
+    max_natoms = max([len(snapshot['atoms']) for snapshot in dataset_as_list])
+    max_bc_nneighbours = max([len(snapshot['bc_ij']) for snapshot in dataset_as_list])
+    max_ac_nneighbours = max([len(snapshot['ac_ij']) for snapshot in dataset_as_list])
 
-    log.info(f"Max natoms: {max_natoms}, nneighbours: {max_nneighbours}")
+    log.info(f"Max natoms: {max_natoms}")
+    log.info(f"Max bond-centered neighbours: {max_bc_nneighbours}")
+    log.info(f"Max atom-centered neighbours: {max_ac_nneighbours}")
 
-    return max_natoms, max_nneighbours
+    return max_natoms, max_bc_nneighbours, max_ac_nneighbours
 
 
 def get_hamiltonian_mapper_from_dataset(dataset_as_list):
-    orbital_ells_across_dataset = [x[1] for x in dataset_as_list]
+    orbital_ells_across_dataset = [snapshot['orbital_spec'] for snapshot in dataset_as_list]
     orbital_ells_across_dataset = dict(
         (int(k), v) for d in orbital_ells_across_dataset for k, v in d.items()
     )
