@@ -89,6 +89,7 @@ class SAAtomCenteredDescriptor(nn.Module):
 
 class ShallowTDSAAtomCenteredDescriptor(nn.Module):
     radial_basis: SpeciesAwareRadialBasis
+    num_tensordenses: int
     max_tensordense_degree: int
     num_tensordense_features: int
     use_fused_tensor: bool = False
@@ -101,8 +102,7 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
     def setup(self):
         self.embedding = self.radial_basis.embedding
         self.embedding_transformation = e3x.nn.Dense(
-            # This is just because it's currently hardcoded to num_radial + 2 tensordenses
-            self.radial_basis.num_radial + 2 * self.num_tensordense_features,
+            self.radial_basis.num_radial + self.num_tensordenses * self.num_tensordense_features,
             name="embed_transform",
             dtype=jnp.float32,
             param_dtype=jnp.float32,
