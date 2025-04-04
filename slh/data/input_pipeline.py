@@ -10,7 +10,7 @@ from ase.io import read
 from matscipy.neighbours import neighbour_list
 import numpy as np
 import tensorflow as tf
-from tqdm import tqdm, trange
+from tqdm import tqdm
 
 from slh.data.preprocessing import prefetch_to_single_device
 from slh.data.utilities import split_dataset, split_idxs
