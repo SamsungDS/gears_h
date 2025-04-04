@@ -152,7 +152,7 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
 
         # Set max degree for the TD to the max achievable degree from the inputs.
         max_td_deg = min(self.max_tensordense_degree, 
-                         self.num_tensordenses * self.num_tensordense_features)
+                         2 * self.radial_basis.max_degree)
         # Apply TensorDenses
         for i in range(self.num_tensordenses):
             td = e3x.nn.TensorDense(self.num_tensordense_features,
