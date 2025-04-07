@@ -92,10 +92,12 @@ def run(user_config, log_level="error"):
         assert config.data.val_data_path is not None, "val_data_path must be provided when data_path is not."
         train_ds_list = read_dataset_as_list(
             Path(config.data.train_data_path),
+            atomcentered_cutoff = atomcentered_cutoff,
             num_snapshots=num_train,
         )
         val_ds_list = read_dataset_as_list(
             Path(config.data.val_data_path),
+            atomcentered_cutoff = atomcentered_cutoff,
             num_snapshots=num_val,
         )
         train_ds, val_ds = (PureInMemoryDataset(train_ds_list,
