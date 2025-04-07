@@ -56,9 +56,12 @@ def create_inference_state(model_path: Path | str):
 
     return state
 
-def infer_h_irreps(apply_fn, params, numbers, ij, D, B):
+def infer_h_irreps(apply_fn, params, numbers, bc_ij, bc_D, ac_ij, ac_D, B):
     h_irreps_off_diagonal, h_irreps_on_diagonal = apply_fn(params, 
-                                                           numbers, ij, D, B)
+                                                           numbers, 
+                                                           bc_ij, bc_D,
+                                                           ac_ij, ac_D,
+                                                           B)
     return h_irreps_off_diagonal, h_irreps_on_diagonal
 
 def get_h_blocks(
@@ -164,7 +167,8 @@ def infer(model_path: Path | str,
     log.info("Reading target structure.")
     config = parse_config(model_path / "config.yaml")
     inputs = process_structure_for_inference(structure_path, 
-                                             config.model.bond_centered.cutoff)
+                                             config.model.bond_centered.cutoff,
+                                             config.model.atom_centered.radial_basis.cutoff)
     # Infer H irreps
     log.info("Inferring H irreps.")
     h_irreps_off_diagonal, h_irreps_on_diagonal = infer_h_irreps(apply_fn, state.params, *inputs)
