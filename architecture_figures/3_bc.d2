@@ -1,9 +1,42 @@
-acfi: "Atom-centered features \{Fi\}" {class: empty;}# label.near: outside-top-center}
-acfj: "Atom-centered features \{Fj\}" {class: empty;}# label.near: outside-top-center}
-r: rij {class: empty}
-bcf: "Bond-centered features \{F\}" {class: empty; label.near: outside-top-center}
+# direction: right
 
-bc: Bond-centered descriptor {
+vars: {
+    d2-config: {
+      layout-engine: elk
+      pad: 10
+    #   theme-id: 101
+    }
+}
+
+acfi: {
+    label: ""
+    class: empty
+    equation: |latex
+        \huge{\mathbf{x}_i^{\mathrm{AC}}}
+    |
+}
+acfj: {
+    label: ""
+    class: empty
+    equation: |latex
+        \huge{\mathbf{x}_j^{\mathrm{AC}}}
+    |
+}
+
+r: {label: ""
+    equation: |latex
+        \huge{\mathbf{r}_{ij}}
+    |
+    class: empty}
+bcf: {
+    label: ""
+    class: empty
+    equation: |latex
+        \huge{\mathbf{x}_{ij}^{\mathrm{BC}}}
+    |
+}
+
+bc: Bond-Centered Descriptor {
     class: bc
     s1: ⊕ {class: operator}
     d1: Dense {class: in_module}
@@ -12,19 +45,19 @@ bc: Bond-centered descriptor {
     d2: Dense {class: in_module}
     s1 -> d1 -> ln -> mish -> d2: {style: {stroke: "#000000"; font-color: black}}
     s2: ⊕ {class: operator}
-    d1 -> s2: Residual connection {style: {stroke: "#000000"; font-color: black}}
+    d1 -> s2: {style: {stroke: "#000000"; font-color: black}}
     d2 -> s2: {style: {stroke: "#000000"; font-color: black}}
-    bond_exp: Bond expansion {class: in_module}
+    bond_exp: Basis expansion {class: in_module}
     d3be: Dense {class: in_module}
     bond_exp -> d3be: {style: {stroke: "#000000"; font-color: black}}
-    tm: Tensor module {class: in_module}
+    tm: Tensor Product {class: in_module}
     s2 -> tm: {style: {stroke: "#000000"; font-color: black}}
     d3be -> tm: {style: {stroke: "#000000"; font-color: black}}
 }
-acfi -> bc.s1: {style: {stroke: "#000000"; font-color: black}}
-acfj -> bc.s1: {style: {stroke: "#000000"; font-color: black}}
-r -> bc.bond_exp: {style: {stroke: "#000000"; font-color: black}}
-bc.tm -> bcf: {style: {stroke: "#000000"; font-color: black}}
+acfi.equation -> bc.s1: {style: {stroke: "#000000"; font-color: black}}
+acfj.equation -> bc.s1: {style: {stroke: "#000000"; font-color: black}}
+r.equation -> bc.bond_exp: {style: {stroke: "#000000"; font-color: black}}
+bc.tm -> bcf.equation: {style: {stroke: "#000000"; font-color: black}}
 
 classes: {
     operator: {shape: circle
@@ -32,11 +65,9 @@ classes: {
                height: 35
                style: {fill: "#FFFFFF"
                        stroke: "#000000"
-                    #    font: mono
                       }
     }
     empty: {
-            # label: ""
             width: 50
             height: 50
             style: {
@@ -55,7 +86,6 @@ classes: {
         style: {
             fill: "#FFFFFF"
             stroke: "#000000"
-            # opacity: 0.5
         }
     }
     ac: {
@@ -68,6 +98,7 @@ classes: {
         style: {
             fill: "#EEDD88"
             stroke: "#000000"
+            bold: true
         }
     }
     rd: {
@@ -90,7 +121,6 @@ classes: {
         }
     }
     input : {
-        # label: ""
         width: 50
         height: 50
         style: {
@@ -98,12 +128,5 @@ classes: {
             stroke: "#000000"
             multiple: true
         }
-    }
-}
-
-vars: {
-    d2-config: {
-      layout-engine: elk
-    #   theme-id: 101
     }
 }

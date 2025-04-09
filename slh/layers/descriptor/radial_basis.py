@@ -13,8 +13,6 @@ class SpeciesAwareRadialBasis(nn.Module):
     num_radial: int = 8
     max_degree: int = 3
     num_elemental_embedding: int = 64
-    tensor_module: Union[e3x.nn.Tensor, e3x.nn.FusedTensor] = e3x.nn.Tensor
-    embedding_residual_connection: bool = True
 
     def setup(self):
         self.radial_function = partial(
@@ -70,9 +68,6 @@ class SpeciesAwareRadialBasis(nn.Module):
         )(self.embedding(Z_j))
 
         y = basis_expansion * transformed_embedding
-
-        if self.embedding_residual_connection:
-            y = e3x.nn.add(y, transformed_embedding)
 
         return y.astype(jnp.float32)
 

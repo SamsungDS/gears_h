@@ -1,22 +1,51 @@
-bcf: "Bond-centered features \{F\}" {class: empty;}# label.near: outside-top-center}
-mlpf: "MLP-processed features \{F\}" {class: empty; label.near: outside-top-center}
+# direction: right
 
-rd: Residual dense block {
-    class: rd
-    da: Multi-layer perceptron {
-        class: in_module
-        # d1: Dense {class: in_module}
-        # act: Activation {class: in_module}
-        # d1 -> act: {style: {stroke: "#000000"; font-color: black}}
+vars: {
+    d2-config: {
+      layout-engine: elk
+      pad: 10
+    #   theme-id: 101
     }
-    da -> da: x N_layers {style: {stroke: "#000000"; font-color: black}}
-    s1: ⊕ {class: operator}
-    da -> s1: {style: {stroke: "#000000"; font-color: black}}
-    da -> s1: Residual connection\n(from first Dense, if > 1 layer): {style: {stroke: "#000000"; font-color: black}}
 }
 
-bcf -> rd.da: {style: {stroke: "#000000"; font-color: black}}
-rd.s1 -> mlpf: {style: {stroke: "#000000"; font-color: black}}
+f: {
+    label: ""
+    class: empty
+    equation: |latex
+        \huge{\mathbf{x}^{\mathrm{AC}}\ \mathrm{or}\ \mathbf{x}_{ij}^{\mathrm{BC}}}
+    |
+}
+
+fo: {
+    label: ""
+    class: empty
+    equation: |latex
+        \huge{\mathbf{y}^{\mathrm{AC}}\ \mathrm{or}\ \mathbf{y}_{ij}^{\mathrm{BC}}}
+    |
+}
+
+rd: Residual Dense Block {
+    class: rd
+    initial_dense: Dense {class: in_module}
+    optional_block: {
+        class: in_module
+        style: {stroke-dash: 3; multiple: true}
+        label: ""
+        ob_act: Nonlinear Activation {class: in_module}
+        ob_dense: Dense {class: in_module}
+        ob_act -> ob_dense: {style: {stroke: "#000000"; font-color: black}}
+
+    }
+
+    s1: ⊕ {class: operator}
+    initial_dense -> optional_block: {style: {stroke: "#000000"; font-color: black}}
+    initial_dense -> s1: Learnable\nweight  {style: {stroke: "#000000"; font-color: black; font-size: 20}}
+    optional_block -> s1: {style: {stroke: "#000000"; font-color: black}}
+
+}
+
+f.equation -> rd.initial_dense: {style: {stroke: "#000000"; font-color: black}}
+rd.s1 -> fo.equation: {style: {stroke: "#000000"; font-color: black}}
 
 classes: {
     operator: {shape: circle
@@ -24,11 +53,9 @@ classes: {
                height: 35
                style: {fill: "#FFFFFF"
                        stroke: "#000000"
-                    #    font: mono
                       }
     }
     empty: {
-            # label: ""
             width: 50
             height: 50
             style: {
@@ -47,7 +74,6 @@ classes: {
         style: {
             fill: "#FFFFFF"
             stroke: "#000000"
-            # opacity: 0.5
         }
     }
     ac: {
@@ -66,6 +92,7 @@ classes: {
         style: {
             fill: "#EE8866"
             stroke: "#000000"
+            bold: true
         }
     }
     ro: {
@@ -90,12 +117,5 @@ classes: {
             stroke: "#000000"
             multiple: true
         }
-    }
-}
-
-vars: {
-    d2-config: {
-      layout-engine: elk
-    #   theme-id: 101
     }
 }

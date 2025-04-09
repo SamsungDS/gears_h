@@ -89,10 +89,10 @@ class SAAtomCenteredDescriptor(nn.Module):
 
 class ShallowTDSAAtomCenteredDescriptor(nn.Module):
     radial_basis: SpeciesAwareRadialBasis
+    num_tensordenses: int
     max_tensordense_degree: int
     num_tensordense_features: int
     use_fused_tensor: bool = False
-    embedding_residual_connection: bool = True
 
     mp_steps: int = 2
     mp_degree: int = 4
@@ -102,8 +102,7 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
     def setup(self):
         self.embedding = self.radial_basis.embedding
         self.embedding_transformation = e3x.nn.Dense(
-            # This is just because it's currently hardcoded to num_radial + 2 tensordenses
-            self.radial_basis.num_radial + 2 * self.num_tensordense_features,
+            self.radial_basis.num_radial + self.num_tensordenses * self.num_tensordense_features,
             name="embed_transform",
             dtype=jnp.float32,
             param_dtype=jnp.float32,
@@ -149,22 +148,29 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
         ).astype(jnp.float32)
         
         y_2b = e3x.ops.indexed_sum(y_2b, dst_idx=idx_i, num_segments=len(atomic_numbers))
+        y = [y_2b]
 
-        y1 = e3x.nn.TensorDense(
-            self.num_tensordense_features,
-            self.max_tensordense_degree,
-            cartesian_order=False,
-            use_fused_tensor=self.use_fused_tensor,
-            )(y_2b)
-        
-        y2 = e3x.nn.TensorDense(
-            self.num_tensordense_features,
-            self.max_tensordense_degree,
-            cartesian_order=False,
-            use_fused_tensor=self.use_fused_tensor,
-            )(y1)
-        y = e3x.nn.features.change_max_degree_or_type(y_2b, self.max_tensordense_degree, include_pseudotensors=True)
-        y = jnp.concatenate([y, y1, y2], axis=-1)
+        # Set max degree for the TD to the max achievable degree from the inputs.
+        max_td_deg = min(self.max_tensordense_degree, 
+                         2 * self.radial_basis.max_degree)
+        # Apply TensorDenses
+        for i in range(self.num_tensordenses):
+            td = e3x.nn.TensorDense(self.num_tensordense_features,
+                                    max_td_deg,
+                                    cartesian_order=False,
+                                    use_fused_tensor=self.use_fused_tensor,
+                                   )(y[i])
+            # Compute max degree for the next TD to the max achievable degree from the inputs.
+            deg = e3x.nn.features._extract_max_degree_and_check_shape(td.shape)
+            max_td_deg = min(self.max_tensordense_degree,
+                             deg)
+            y.append(td)
+
+        y = [e3x.nn.features.change_max_degree_or_type(desc, 
+                                                       self.max_tensordense_degree, 
+                                                       include_pseudotensors=True) for desc in y]
+        y = jnp.concatenate(y, axis=-1)
+
         # y = y * self.embedding_transformation(self.embedding(Z_i))
 
         # num_atoms x 1 x L x F
@@ -183,13 +189,8 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
 
         y0 = e3x.nn.Dense(self.embedding_transformation.features)(y)
         y = LayerNorm()(y0)
-        y = e3x.nn.mish(y)
+        y = e3x.nn.bent_identity(y)
         y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y0
-
-        if self.embedding_residual_connection:
-            y = e3x.nn.add(
-                y, self.embedding_transformation(self.embedding(atomic_numbers))
-            )
 
         return y
     

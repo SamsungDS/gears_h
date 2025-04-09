@@ -45,6 +45,21 @@ def train(
 
     run(train_config_path, log_level)
 
+@app.command()
+def infer(
+    model_path: Path = typer.Argument(
+        ..., help="Model path."
+    ),
+    structure_path: Path = typer.Argument(..., help="Structure to infer on."),
+):
+    """
+    Uses a trained model to infer the trained quantity for a selected structure.
+    """
+
+    from slh.infer.infer import infer
+
+    infer(model_path, structure_path)
+
 
 # @app.command()
 # def eval(

@@ -1,6 +1,7 @@
 import logging
 import sys
 from pathlib import Path
+import yaml
 
 import jax
 from functools import partial
@@ -105,14 +106,22 @@ def run(user_config, log_level="error"):
                                                 bond_fraction = config.data.bond_fraction,
                                                 sampling_alpha = config.data.sampling_alpha)
                            )
-    max_ell = train_ds.max_ell
-    readout_nfeatures = train_ds.readout_nfeatures
+
+    log.info("Writing readout parameters and orbital ells dictionary.")
+    readout_parameters = {"max_ell" : train_ds.max_ell,
+                          "readout_nfeatures" : train_ds.readout_nfeatures}
+    with open(config.data.model_version_path / "readout_parameters.yaml", "w") as f:
+        yaml.dump(readout_parameters, f)
+
+    species_ells_dict = train_ds.species_ells_dict
+    with open(config.data.model_version_path / "species_ells.yaml", "w") as f:
+        yaml.dump(species_ells_dict, f)
 
     log.info("Initializing Model")
     sample_input = train_ds.init_input()
 
     model_builder = ModelBuilder(config.model.model_dump())
-    model = model_builder.build_lcao_hamiltonian_model(readout_nfeatures, max_ell)
+    model = model_builder.build_lcao_hamiltonian_model(**readout_parameters)
 
     batched_model = jax.vmap(
         model.apply, in_axes=(None, 0, 0, 0, 0), axis_name="batch"
@@ -133,22 +142,27 @@ def run(user_config, log_level="error"):
     schedule_name = optimizer_config['schedule'].pop('name')
     initial_lr = optimizer_config['lr']
     lr_options = optimizer_config['schedule']
-    # lr_options = {key : val for key, val in optimizer_config['schedule'].items() if key != "name"}
-    # learning_rate = getattr(optax,optimizer_config['schedule']['name'])(optimizer_config['lr'],
-    #                                                                     **lr_options)
+    
     # Define LR schedule.
-    if schedule_name == 'reduce_on_plateau': # TODO can we not have this if statement?
-        raise NotImplementedError
-        # learning_rate = getattr(optax.contrib,schedule_name)(**lr_options)
+    if schedule_name == 'reduce_on_plateau':
+        rop = getattr(optax.contrib,schedule_name)(**lr_options)
+        opt = optax.inject_hyperparams(getattr(optax,optimizer_name))(learning_rate=initial_lr, 
+                                                                      **optimizer_config["opt_kwargs"])
+        opt = optax.chain(opt,
+                          rop,
+                          optax.zero_nans(),
+                          optax.clip(1))
     else:
-        learning_rate = getattr(optax,schedule_name)(initial_lr,
-                                                     **lr_options)
-    # Define optimizer
-    opt = getattr(optax,optimizer_name)(learning_rate, 
-                                        **optimizer_config["opt_kwargs"])
-    # Chain optimizer with zero_nans and clip.
-    opt = optax.chain(opt, optax.zero_nans(), optax.clip(1))
-    # state = create_train_state(batched_model, params, optax.adam(1e-3))
+        lr_schedule = getattr(optax,schedule_name)(initial_lr,
+                                                   **lr_options)
+        # Define optimizer
+        opt = optax.inject_hyperparams(getattr(optax,optimizer_name))(
+                                       learning_rate=lr_schedule, 
+                                       **optimizer_config["opt_kwargs"])
+        opt = optax.with_extra_args_support(opt)
+        opt = optax.chain(opt,
+                          optax.zero_nans(),
+                          optax.clip(1))
 
     state = create_train_state(batched_model, params, opt)
 

@@ -1,37 +1,48 @@
-# zi: {class: empty
-#      label: ""
-#      label.near: bottom-center
-#      equation: |latex 
-#                 \\large{Z_i}
-#                |
-#     }
-zi: Zi {class: empty}
-zj: Zj {class: empty}
-r: rij {class: empty}
-f: "2-body features \{f\}" {class: empty;label.near: outside-top-center}
-# ins.class: input
-sarb: Species-aware radial basis {
+# direction: right
+
+vars: {
+    d2-config: {
+      layout-engine: elk
+    #   theme-id: 101
+      pad: 10
+    }
+}
+
+zj: {label: ""
+     equation: |latex
+         \huge{Z_j}
+     |
+     class: empty
+}
+r: {label: ""
+    equation: |latex
+        \huge{\mathbf{r}_{ij}}
+    |
+    class: empty
+}
+f: {label: ""
+    equation: |latex
+        \huge{\mathbf{x}^{2\mathrm{B}}_{ij}}
+    |
+    class: empty
+    label.near: outside-bottom-center
+}
+
+sarb: Species-Aware Radial Basis {
     class: sarb
     embedding: Embedding {class: in_module}
     basis: Basis expansion {class: in_module}
-    transformed_embedding: Transformed embedding {class: in_module}
+    dense: Dense {class: in_module}
     ⊗: {class: operator}
-    ⊕: {class: operator}
+    # ⊕: {class: operator}
 
-
-    embedding -> transformed_embedding: Dense ⭙ (Embedding(Zi) + \nEmbedding(Zj)) {style: {stroke: "#000000"; font-color: black}}
-
-    transformed_embedding -> ⊗: {style: {stroke: "#000000"}}
+    _.r.equation -> basis: {style: {stroke: "#000000"}}
+    _.zj.equation -> embedding: {style: {stroke: "#000000"}}
+    embedding -> dense: {style: {stroke: "#000000"; font-color: black}}
+    dense -> ⊗: {style: {stroke: "#000000"}}
     basis -> ⊗: {style: {stroke: "#000000"}}
-    ⊗ -> ⊕: {style: {stroke: "#000000"}}
-    transformed_embedding -> ⊕: Residual connection {style: {stroke: "#000000"; font-color: black}}
+    ⊗ -> _.f.equation: {style: {stroke: "#000000"}}
 }
-
-zi -> sarb.embedding: {style: {stroke: "#000000"}}
-zj -> sarb.embedding: {style: {stroke: "#000000"}}
-r -> sarb.basis: {style: {stroke: "#000000"}}
-sarb.⊕ -> f: {style: {stroke: "#000000"}}
-
 
 classes: {
     operator: {shape: circle
@@ -39,13 +50,11 @@ classes: {
                height: 35
                style: {fill: "#FFFFFF"
                        stroke: "#000000"
-                    #    font: mono
                       }
     }
     empty: {
-            # label: ""
             width: 50
-            height: 50
+            height: 10
             style: {
                 fill: transparent
                 stroke: transparent
@@ -56,6 +65,7 @@ classes: {
         style: {
             fill: "#44BB99"
             stroke: "#000000"
+            bold: true
         }
     }
     in_module: {
@@ -100,17 +110,11 @@ classes: {
         # label: ""
         width: 50
         height: 50
+        shape: parallelogram
         style: {
             fill: "#99DDFF"
             stroke: "#000000"
             multiple: true
         }
-    }
-}
-
-vars: {
-    d2-config: {
-      layout-engine: elk
-    #   theme-id: 101
     }
 }

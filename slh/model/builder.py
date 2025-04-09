@@ -19,18 +19,11 @@ class ModelBuilder:
 
     def build_species_aware_radial_basis(self):
         radial_config = self.config['atom_centered']['radial_basis']
-        if radial_config["tensor_module"] == "tensor":
-            tensor_module = partial(e3x.nn.Tensor,
-                                    param_dtype=getattr(jnp,radial_config["tensor_module_dtype"]))
-        elif radial_config["tensor_module"] == "fused_tensor":
-            tensor_module = partial(e3x.nn.FusedTensor,
-                                    param_dtype=getattr(jnp,radial_config["tensor_module_dtype"]))
+        
         sarb = SpeciesAwareRadialBasis(cutoff=radial_config["cutoff"],
                                        num_radial=radial_config["num_radial"],
                                        max_degree=radial_config["max_degree"],
-                                       num_elemental_embedding=radial_config["num_elemental_embedding"],
-                                       tensor_module=tensor_module,
-                                       embedding_residual_connection=radial_config["embedding_residual_connection"] 
+                                       num_elemental_embedding=radial_config["num_elemental_embedding"]
                                       )
         return sarb
     

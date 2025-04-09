@@ -1,60 +1,52 @@
 # direction: right
-
-# zi: Zi {class: empty}
-# zj: Zj {class: empty}
-sarb_emb: Embedding (from species-\naware radial basis) {class: empty;label.near: top-center}
-f: "2-body features \{f\}" {class: empty;}#label.near: outside-top-center}
-acf: "Atom-centered features \{F\}" {class: empty; label.near: outside-top-center}
-
-ac: Atom-centered descriptor {
-    class: ac
-    sum_j: ∑j {class: operator}
-    sum_j -> 3b: TensorDense {style: {stroke: "#000000"; font-color: black}}
-    3b: 3-body {class: in_module}
-    5b: 5-body {class: in_module}
-    3b -> 5b: TensorDense {style: {stroke: "#000000"; font-color: black}}
-    c: Concatenate  {class: in_module}
-    sum_j  -> c: {style: {stroke: "#000000"; font-color: black}}
-    3b -> c: {style: {stroke: "#000000"; font-color: black}}
-    5b -> c: {style: {stroke: "#000000"; font-color: black}}
-    transformed_embedding: Transformed Embedding {class: in_module}
-    p1: ⊗ {class: operator}
-    c -> p1: {style: {stroke: "#000000"; font-color: black}}
-    transformed_embedding -> p1: {style: {stroke: "#000000"; font-color: black}}
-    # p1 -> sum_j: {style: {stroke: "#000000"; font-color: black}}
-    mp_block:  Message-passing block {
-        class: in_module
-        # direction: right
-        # sa: Self-attention {class: in_module}
-        # mpln: Layer norm{class: in_module}
-        # sa -> mpln: {style: {stroke: "#000000"; font-color: black}}
-        # mpln -> sa: x number of message-passing steps {style: {stroke: "#000000"; font-color: black}}
+ 
+vars: {
+    d2-config: {
+      layout-engine: elk
+      pad: 10
+    #   theme-id: 101
     }
-    # sum_j -> mp_block.sa: {style: {stroke: "#000000"; font-color: black}}
-    p1 -> mp_block: {style: {stroke: "#000000"; font-color: black}}
-    nl_block: Non-linear block {
-        class: in_module
-        # nld1: Dense {class: in_module}
-        # nld2: Dense {class: in_module}
-        # nlln: Layer Norm {class: in_module}
-        # nlma: Mish Activation {class: in_module}
-        # nld1 -> nlln -> nlma -> nld2: {style: {stroke: "#000000"; font-color: black}}
-        # nlrescon: ⊕ {class: operator}
-        # nld2 -> nlrescon: {style: {stroke: "#000000"; font-color: black}}
-    }
-    mp_block -> nl_block: {style: {stroke: "#000000"; font-color: black}}
-    # transformed_embedding -> nl_block: Residual connection {style: {stroke: "#000000"; font-color: black}}
-    # mp_block.mpln -> nl_block.nld1: {style: {stroke: "#000000"; font-color: black}}
-    # transformed_embedding -> nl_block.nlrescon: Residual connection {style: {stroke: "#000000"; font-color: black}}
 }
 
-# zi -> sarb_emb: {style: {stroke: "#000000"; font-color: black}}
-# zj -> sarb_emb: {style: {stroke: "#000000"; font-color: black}}
-f -> ac.sum_j: {style: {stroke: "#000000"; font-color: black}} #ac.3b: TensorDense {style: {stroke: "#000000"; font-color: black}}
-# f -> ac.c: {style: {stroke: "#000000"; font-color: black}}
-sarb_emb -> ac.transformed_embedding: Dense {style: {stroke: "#000000"; font-color: black}}
-# ac.nl_block.nlrescon -> acf: {style: {stroke: "#000000"; font-color: black}}
-ac.nl_block -> acf: {style: {stroke: "#000000"; font-color: black}}
+f: {label: ""
+    equation: |latex
+        \huge{\mathbf{x}^{2\mathrm{B}}_{ij}}
+    |
+    class: empty
+    label.near: outside-bottom-center
+}
+acf: {
+    label: ""
+    class: empty
+    equation: |latex
+        \huge{\mathbf{x}^{\mathrm{AC}}}
+    |
+}
+
+ac: Atom-Centered Descriptor {
+    class: ac
+    _.f.equation -> sum_j: {style: {stroke: "#000000"; font-color: black}}
+    sum_j: ∑ j {class: operator}
+    sum_j -> ntd: {style: {stroke: "#000000"; font-color: black}}
+    ntd: TensorDenses {class: in_module; style: {stroke-dash: 3; multiple: true}}
+    c: Concatenate  {class: in_module}
+    sum_j  -> c: {style: {stroke: "#000000"; font-color: black}}
+    ntd -> c: {style: {stroke: "#000000"; font-color: black}}
+
+    c -> mp_block: {style: {stroke: "#000000"; font-color: black}}
+
+    mp_block:  Message-Passing Blocks {
+        class: in_module
+        style: {stroke-dash: 3; multiple: true}
+    }
+    
+    nl_block: Nonlinear Block {
+        class: in_module
+    }
+    mp_block -> nl_block: {style: {stroke: "#000000"; font-color: black}}
+}
+
+ac.nl_block -> acf.equation: {style: {stroke: "#000000"; font-color: black}}
 
 classes: {
     operator: {shape: circle
@@ -62,7 +54,6 @@ classes: {
                height: 35
                style: {fill: "#FFFFFF"
                        stroke: "#000000"
-                    #    font: mono
                       }
     }
     empty: {
@@ -85,13 +76,13 @@ classes: {
         style: {
             fill: "#FFFFFF"
             stroke: "#000000"
-            # opacity: 0.5
         }
     }
     ac: {
         style: {
             fill: "#BBCC33"
             stroke: "#000000"
+            bold: true
         }
     }
     bc: {
@@ -120,7 +111,6 @@ classes: {
         }
     }
     input : {
-        # label: ""
         width: 50
         height: 50
         style: {
@@ -128,12 +118,5 @@ classes: {
             stroke: "#000000"
             multiple: true
         }
-    }
-}
-
-vars: {
-    d2-config: {
-      layout-engine: elk
-    #   theme-id: 101
     }
 }

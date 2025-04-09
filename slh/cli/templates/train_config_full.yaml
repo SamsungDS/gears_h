@@ -21,7 +21,7 @@ model:
     descriptor: 
       descriptor_name: ShallowTDSAAtomCenteredDescriptor
       use_fused_tensor: False
-      embedding_residual_connection: True
+      num_tensordenses: 2
       max_tensordense_degree: 4
       num_tensordense_features: 12
       mp_steps: 2
@@ -40,8 +40,6 @@ model:
       num_radial: 16
       max_degree: 2
       num_elemental_embedding: 32
-      tensor_module: tensor
-      tensor_module_dtype: float32
   bond_centered:
     cutoff: <CUTOFF>
     max_basis_degree: 2
