@@ -67,6 +67,16 @@ class ReduceOnPlateauSchedule(BaseModel, frozen = True, extra = "forbid"):
     min_scale: NonNegativeFloat = 1e-5
     cooldown: NonNegativeInt = 0
 
+class WarmupExponentialDecaySchedule(BaseModel, frozen = True, extra = "forbid"):
+    name: Literal["warmup_exponential_decay_schedule"] = "warmup_exponential_decay_schedule"
+    peak_value: NonNegativeFloat =5e-3
+    warmup_steps: NonNegativeInt = 5000
+    transition_begin: NonNegativeInt = 2000
+    transition_steps: NonNegativeInt = 1
+    end_value: NonNegativeFloat = 5e-5
+    decay_rate: NonNegativeInt = 0.99995
+    staircase: bool = False
+
 class WarmupCosineDecaySchedule(BaseModel, frozen = True, extra = "forbid"):
     name: Literal["warmup_cosine_decay_schedule"] = "warmup_cosine_decay_schedule"
     #init_value: NonNegativeFloat = 1e-3
