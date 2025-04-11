@@ -3,18 +3,14 @@ import json
 import logging
 import uuid
 from collections import deque
-from multiprocessing import Pool
 from pathlib import Path
-from random import shuffle
-from typing import Dict, Iterator
 
-import jax
-import jax.numpy as jnp
-import numpy as np
-import tensorflow as tf
 from ase import Atoms
 from ase.io import read
-from tqdm import tqdm, trange
+from matscipy.neighbours import neighbour_list
+import numpy as np
+import tensorflow as tf
+from tqdm import tqdm
 
 from slh.data.preprocessing import prefetch_to_single_device
 from slh.data.utilities import split_dataset, split_idxs
@@ -76,34 +72,43 @@ def pairwise_off_diagonal_hamiltonian_from_file(
     return ij, D, hblocks
 
 
-def snapshot_tuple_from_directory(
+def snapshot_from_directory(
     directory: Path,
+    ac_nl_rcut: float,
     atoms_filename: str = "atoms.extxyz",
     orbital_spec_filename: str = "orbital_ells.json",
     ijD_filename: str = "ijD.npz",
     off_diagonal_hamiltonian_dataset_filename: str = "hblocks_off-diagonal.npz",
     diagonal_hamiltonian_dataset_filename: str = "hblocks_on-diagonal.npz",
 ):
-    atoms = read(directory / atoms_filename)
+    snapshot = {}
+    snapshot['atoms'] = read(directory / atoms_filename)
 
-    log.debug(f"Reading in atoms {atoms} from {directory}")
+    ac_nl = neighbour_list("ijD", 
+                           atoms=snapshot['atoms'], 
+                           cutoff=ac_nl_rcut)
+    snapshot['ac_ij'] = np.column_stack(ac_nl[0:2])
+    snapshot['ac_D'] = ac_nl[2]
 
-    orbital_spec = orbital_spec_from_file(directory / orbital_spec_filename)
+    log.debug(f"Reading in atoms {snapshot['atoms']} from {directory}")
 
-    log.debug(f"Orbital spec of: {orbital_spec}")
+    snapshot['orbital_spec'] = orbital_spec_from_file(directory / orbital_spec_filename)
+
+    log.debug(f"Orbital spec of: {snapshot['orbital_spec']}")
     (
-        bond_atom_indices,
-        bond_vectors,
-        off_diagonal_hblocks,
+        snapshot['bc_ij'],
+        snapshot['bc_D'],
+        snapshot['off_diagonal_hblocks'],
     ) = pairwise_off_diagonal_hamiltonian_from_file(
         directory, ijD_filename, off_diagonal_hamiltonian_dataset_filename
     )
-    on_diagonal_hblocks = diagonal_hamiltonian_from_file(directory, diagonal_hamiltonian_dataset_filename)
-    return atoms, orbital_spec, bond_atom_indices, bond_vectors, off_diagonal_hblocks, on_diagonal_hblocks
+    snapshot['on_diagonal_hblocks'] = diagonal_hamiltonian_from_file(directory, diagonal_hamiltonian_dataset_filename)
+    return snapshot
 
 
 def read_dataset_as_list(
     directory: Path,
+    atomcentered_cutoff: float,
     marker_filename: str = "orbital_ells.json",
     num_snapshots=-1,
 ) -> DatasetList:
@@ -116,7 +121,7 @@ def read_dataset_as_list(
     log.info(f"Using {len(dataset_dirlist)} snapshots.")
 
     dataset_as_list = [
-        snapshot_tuple_from_directory(fd)
+        snapshot_from_directory(fd, ac_nl_rcut=atomcentered_cutoff)
         for fd in tqdm(dataset_dirlist, desc="Reading dataset", ncols=100)
     ]
     # with Pool(nprocs) as pool:
@@ -132,16 +137,19 @@ def read_dataset_as_list(
 
 
 def get_max_natoms_and_nneighbours(dataset_as_list):
-    max_natoms = max([len(x[0]) for x in dataset_as_list])
-    max_nneighbours = max([len(x[2]) for x in dataset_as_list])
+    max_natoms = max([len(snapshot['atoms']) for snapshot in dataset_as_list])
+    max_bc_nneighbours = max([len(snapshot['bc_ij']) for snapshot in dataset_as_list])
+    max_ac_nneighbours = max([len(snapshot['ac_ij']) for snapshot in dataset_as_list])
 
-    log.info(f"Max natoms: {max_natoms}, nneighbours: {max_nneighbours}")
+    log.info(f"Max natoms: {max_natoms}")
+    log.info(f"Max bond-centered neighbours: {max_bc_nneighbours}")
+    log.info(f"Max atom-centered neighbours: {max_ac_nneighbours}")
 
-    return max_natoms, max_nneighbours
+    return max_natoms, max_bc_nneighbours, max_ac_nneighbours
 
 
 def get_hamiltonian_mapper_from_dataset(dataset_as_list):
-    orbital_ells_across_dataset = [x[1] for x in dataset_as_list]
+    orbital_ells_across_dataset = [snapshot['orbital_spec'] for snapshot in dataset_as_list]
     orbital_ells_across_dataset = dict(
         (int(k), v) for d in orbital_ells_across_dataset for k, v in d.items()
     )
@@ -268,11 +276,14 @@ def get_irreps_mask_on_diagonal(
 
 def prepare_input_dict(dataset_as_list: DatasetList):
     inputs_dict = {}
-    inputs_dict["numbers"] = [datatuple[0].numbers for datatuple in dataset_as_list]
-    inputs_dict["positions"] = [datatuple[0].positions for datatuple in dataset_as_list]
+    inputs_dict["numbers"] = [snapshot['atoms'].numbers for snapshot in dataset_as_list]
+    inputs_dict["positions"] = [snapshot['atoms'].positions for snapshot in dataset_as_list]
 
-    inputs_dict["idx_ij"] = [datatuple[2] for datatuple in dataset_as_list]
-    inputs_dict["idx_D"] = [datatuple[3] for datatuple in dataset_as_list]
+    inputs_dict["ac_ij"] = [snapshot['ac_ij'] for snapshot in dataset_as_list]
+    inputs_dict["ac_D"] = [snapshot['ac_D'] for snapshot in dataset_as_list]
+
+    inputs_dict["bc_ij"] = [snapshot['bc_ij'] for snapshot in dataset_as_list]
+    inputs_dict["bc_D"] = [snapshot['bc_D'] for snapshot in dataset_as_list]
 
     return inputs_dict
 
@@ -281,7 +292,6 @@ def prepare_label_dict(
     dataset_as_list: DatasetList,
     hmapper: MultiElementPairHBlockMapper,
     mask_dict: dict,
-    inputs_dict,
     max_ell,
     readout_nfeatures,
 ):
@@ -289,16 +299,16 @@ def prepare_label_dict(
 
     tmp_irrep_list = [
         get_h_irreps(
-            hblocks_off_diagonal=datatuple[4],
-            hblocks_on_diagonal=datatuple[5],
+            hblocks_off_diagonal=snapshot['off_diagonal_hblocks'],
+            hblocks_on_diagonal=snapshot['on_diagonal_hblocks'],
             hmapper=hmapper,
-            atomic_numbers=inputs_dict["numbers"][i],
-            neighbour_indices=datatuple[2],
+            atomic_numbers=snapshot["atoms"].numbers,
+            neighbour_indices=snapshot["bc_ij"],
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i, datatuple in tqdm(
-            enumerate(dataset_as_list),
+        for snapshot in tqdm(
+            dataset_as_list,
             desc="Converting H blocks to irreps",
             total=len(dataset_as_list),
             ncols=100
@@ -310,22 +320,22 @@ def prepare_label_dict(
     labels_dict["mask_off_diagonal"] = [
         get_irreps_mask_off_diagonal(
             mask_dict,
-            inputs_dict["numbers"][i],
-            inputs_dict["idx_ij"][i],
+            snapshot["atoms"].numbers,
+            snapshot["bc_ij"],
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i in trange(len(dataset_as_list), desc="Making off-diagonal irreps masks", ncols=100)
+        for snapshot in tqdm(dataset_as_list, desc="Making off-diagonal irreps masks", ncols=100)
     ]
 
     labels_dict["mask_on_diagonal"] = [
         get_irreps_mask_on_diagonal(
             mask_dict,
-            inputs_dict["numbers"][i],
+            snapshot["atoms"].numbers,
             max_ell=max_ell,
             readout_nfeatures=readout_nfeatures,
         )
-        for i in trange(len(dataset_as_list), desc="Making on-diagonal irreps masks", ncols=100)
+        for snapshot in tqdm(dataset_as_list, desc="Making on-diagonal irreps masks", ncols=100)
     ]
 
     return labels_dict
@@ -367,11 +377,11 @@ class InMemoryDataset:
 
         self.max_ell, self.readout_nfeatures = get_max_ell_and_max_features(self.hmap)
 
-        self.max_natoms, self.max_nneighbours = get_max_natoms_and_nneighbours(
+        self.max_natoms, self.bc_max_nneighbours, self.ac_max_nneighbours = get_max_natoms_and_nneighbours(
             dataset_as_list
         )
 
-        self.n_bonds = int(self.bond_fraction*self.max_nneighbours)
+        self.n_bonds = int(self.bond_fraction*self.bc_max_nneighbours)
 
         self.dataset_mask_dict = get_mask_dict(
             self.max_ell, self.readout_nfeatures, self.hmap
@@ -384,7 +394,6 @@ class InMemoryDataset:
                 dataset_as_list,
                 self.hmap,
                 self.dataset_mask_dict,
-                self.inputs,
                 self.max_ell,
                 self.readout_nfeatures,
             )
@@ -414,11 +423,18 @@ class InMemoryDataset:
             (self.max_natoms, 3), dtype=tf.float32, name="positions"
         )
         # input_signature["box"] = tf.TensorSpec((3, 3), dtype=tf.float64, name="box")
-        input_signature["idx_ij"] = tf.TensorSpec(
-            (self.max_nneighbours, 2), dtype=tf.int16, name="idx_ij"
+        input_signature["bc_ij"] = tf.TensorSpec(
+            (self.bc_max_nneighbours, 2), dtype=tf.int16, name="bc_ij"
         )
-        input_signature["idx_D"] = tf.TensorSpec(
-            (self.max_nneighbours, 3), dtype=tf.float32, name="idx_D"
+        input_signature["bc_D"] = tf.TensorSpec(
+            (self.bc_max_nneighbours, 3), dtype=tf.float32, name="bc_D"
+        )
+
+        input_signature["ac_ij"] = tf.TensorSpec(
+            (self.ac_max_nneighbours, 2), dtype=tf.int16, name="ac_ij"
+        )
+        input_signature["ac_D"] = tf.TensorSpec(
+            (self.ac_max_nneighbours, 3), dtype=tf.float32, name="ac_D"
         )
 
         if self.is_inference:
@@ -470,31 +486,42 @@ class InMemoryDataset:
             inputs["numbers"], (0, natoms_zeros_to_add), "constant"
         ).astype(np.int16)
 
-
-        neighbour_zeros_to_add = self.max_nneighbours - len(inputs["idx_ij"])
-        inputs["idx_ij"] = np.pad(
-            inputs["idx_ij"],
-            ((0, neighbour_zeros_to_add), (0, 0)),
+        bc_neighbour_zeros_to_add = self.bc_max_nneighbours - len(inputs["bc_ij"])
+        inputs["bc_ij"] = np.pad(
+            inputs["bc_ij"],
+            ((0, bc_neighbour_zeros_to_add), (0, 0)),
             "constant",
             constant_values=self.max_natoms + 1,
         ).astype(np.int16)
-        inputs["idx_D"] = np.pad(
-            inputs["idx_D"], ((0, neighbour_zeros_to_add), (0, 0)), "constant"
+        inputs["bc_D"] = np.pad(
+            inputs["bc_D"], ((0, bc_neighbour_zeros_to_add), (0, 0)), "constant"
         ).astype(np.float32)
 
-        if self.is_inference:
-            return inputs
-        
-        if self.n_bonds != self.max_nneighbours:
-            unpadded_neighbour_count = self.max_nneighbours - neighbour_zeros_to_add
-            d_unpadded = np.linalg.norm(inputs["idx_D"][:unpadded_neighbour_count], axis=-1)
+        # TODO rename idx_bonds
+        # TODO do this faster elsewhere maybe?
+        if self.n_bonds != self.bc_max_nneighbours:
+            unpadded_neighbour_count = self.bc_max_nneighbours - bc_neighbour_zeros_to_add
+            d_unpadded = np.linalg.norm(inputs["bc_D"][:unpadded_neighbour_count], axis=-1)
             inverse_d = np.reciprocal(d_unpadded, where = d_unpadded > 0.1)
             # alpha = np.random.rand() * 3 + 1.0
             dprobs = (inverse_d ** self.sampling_alpha) / np.sum(inverse_d ** self.sampling_alpha)
             inputs["idx_bonds"] = np.random.choice(unpadded_neighbour_count, size=self.n_bonds, replace=False, p=dprobs)
         else:
-            inputs["idx_bonds"] = np.arange(self.max_nneighbours)
+            inputs["idx_bonds"] = np.arange(self.bc_max_nneighbours)
 
+        ac_neighbour_zeros_to_add = self.ac_max_nneighbours - len(inputs["ac_ij"])
+        inputs["ac_ij"] = np.pad(
+            inputs["ac_ij"],
+            ((0, ac_neighbour_zeros_to_add), (0, 0)),
+            "constant",
+            constant_values=self.max_natoms + 1,
+        ).astype(np.int16)
+        inputs["ac_D"] = np.pad(
+            inputs["ac_D"], ((0, ac_neighbour_zeros_to_add), (0, 0)), "constant"
+        ).astype(np.float32)
+
+        if self.is_inference:
+            return inputs
         
         labels = self.labels
         labels = {k: v[i] for k, v in labels.items()}
@@ -502,7 +529,7 @@ class InMemoryDataset:
         labels["h_irreps_off_diagonal"] = np.pad(
             labels["h_irreps_off_diagonal"],
             (
-                (0, neighbour_zeros_to_add),
+                (0, bc_neighbour_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),
@@ -512,7 +539,7 @@ class InMemoryDataset:
         labels["mask_off_diagonal"] = np.pad(
             labels["mask_off_diagonal"],
             (
-                (0, neighbour_zeros_to_add),
+                (0, bc_neighbour_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
                 (0, 0),  # Feature dim

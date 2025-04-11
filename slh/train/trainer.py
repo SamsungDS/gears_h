@@ -214,8 +214,10 @@ def calculate_loss(params, batch_full, loss_function, apply_function):
     h_irreps_off_diagonal_predicted, h_irreps_on_diagonal_predicted = apply_function(
         params,
         batch["numbers"],
-        batch["idx_ij"],
-        batch["idx_D"],
+        batch["bc_ij"],
+        batch["bc_D"],
+        batch["ac_ij"],
+        batch["ac_D"],
         batch["idx_bonds"]
     )
 
