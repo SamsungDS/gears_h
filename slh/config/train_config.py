@@ -16,8 +16,8 @@ from pydantic import (
 from slh.config.lr_config import (LinearSchedule, 
                                   CyclicCosineSchedule, 
                                   ExponentialDecaySchedule,
-                                  WarmupCosineDecay,
-                                  ReduceOnPlateau,
+                                  WarmupCosineDecaySchedule,
+                                  ReduceOnPlateauSchedule,
                                   ConstantSchedule
 )
 
@@ -180,8 +180,8 @@ class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     schedule: Union[LinearSchedule, 
                     CyclicCosineSchedule, 
                     ExponentialDecaySchedule,
-                    WarmupCosineDecay,
-                    ReduceOnPlateau,
+                    WarmupCosineDecaySchedule,
+                    ReduceOnPlateauSchedule,
                     ConstantSchedule
                    ] = Field(ExponentialDecaySchedule(), 
                              discriminator="name")

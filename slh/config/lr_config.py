@@ -32,7 +32,6 @@ class LinearSchedule(BaseModel, frozen=True, extra="forbid"):
     transition_steps: int = 1000
     end_value: NonNegativeFloat = 1e-4
 
-
 class CyclicCosineSchedule(BaseModel, frozen=True, extra="forbid"):
     """
     Configuration of the optimizer.
@@ -58,16 +57,7 @@ class ExponentialDecaySchedule(BaseModel, frozen=True, extra="forbid"):
     decay_rate: NonNegativeFloat = 0.99
     end_value: NonNegativeFloat = 1e-4
 
-class WarmupCosineDecay(BaseModel, frozen = True, extra = "forbid"):
-    name: Literal["warmup_cosine_decay_schedule"] = "warmup_cosine_decay_schedule"
-    #init_value: NonNegativeFloat = 1e-3
-    peak_value: NonNegativeFloat = 1e-2
-    end_value: NonNegativeFloat = 1e-4
-    warmup_steps: NonNegativeInt = 25
-    decay_steps: NonNegativeInt = 225
-    exponent: float = 1
-
-class ReduceOnPlateau(BaseModel, frozen = True, extra = "forbid"):
+class ReduceOnPlateauSchedule(BaseModel, frozen = True, extra = "forbid"):
     name: Literal["reduce_on_plateau"] = "reduce_on_plateau"
     factor: NonNegativeFloat = 0.5
     patience: NonNegativeInt = 10
@@ -76,3 +66,12 @@ class ReduceOnPlateau(BaseModel, frozen = True, extra = "forbid"):
     accumulation_size: NonNegativeInt = 1
     min_scale: NonNegativeFloat = 1e-5
     cooldown: NonNegativeInt = 0
+
+class WarmupCosineDecaySchedule(BaseModel, frozen = True, extra = "forbid"):
+    name: Literal["warmup_cosine_decay_schedule"] = "warmup_cosine_decay_schedule"
+    #init_value: NonNegativeFloat = 1e-3
+    peak_value: NonNegativeFloat = 1e-2
+    end_value: NonNegativeFloat = 1e-4
+    warmup_steps: NonNegativeInt = 25
+    decay_steps: NonNegativeInt = 225
+    exponent: float = 1
