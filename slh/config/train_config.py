@@ -13,12 +13,13 @@ from pydantic import (
     model_validator
 )
 
-from slh.config.lr_config import (LinearSchedule, 
+from slh.config.lr_config import (ConstantSchedule,
                                   CyclicCosineSchedule, 
                                   ExponentialDecaySchedule,
-                                  WarmupCosineDecay,
-                                  ReduceOnPlateau,
-                                  ConstantSchedule
+                                  LinearSchedule,
+                                  ReduceOnPlateauSchedule,
+                                  WarmupCosineDecaySchedule,
+                                  WarmupExponentialDecaySchedule
 )
 
 class DataConfig(BaseModel, extra="forbid"):
@@ -177,12 +178,13 @@ class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     name: str = "adam"
     lr: NonNegativeFloat = 0.005
     opt_kwargs: dict[str, Any] = {"nesterov" : True}
-    schedule: Union[LinearSchedule, 
+    schedule: Union[ConstantSchedule,
                     CyclicCosineSchedule, 
                     ExponentialDecaySchedule,
-                    WarmupCosineDecay,
-                    ReduceOnPlateau,
-                    ConstantSchedule
+                    LinearSchedule,
+                    ReduceOnPlateauSchedule,
+                    WarmupCosineDecaySchedule,
+                    WarmupExponentialDecaySchedule
                    ] = Field(ExponentialDecaySchedule(), 
                              discriminator="name")
     
