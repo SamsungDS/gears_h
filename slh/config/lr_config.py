@@ -74,7 +74,7 @@ class WarmupExponentialDecaySchedule(BaseModel, frozen = True, extra = "forbid")
     transition_begin: NonNegativeInt = 2000
     transition_steps: NonNegativeInt = 1
     end_value: NonNegativeFloat = 5e-5
-    decay_rate: NonNegativeInt = 0.99995
+    decay_rate: NonNegativeFloat = 0.99995
     staircase: bool = False
 
 class WarmupCosineDecaySchedule(BaseModel, frozen = True, extra = "forbid"):
