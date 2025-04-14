@@ -4,6 +4,7 @@ import yaml
 
 from ase.io import read
 import jax
+import jax.numpy as jnp
 import numpy as np
 import optax
 from scipy.sparse import block_array
@@ -40,10 +41,42 @@ def create_inference_state(model_path: Path | str):
     with open(model_path / "readout_parameters.yaml", "r") as f:
         readout_parameters = yaml.load(f, yaml.SafeLoader)
 
+    try:
+        with open(model_path / "off_diag_analysis_results.yaml", "r") as f:
+            temp_off_diag_analysis_dict = yaml.load(f, yaml.SafeLoader)
+        build_with_off_diag_analysis = True
+        off_diag_analysis_dict = {}
+        for k, v in temp_off_diag_analysis_dict.items():
+            new_key = tuple(map(int, k.split()))
+            off_diag_analysis_dict[new_key] = {k2: jnp.array(v2) for k2,v2 in v.items()}
+    except FileNotFoundError:
+        build_with_off_diag_analysis = False
+
+    try:
+        with open(model_path / "on_diag_analysis_results.yaml", "r") as f:
+            temp_on_diag_analysis_dict = yaml.load(f, yaml.SafeLoader)
+        build_with_on_diag_analysis = True
+        on_diag_analysis_dict = {}
+        for k, v in temp_on_diag_analysis_dict.items():
+            new_key = int(k)
+            on_diag_analysis_dict[new_key] = {k2: jnp.array(v2) for k2,v2 in v.items()}
+    except FileNotFoundError:
+        build_with_on_diag_analysis = False
+
     log.info("Initializing model")
 
     model_builder = ModelBuilder(config.model.model_dump())
-    model = model_builder.build_lcao_hamiltonian_model(**readout_parameters)
+    if build_with_off_diag_analysis * build_with_on_diag_analysis:
+        log.info("Building model with analysis")
+        model = model_builder.build_lcao_hamiltonian_model(**readout_parameters,
+                                                           build_with_analysis=True,
+                                                           off_diagonal_analysis_dict=off_diag_analysis_dict,
+                                                           on_diagonal_analysis_dict=on_diag_analysis_dict)
+    else:
+        log.info("Building model without analysis")
+        model = model_builder.build_lcao_hamiltonian_model(**readout_parameters,
+                                                           build_with_analysis=False)
+
     batched_model = jax.vmap(
         model.apply, in_axes=(None, 0, 0, 0, 0, 0, 0), axis_name="batch"
     )
