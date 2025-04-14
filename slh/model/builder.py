@@ -74,9 +74,9 @@ class ModelBuilder:
         exp_lengthscales = jnp.zeros((83,83,readout_nfeatures))
         exp_powers = jnp.zeros((83,83,readout_nfeatures))
         for (Zi, Zj), v in off_diagonal_analysis_dict.items():
-            exp_prefactors[Zi,Zj] = v['exp_prefactors']
-            exp_lengthscales[Zi,Zj] = v['exp_lengthscales']
-            exp_powers[Zi,Zj] = v['exp_powers']
+            exp_prefactors = exp_prefactors.at[Zi,Zj].set(v['exp_prefactors'])
+            exp_lengthscales = exp_lengthscales.at[Zi,Zj].set(v['exp_lengthscales'])
+            exp_powers = exp_powers.at[Zi,Zj].set(v['exp_powers'])
         return OffDiagonalScaleShift(exp_prefactors = exp_prefactors,
                                      exp_lengthscales = exp_lengthscales,
                                      exp_powers = exp_powers)
@@ -87,11 +87,14 @@ class ModelBuilder:
         shifts = jnp.zeros((83,readout_nfeatures))
         scales = jnp.zeros((83,readout_nfeatures))
         for Zi, v in on_diagonal_analysis_dict.items():
-            shifts[Zi] = v['shifts']
-            scales[Zi] = v['scales']
+            shifts = shifts.at[Zi].set(v['shifts'])
+            scales = scales.at[Zi].set(v['scales'])
         return OnDiagonalScaleShift(shifts = shifts,
                                     scales = scales)
     
+    def scale_shift_placeholder(self, *args):
+        return args[0]
+
     def build_lcao_hamiltonian_model(self, 
                                      readout_nfeatures: int, 
                                      max_ell: int,
@@ -110,10 +113,11 @@ class ModelBuilder:
         if build_with_analysis:
             off_dss = self.build_off_diagonal_scale_shift(readout_nfeatures,
                                                           off_diagonal_analysis_dict)
-            on_dss = self.build_on_diagonal_scale_shift(on_diagonal_analysis_dict)
+            on_dss = self.build_on_diagonal_scale_shift(readout_nfeatures,
+                                                        on_diagonal_analysis_dict)
         else:
-            off_dss = lambda x, _: x
-            on_dss = lambda x, _: x
+            off_dss = self.scale_shift_placeholder
+            on_dss = self.scale_shift_placeholder
         
         hmodel = HamiltonianModel(atom_centered=acd,
                                   bond_centered=bcd,
