@@ -15,26 +15,6 @@ from slh.train.run import setup_logging
 
 log = logging.getLogger(__name__)
 
-
-def on_diag_analysis(input_dict: dict[str],
-                     label_dict: dict[str]
-                     ):
-    numbers = np.concatenate([v for v in input_dict['numbers']], axis=0)
-    l0shifts = np.concatenate([v[:, 0, 0, :] for v in label_dict['h_irreps_on_diagonal']], axis=0)
-
-    l0_dict = {}
-    for atomic_number in np.unique(numbers):
-        shifts = []
-        scales = []
-        for i in range(l0shifts.shape[-1]): # N_features
-            meanl0 = np.mean(l0shifts[numbers == atomic_number, i])
-            stdevl0 = np.std(l0shifts[numbers == atomic_number, i])
-            shifts.append(float(meanl0))
-            scales.append(float(stdevl0))
-        l0_dict[int(atomic_number)] = {"shift" : shifts,
-                                       "scale" : scales}
-    return l0_dict
-
 def off_diag_fitting_function(r, coeffs):
     a, length_scale, b = coeffs[:3]
     polycoeffs = [1.0, *coeffs[3:]]
@@ -93,7 +73,24 @@ def off_diag_analysis(input_dict: dict[str],
 
     return l0_fit_param_dict
 
+def on_diag_analysis(input_dict: dict[str],
+                     label_dict: dict[str]
+                     ):
+    numbers = np.concatenate([v for v in input_dict['numbers']], axis=0)
+    l0shifts = np.concatenate([v[:, 0, 0, :] for v in label_dict['h_irreps_on_diagonal']], axis=0)
 
+    l0_dict = {}
+    for atomic_number in np.unique(numbers):
+        shifts = []
+        scales = []
+        for i in range(l0shifts.shape[-1]): # N_features
+            meanl0 = np.mean(l0shifts[numbers == atomic_number, i])
+            stdevl0 = np.std(l0shifts[numbers == atomic_number, i])
+            shifts.append(float(meanl0))
+            scales.append(float(stdevl0))
+        l0_dict[int(atomic_number)] = {"shifts" : shifts,
+                                       "scales" : scales}
+    return l0_dict
 
 def analyze(dataset_root: Path | str,
             num_snapshots: int):
