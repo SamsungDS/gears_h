@@ -58,7 +58,7 @@ def off_diag_analysis(input_dict: dict[str],
 
     atomic_pairs = np.unique(zz, axis=0)
 
-    l0_fit_param_dict = {}
+    feature_fit_param_dict = {}
 
     for zi, zj in atomic_pairs:
         fit_params = []
@@ -81,7 +81,15 @@ def off_diag_analysis(input_dict: dict[str],
                                  restart_temp_ratio=0.1
                                 )
             fit_params.append(res.x.tolist())
-        l0_fit_param_dict[f"{zi} {zj}"] = fit_params # N_unique_pairs x N_features x 3
+        feature_fit_param_dict[f"{zi} {zj}"] = fit_params # N_unique_pairs x N_features x 3
+    
+    l0_fit_param_dict = {}
+    for k, v in feature_fit_param_dict.items():
+        l0_fit_param_dict[k] = {}
+        v = np.array(v).T
+        l0_fit_param_dict[k]['exp_prefactors'] = v[0].tolist()
+        l0_fit_param_dict[k]['exp_lengthscales'] = v[1].tolist()
+        l0_fit_param_dict[k]['exp_powers'] = v[2].tolist()
 
     return l0_fit_param_dict
 
