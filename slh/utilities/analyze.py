@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+import yaml
 
 import numpy as np
 from scipy.optimize import dual_annealing
@@ -10,6 +11,7 @@ from slh.data.input_pipeline import (get_hamiltonian_mapper_from_dataset,
                                      prepare_label_dict, 
                                      read_dataset_as_list, 
                                      prepare_input_dict)
+from slh.train.run import setup_logging
 
 log = logging.getLogger(__name__)
 
@@ -27,10 +29,10 @@ def on_diag_analysis(input_dict: dict[str],
         for i in range(l0shifts.shape[-1]): # N_features
             meanl0 = np.mean(l0shifts[numbers == atomic_number, i])
             stdevl0 = np.std(l0shifts[numbers == atomic_number, i])
-            shifts.append(meanl0)
-            scales.append(stdevl0)
-        l0_dict[atomic_number] = {"shift" : shifts,
-                                  "scale" : scales}
+            shifts.append(float(meanl0))
+            scales.append(float(stdevl0))
+        l0_dict[int(atomic_number)] = {"shift" : shifts,
+                                       "scale" : scales}
     return l0_dict
 
 def off_diag_fitting_function(r, coeffs):
@@ -63,6 +65,8 @@ def off_diag_analysis(input_dict: dict[str],
         for i in range(l0shifts.shape[-1]): # N_features
             idx = np.logical_and(zz[:, 0] == zi, zz[:, 1] == zj)
             if np.max(np.abs(l0shifts[idx, i])) < 1e-2:
+                # Parameters for identity
+                fit_params.append([float(np.e), 1, 0])
                 continue
             res = dual_annealing(off_diag_obj_func,
                                  bounds = [(-100, 100), 
@@ -76,8 +80,8 @@ def off_diag_analysis(input_dict: dict[str],
                                        l0shifts[idx, i][::1_00]), 
                                  restart_temp_ratio=0.1
                                 )
-            fit_params.append(res.x)
-        l0_fit_param_dict[(zi,zj)] = fit_params # N_unique_pairs x N_features x 3
+            fit_params.append(res.x.tolist())
+        l0_fit_param_dict[f"{zi} {zj}"] = fit_params # N_unique_pairs x N_features x 3
 
     return l0_fit_param_dict
 
@@ -85,3 +89,39 @@ def off_diag_analysis(input_dict: dict[str],
 
 def analyze(dataset_root: Path | str,
             num_snapshots: int):
+    dataset_root = Path(dataset_root).resolve()
+    analysis_root = dataset_root / "analysis"
+    analysis_root.mkdir(exist_ok=True)
+    setup_logging(analysis_root / "analysis.log", "info")
+    log.info("Reading datalist")
+    dslist = read_dataset_as_list(dataset_root, 1., 
+                                  num_snapshots=num_snapshots)
+    hmap, species_ells_dict = get_hamiltonian_mapper_from_dataset(dataset_as_list=dslist)
+    max_ell, readout_nfeatures = get_max_ell_and_max_features(hmap)
+    dataset_mask_dict = get_mask_dict(max_ell, 
+                                      readout_nfeatures, 
+                                      hmap)
+    
+    log.info("Preparing inputs and labels.")
+    input_dict = prepare_input_dict(dslist)
+    label_dict = prepare_label_dict(
+                    dslist,
+                    hmap,
+                    dataset_mask_dict,
+                    max_ell,
+                    readout_nfeatures,
+                 )
+    
+    log.info("Analyzing off-diagonal elements.")
+    off_diag_analysis_results = off_diag_analysis(input_dict=input_dict,
+                                                  label_dict=label_dict)
+    with open(analysis_root / "off_diag_analysis_results.yaml", "w") as f:
+        yaml.dump(off_diag_analysis_results, f)
+
+    log.info("Analyzing on-diagonal elements.")
+    on_diag_analysis_results = on_diag_analysis(input_dict=input_dict,
+                                                label_dict=label_dict)
+    with open(analysis_root / "on_diag_analysis_results.yaml", "w") as f:
+        yaml.dump(on_diag_analysis_results, f)
+    
+    log.info(f"Analysis complete! View output in {analysis_root}")
