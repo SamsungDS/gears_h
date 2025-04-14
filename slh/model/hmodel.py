@@ -21,8 +21,8 @@ class HamiltonianModel(nn.Module):
     dense: DenseBlock
     off_diag_readout: Readout
     on_diag_readout: Readout
-    off_diag_scale_shift = OffDiagonalScaleShift
-    on_diag_scale_shift = OnDiagonalScaleShift
+    off_diag_scale_shift: OffDiagonalScaleShift
+    on_diag_scale_shift: OnDiagonalScaleShift
 
     @nn.compact
     def __call__(self, 
@@ -47,9 +47,9 @@ class HamiltonianModel(nn.Module):
         off_diagonal_denseout = self.dense(bc_features)
         off_diagonal_irreps = self.off_diag_readout(off_diagonal_denseout)
         scaled_off_diagonal_irreps = self.off_diag_scale_shift(off_diagonal_irreps,
-                                                               jnp.linalg.norm(bc_neighbour_displacements, axis=1),
-                                                               atomic_numbers[bc_neighbour_indices:,0],
-                                                               atomic_numbers[bc_neighbour_indices:,1]
+                                                               jnp.linalg.norm(bc_neighbour_displacements.at[bond_indices].get(), axis=1),
+                                                               atomic_numbers[bc_neighbour_indices.at[bond_indices].get()[:,0]],
+                                                               atomic_numbers[bc_neighbour_indices.at[bond_indices].get()[:,1]]
                                                                )
 
         on_diagonal_denseout = self.dense(2.0 * atom_centered_descriptors)
