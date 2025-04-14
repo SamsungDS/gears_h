@@ -52,7 +52,7 @@ class HamiltonianModel(nn.Module):
                                                                atomic_numbers[bc_neighbour_indices.at[bond_indices].get()[:,1]]
                                                                )
 
-        on_diagonal_denseout = self.dense(2.0 * atom_centered_descriptors)
+        on_diagonal_denseout = self.dense(atom_centered_descriptors)
         on_diagonal_irreps = self.on_diag_readout(on_diagonal_denseout)
         scaled_on_diagonal_irreps = self.on_diag_scale_shift(on_diagonal_irreps,
                                                              atomic_numbers)
