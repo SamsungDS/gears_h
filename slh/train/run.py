@@ -130,6 +130,8 @@ def run(user_config, log_level="error"):
         try:
             with open(analysis_dir / "off_diag_analysis_results.yaml") as f:
                 temp_off_diag_analysis_dict = yaml.load(f, yaml.SafeLoader)
+            with open(config.data.model_version_path / "off_diag_analysis_results.yaml", "w") as f:
+                yaml.dump(temp_off_diag_analysis_dict, f)
             build_with_off_diag_analysis = True
             off_diag_analysis_dict = {}
             for k, v in temp_off_diag_analysis_dict.items():
@@ -143,6 +145,8 @@ def run(user_config, log_level="error"):
         try:
             with open(analysis_dir / "on_diag_analysis_results.yaml") as f:
                 temp_on_diag_analysis_dict = yaml.load(f, yaml.SafeLoader)
+            with open(config.data.model_version_path / "on_diag_analysis_results.yaml", "w") as f:
+                yaml.dump(temp_on_diag_analysis_dict, f)
             build_with_on_diag_analysis = True
             on_diag_analysis_dict = {}
             for k, v in temp_on_diag_analysis_dict.items():
