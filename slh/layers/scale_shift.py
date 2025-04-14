@@ -1,4 +1,3 @@
-import e3x
 from flax import linen as nn
 import jax.numpy as jnp
 from jaxtyping import Float, Array, Int
@@ -23,9 +22,7 @@ class OffDiagonalScaleShift(nn.Module):
         exp_lengthscales = self.exp_lengthscales[Z_i, Z_j]
         exp_powers = self.exp_powers[Z_i, Z_j]
 
-        shifts = exp_prefactors * jnp.exp(- (d / exp_lengthscales) ** exp_powers)
-
-
+        shifts = exp_prefactors * jnp.exp(- (d[..., None] / exp_lengthscales) ** exp_powers)
 
         x = x.at[..., 0, 0, :].add(shifts[..., :])
         # x = e3x.nn.add(self.shifts[atomic_numbers], x)
@@ -39,5 +36,6 @@ class OnDiagonalScaleShift(nn.Module):
                  x: Float[Array, '... 1 (in_max_degree+1)**2 in_features'],
                  atomic_numbers: Int[Array, ' num_atoms']):
         x = x.at[..., 0, 0, :].multiply(self.scales[atomic_numbers])
-        x = e3x.nn.add(self.shifts[atomic_numbers], x)
+        # x = e3x.nn.add(self.shifts[atomic_numbers], x)
+        x = x.at[..., 0, 0, :].add(self.shifts[atomic_numbers])
         return x
