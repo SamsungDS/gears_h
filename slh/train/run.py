@@ -4,6 +4,7 @@ from pathlib import Path
 import yaml
 
 import jax
+import jax.numpy as jnp
 from functools import partial
 import optax
 
@@ -122,11 +123,50 @@ def run(user_config, log_level="error"):
     with open(config.data.model_version_path / "species_ells.yaml", "w") as f:
         yaml.dump(species_ells_dict, f)
 
-    log.info("Initializing Model")
+    log.info("Checking for analysis...")
+    data_root = Path(config.data.data_path)
+    analysis_dir = data_root / "analysis"
+    if analysis_dir.is_dir():
+        try:
+            with open(analysis_dir / "off_diag_analysis_results.yaml") as f:
+                temp_off_diag_analysis_dict = yaml.load(f, yaml.SafeLoader)
+            build_with_off_diag_analysis = True
+            off_diag_analysis_dict = {}
+            for k, v in temp_off_diag_analysis_dict.items():
+                new_key = tuple(map(int, k.split()))
+                off_diag_analysis_dict[new_key] = {k2: jnp.array(v2) for k2,v2 in v.items()}
+        except FileNotFoundError:
+            log.warning("""Off-diagonal analysis not found!
+            Analyzing using `slh analyze path/to/dataset/root <Num_structures_to_analyze>
+            greatly improves accuracy.""")
+            build_with_off_diag_analysis = False
+        try:
+            with open(analysis_dir / "on_diag_analysis_results.yaml") as f:
+                temp_on_diag_analysis_dict = yaml.load(f, yaml.SafeLoader)
+            build_with_on_diag_analysis = True
+            on_diag_analysis_dict = {}
+            for k, v in temp_on_diag_analysis_dict.items():
+                new_key = int(k)
+                on_diag_analysis_dict[new_key] = {k2: jnp.array(v2) for k2,v2 in v.items()}
+        except FileNotFoundError:
+            log.warning("""On-diagonal analysis not found!
+            Analyzing using `slh analyze path/to/dataset/root <Num_structures_to_analyze>
+            greatly improves accuracy.""")
+            build_with_on_diag_analysis = False
+
     sample_input = train_ds.init_input()
 
     model_builder = ModelBuilder(config.model.model_dump())
-    model = model_builder.build_lcao_hamiltonian_model(**readout_parameters)
+    if build_with_off_diag_analysis and build_with_on_diag_analysis:
+        log.info("Building model with analysis")
+        model = model_builder.build_lcao_hamiltonian_model(**readout_parameters,
+                                                           build_with_analysis=True,
+                                                           off_diagonal_analysis_dict=off_diag_analysis_dict,
+                                                           on_diagonal_analysis_dict=on_diag_analysis_dict)
+    else:
+        log.info("Building model without analysis")
+        model = model_builder.build_lcao_hamiltonian_model(**readout_parameters,
+                                                           build_with_analysis=False)
 
     batched_model = jax.vmap(
         model.apply, in_axes=(None, 0, 0, 0, 0, 0, 0), axis_name="batch"
