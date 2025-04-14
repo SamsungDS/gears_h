@@ -61,6 +61,23 @@ def infer(
     infer(model_path, structure_path)
 
 
+analyze_app = typer.Typer(
+    pretty_exceptions_show_locals=False,
+    context_settings={"help_option_names": ["-h", "--help"]},
+    help="""Currently only supports dataset analysis.
+\nFor large structures with relatively uniform chemistries, 10 snapshots should suffice.""",
+)
+
+@analyze_app.command("dataset")
+def analyze(
+    dataset_root: Path = typer.Argument(..., help = "Dataset root path.")  ,
+    num_snapshots: int = typer.Argument(10, help = "Number of snapshots to analyze on.")
+):
+    from slh.utilities.analyze import analyze
+
+    analyze(dataset_root, num_snapshots)
+
+
 # @app.command()
 # def eval(
 #     train_config_path: Path = typer.Argument(
