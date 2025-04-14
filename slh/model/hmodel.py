@@ -1,8 +1,5 @@
 import flax.linen as nn
-import flax.linen
 import jax.numpy as jnp
-
-import flax
 
 from slh.layers import (
     SAAtomCenteredDescriptor,
@@ -13,7 +10,7 @@ from slh.layers import (
     OffDiagonalScaleShift,
     OnDiagonalScaleShift
 )
-from slh.layers.corrections import ExponentialScaleCorrection
+# from slh.layers.corrections import ExponentialScaleCorrection
 
 from typing import Union
 
@@ -49,10 +46,15 @@ class HamiltonianModel(nn.Module):
 
         off_diagonal_denseout = self.dense(bc_features)
         off_diagonal_irreps = self.off_diag_readout(off_diagonal_denseout)
-        scaled_off_diagonal_irreps = self.off_diag_scale_shift(off_diagonal_irreps)
+        scaled_off_diagonal_irreps = self.off_diag_scale_shift(off_diagonal_irreps,
+                                                               jnp.linalg.norm(bc_neighbour_displacements, axis=1),
+                                                               atomic_numbers[bc_neighbour_indices:,0],
+                                                               atomic_numbers[bc_neighbour_indices:,1]
+                                                               )
 
         on_diagonal_denseout = self.dense(2.0 * atom_centered_descriptors)
         on_diagonal_irreps = self.on_diag_readout(on_diagonal_denseout)
-        scaled_on_diagonal_irreps = self.on_diag_scale_shift(on_diagonal_irreps)
+        scaled_on_diagonal_irreps = self.on_diag_scale_shift(on_diagonal_irreps,
+                                                             atomic_numbers)
         
         return scaled_off_diagonal_irreps, scaled_on_diagonal_irreps
