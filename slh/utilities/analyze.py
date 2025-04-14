@@ -101,6 +101,9 @@ def analyze(dataset_root: Path | str,
     log.info("Reading datalist")
     dslist = read_dataset_as_list(dataset_root, 1., 
                                   num_snapshots=num_snapshots)
+    if len(dslist) == 0:
+        # TODO put this in read_dataset_as_list
+        raise(f"No data found in {dataset_root}")
     hmap, species_ells_dict = get_hamiltonian_mapper_from_dataset(dataset_as_list=dslist)
     max_ell, readout_nfeatures = get_max_ell_and_max_features(hmap)
     dataset_mask_dict = get_mask_dict(max_ell, 
