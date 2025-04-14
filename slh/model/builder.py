@@ -2,6 +2,7 @@ from functools import partial
 
 import e3x
 import jax.numpy as jnp
+import numpy as np
 
 import slh
 from slh.config.train_config import ModelConfig
@@ -11,6 +12,7 @@ from slh.layers.descriptor import (
 )
 from slh.layers.readout import Readout
 from slh.layers.residual_dense import DenseBlock
+from slh.layers.scale_shift import OffDiagonalScaleShift, OnDiagonalScaleShift
 from slh.model.hmodel import HamiltonianModel
 
 class ModelBuilder:
@@ -65,14 +67,50 @@ class ModelBuilder:
     def build_readout(self, readout_nfeatures: int, max_ell: int):
         return Readout(readout_nfeatures, max_ell=max_ell)
     
-    def build_lcao_hamiltonian_model(self, readout_nfeatures: int, max_ell: int):
+    def build_off_diagonal_scale_shift(self, 
+                                       exp_prefactors,
+                                       exp_lengthscales,
+                                       exp_powers):
+        if np.any(np.array([exp_prefactors,exp_lengthscales,exp_powers]) == None):  # noqa: E711
+            return lambda x: x
+        else:
+            return OffDiagonalScaleShift(exp_prefactors = exp_prefactors,
+                                         exp_lengthscales = exp_lengthscales,
+                                         exp_powers = exp_powers)
+        
+    def build_on_diagonal_scale_shift(self,
+                                      shifts,
+                                      scales):
+        if np.any(np.array(shifts, scales) == None):  # noqa: E711
+            return lambda x: x
+        else:
+            return OnDiagonalScaleShift(shifts = shifts,
+                                        scales = scales)
+    
+    def build_lcao_hamiltonian_model(self, 
+                                     readout_nfeatures: int, 
+                                     max_ell: int,
+                                     exp_prefactors,
+                                     exp_lengthscales,
+                                     exp_powers,
+                                     shifts,
+                                     scales
+                                    ):
         acd = self.build_atom_centered_descriptor()
         bcd = self.build_bond_centered_descriptor()
         mlp = self.build_mlp()
         readout = self.build_readout(readout_nfeatures, max_ell=max_ell)
+        off_dss = self.build_off_diagonal_scale_shift(exp_prefactors,
+                                                      exp_lengthscales,
+                                                      exp_powers)
+        on_dss = self.build_on_diagonal_scale_shift(shifts, scales)
+        
         hmodel = HamiltonianModel(atom_centered=acd,
                                   bond_centered=bcd,
                                   dense=mlp,
-                                  readout=readout
+                                  readout=readout,
+                                  off_diag_scale_shift = off_dss,
+                                  on_diag_scale_shift = on_dss
                                  )
+        
         return hmodel
