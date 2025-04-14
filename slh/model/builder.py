@@ -67,34 +67,38 @@ class ModelBuilder:
     def build_readout(self, readout_nfeatures: int, max_ell: int):
         return Readout(readout_nfeatures, max_ell=max_ell)
     
-    def build_off_diagonal_scale_shift(self, 
-                                       exp_prefactors,
-                                       exp_lengthscales,
-                                       exp_powers):
-        if np.any(np.array([exp_prefactors,exp_lengthscales,exp_powers]) == None):  # noqa: E711
-            return lambda x: x
-        else:
-            return OffDiagonalScaleShift(exp_prefactors = exp_prefactors,
-                                         exp_lengthscales = exp_lengthscales,
-                                         exp_powers = exp_powers)
+    def build_off_diagonal_scale_shift(self,
+                                       readout_nfeatures,
+                                       off_diagonal_analysis_dict):
+        exp_prefactors = jnp.zeros((83,83,readout_nfeatures))
+        exp_lengthscales = jnp.zeros((83,83,readout_nfeatures))
+        exp_powers = jnp.zeros((83,83,readout_nfeatures))
+        for (Zi, Zj), v in off_diagonal_analysis_dict.items():
+            exp_prefactors[Zi,Zj] = v['exp_prefactors']
+            exp_lengthscales[Zi,Zj] = v['exp_lengthscales']
+            exp_powers[Zi,Zj] = v['exp_powers']
+        return OffDiagonalScaleShift(exp_prefactors = exp_prefactors,
+                                     exp_lengthscales = exp_lengthscales,
+                                     exp_powers = exp_powers)
         
     def build_on_diagonal_scale_shift(self,
-                                      shifts,
-                                      scales):
-        if np.any(np.array(shifts, scales) == None):  # noqa: E711
-            return lambda x: x
-        else:
-            return OnDiagonalScaleShift(shifts = shifts,
-                                        scales = scales)
+                                      readout_nfeatures,
+                                      on_diagonal_analysis_dict):
+        shifts = jnp.zeros((83,readout_nfeatures))
+        scales = jnp.zeros((83,readout_nfeatures))
+        for Zi, v in on_diagonal_analysis_dict.items():
+            shifts[Zi] = v['shifts']
+            scales[Zi] = v['scales']
+        return OnDiagonalScaleShift(shifts = shifts,
+                                    scales = scales)
     
     def build_lcao_hamiltonian_model(self, 
                                      readout_nfeatures: int, 
                                      max_ell: int,
-                                     exp_prefactors,
-                                     exp_lengthscales,
-                                     exp_powers,
-                                     shifts,
-                                     scales
+                                     build_with_analysis: bool,
+                                     *,
+                                     off_diagonal_analysis_dict = None,
+                                     on_diagonal_analysis_dict = None
                                     ):
         acd = self.build_atom_centered_descriptor()
         bcd = self.build_bond_centered_descriptor()
@@ -103,11 +107,13 @@ class ModelBuilder:
                                      max_ell)
         on_dro = self.build_readout(readout_nfeatures,
                                     max_ell)
-        off_dss = self.build_off_diagonal_scale_shift(exp_prefactors,
-                                                      exp_lengthscales,
-                                                      exp_powers)
-        on_dss = self.build_on_diagonal_scale_shift(shifts, 
-                                                    scales)
+        if build_with_analysis:
+            off_dss = self.build_off_diagonal_scale_shift(readout_nfeatures,
+                                                          off_diagonal_analysis_dict)
+            on_dss = self.build_on_diagonal_scale_shift(on_diagonal_analysis_dict)
+        else:
+            off_dss = lambda x, _: x
+            on_dss = lambda x, _: x
         
         hmodel = HamiltonianModel(atom_centered=acd,
                                   bond_centered=bcd,
