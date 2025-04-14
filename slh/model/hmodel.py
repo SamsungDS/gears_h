@@ -10,6 +10,8 @@ from slh.layers import (
     BondCenteredTensorMomentDescriptor,
     DenseBlock,
     Readout,
+    OffDiagonalScaleShift,
+    OnDiagonalScaleShift
 )
 from slh.layers.corrections import ExponentialScaleCorrection
 
@@ -21,6 +23,8 @@ class HamiltonianModel(nn.Module):
     bond_centered: BondCenteredTensorMomentDescriptor
     dense: DenseBlock
     readout: Readout
+    off_diag_scale_shift = OffDiagonalScaleShift
+    on_diag_scale_shift = OnDiagonalScaleShift
 
     @nn.compact
     def __call__(self, 
@@ -35,9 +39,6 @@ class HamiltonianModel(nn.Module):
                                                        ac_neighbour_displacements
                                                       )
 
-        # atom_centered_descriptors = atom_centered_descriptors.astype(jnp.float32)
-        # assert atom_centered_descriptors.dtype == jnp.float32
-
         bc_features = self.bond_centered(atom_centered_descriptors, 
                                          bc_neighbour_indices.at[bond_indices].get(), 
                                          bc_neighbour_displacements.at[bond_indices].get()
@@ -47,12 +48,10 @@ class HamiltonianModel(nn.Module):
 
         off_diagonal_denseout = self.dense(bc_features)
         off_diagonal_irreps = self.readout(off_diagonal_denseout)
+        scaled_off_diagonal_irreps = self.off_diag_scale_shift(off_diagonal_irreps)
 
         on_diagonal_denseout = self.dense(2.0 * atom_centered_descriptors)
         on_diagonal_irreps = Readout(self.readout.nfeatures, self.readout.max_ell)(on_diagonal_denseout)
-        # scaling_correction = ExponentialScaleCorrection(
-        #     self.readout.nfeatures, self.readout.max_ell
-        # )(jnp.linalg.norm(neighbour_displacements, axis=-1, keepdims=True))
-        diagonal_scaling = self.param("odscale", flax.linen.initializers.constant(2.0), shape=(1,))
-        diagonal_scaling = flax.linen.softplus(diagonal_scaling)
-        return off_diagonal_irreps, diagonal_scaling * on_diagonal_irreps  #  * scaling_correction
+        scaled_on_diagonal_irreps = self.on_diag_scale_shift(on_diagonal_irreps)
+        
+        return scaled_off_diagonal_irreps, scaled_on_diagonal_irreps
