@@ -22,7 +22,8 @@ class HamiltonianModel(nn.Module):
     atom_centered: Union[SAAtomCenteredDescriptor,TDSAAtomCenteredDescriptor]
     bond_centered: BondCenteredTensorMomentDescriptor
     dense: DenseBlock
-    readout: Readout
+    off_diag_readout: Readout
+    on_diag_readout: Readout
     off_diag_scale_shift = OffDiagonalScaleShift
     on_diag_scale_shift = OnDiagonalScaleShift
 
@@ -47,11 +48,11 @@ class HamiltonianModel(nn.Module):
         bc_features = bc_features.astype(jnp.float32)
 
         off_diagonal_denseout = self.dense(bc_features)
-        off_diagonal_irreps = self.readout(off_diagonal_denseout)
+        off_diagonal_irreps = self.off_diag_readout(off_diagonal_denseout)
         scaled_off_diagonal_irreps = self.off_diag_scale_shift(off_diagonal_irreps)
 
         on_diagonal_denseout = self.dense(2.0 * atom_centered_descriptors)
-        on_diagonal_irreps = Readout(self.readout.nfeatures, self.readout.max_ell)(on_diagonal_denseout)
+        on_diagonal_irreps = self.on_diag_readout(on_diagonal_denseout)
         scaled_on_diagonal_irreps = self.on_diag_scale_shift(on_diagonal_irreps)
         
         return scaled_off_diagonal_irreps, scaled_on_diagonal_irreps

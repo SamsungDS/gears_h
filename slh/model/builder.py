@@ -99,16 +99,21 @@ class ModelBuilder:
         acd = self.build_atom_centered_descriptor()
         bcd = self.build_bond_centered_descriptor()
         mlp = self.build_mlp()
-        readout = self.build_readout(readout_nfeatures, max_ell=max_ell)
+        off_dro = self.build_readout(readout_nfeatures,
+                                     max_ell)
+        on_dro = self.build_readout(readout_nfeatures,
+                                    max_ell)
         off_dss = self.build_off_diagonal_scale_shift(exp_prefactors,
                                                       exp_lengthscales,
                                                       exp_powers)
-        on_dss = self.build_on_diagonal_scale_shift(shifts, scales)
+        on_dss = self.build_on_diagonal_scale_shift(shifts, 
+                                                    scales)
         
         hmodel = HamiltonianModel(atom_centered=acd,
                                   bond_centered=bcd,
                                   dense=mlp,
-                                  readout=readout,
+                                  off_diag_readout=off_dro,
+                                  on_diag_readout=on_dro,
                                   off_diag_scale_shift = off_dss,
                                   on_diag_scale_shift = on_dss
                                  )
