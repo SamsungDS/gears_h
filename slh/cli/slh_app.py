@@ -67,6 +67,7 @@ analyze_app = typer.Typer(
     help="""Currently only supports dataset analysis.
 \nFor large structures with relatively uniform chemistries, 10 snapshots should suffice.""",
 )
+app.add_typer(analyze_app, name="analyze")
 
 @analyze_app.command("dataset")
 def analyze(
