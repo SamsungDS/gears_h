@@ -137,8 +137,8 @@ def run(user_config, log_level="error"):
                 off_diag_analysis_dict[new_key] = {k2: jnp.array(v2) for k2,v2 in v.items()}
         except FileNotFoundError:
             log.warning("""Off-diagonal analysis not found!
-            Analyzing using `slh analyze path/to/dataset/root <Num_structures_to_analyze>
-            greatly improves accuracy.""")
+                         Analyzing using `slh analyze path/to/dataset/root <Num_structures_to_analyze>
+                         greatly improves accuracy.""")
             build_with_off_diag_analysis = False
         try:
             with open(analysis_dir / "on_diag_analysis_results.yaml") as f:
@@ -150,14 +150,20 @@ def run(user_config, log_level="error"):
                 on_diag_analysis_dict[new_key] = {k2: jnp.array(v2) for k2,v2 in v.items()}
         except FileNotFoundError:
             log.warning("""On-diagonal analysis not found!
-            Analyzing using `slh analyze path/to/dataset/root <Num_structures_to_analyze>
-            greatly improves accuracy.""")
+                         Analyzing using `slh analyze path/to/dataset/root <Num_structures_to_analyze>
+                         greatly improves accuracy.""")
             build_with_on_diag_analysis = False
+    else:
+        log.warning("""Analysis not found!
+                     Analyzing using `slh analyze path/to/dataset/root <Num_structures_to_analyze>
+                     greatly improves accuracy.""")
+        build_with_off_diag_analysis = False
+        build_with_on_diag_analysis = False
 
     sample_input = train_ds.init_input()
 
     model_builder = ModelBuilder(config.model.model_dump())
-    if build_with_off_diag_analysis and build_with_on_diag_analysis:
+    if build_with_off_diag_analysis * build_with_on_diag_analysis:
         log.info("Building model with analysis")
         model = model_builder.build_lcao_hamiltonian_model(**readout_parameters,
                                                            build_with_analysis=True,
