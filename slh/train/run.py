@@ -68,14 +68,15 @@ def run(user_config, log_level="error"):
     if config.data.data_path is not None:
         assert config.data.train_data_path is None, "train_data_path must not be provided when data_path is."
         assert config.data.val_data_path is None, "val_data_path must not be provided when data_path is."
+        data_root = Path(config.data.data_path)
         ds_list = read_dataset_as_list(
-            directory = Path(config.data.data_path),
+            directory = data_root,
             atomcentered_cutoff = atomcentered_cutoff,
             num_snapshots= num_train + num_val,
         )
         if len(ds_list) == 0:
             raise FileNotFoundError(
-                f"Did not find any snapshots at {Path(config.data.directory)}"
+                f"Did not find any snapshots at {data_root}"
             )
     
         train_ds, val_ds = initialize_dataset_from_list(
@@ -91,15 +92,17 @@ def run(user_config, log_level="error"):
     elif config.data.data_path is None:
         assert config.data.train_data_path is not None, "train_data_path must be provided when data_path is not."
         assert config.data.val_data_path is not None, "val_data_path must be provided when data_path is not."
+        data_root = Path(config.data.train_data_path)
+        val_data_root = Path(config.data.val_data_path)
         train_ds_list = read_dataset_as_list(
-            Path(config.data.train_data_path),
+            directory = data_root,
             atomcentered_cutoff = atomcentered_cutoff,
-            num_snapshots=num_train,
+            num_snapshots = num_train,
         )
         val_ds_list = read_dataset_as_list(
-            Path(config.data.val_data_path),
+            directory = val_data_root,
             atomcentered_cutoff = atomcentered_cutoff,
-            num_snapshots=num_val,
+            num_snapshots = num_val,
         )
         train_ds, val_ds = (PureInMemoryDataset(train_ds_list,
                                                 batch_size = config.data.batch_size,
@@ -124,7 +127,6 @@ def run(user_config, log_level="error"):
         yaml.dump(species_ells_dict, f)
 
     log.info("Checking for analysis...")
-    data_root = Path(config.data.data_path)
     analysis_dir = data_root / "analysis"
     if analysis_dir.is_dir():
         try:
@@ -139,7 +141,7 @@ def run(user_config, log_level="error"):
                 off_diag_analysis_dict[new_key] = {k2: jnp.array(v2) for k2,v2 in v.items()}
         except FileNotFoundError:
             log.warning("""Off-diagonal analysis not found!
-                         Analyzing using `slh analyze path/to/dataset/root <Num_structures_to_analyze>
+                         Analyzing using `slh analyze path/to/training/dataset/root <Num_structures_to_analyze>`
                          greatly improves accuracy.""")
             build_with_off_diag_analysis = False
         try:
@@ -154,12 +156,12 @@ def run(user_config, log_level="error"):
                 on_diag_analysis_dict[new_key] = {k2: jnp.array(v2) for k2,v2 in v.items()}
         except FileNotFoundError:
             log.warning("""On-diagonal analysis not found!
-                         Analyzing using `slh analyze path/to/dataset/root <Num_structures_to_analyze>
+                         Analyzing using `slh analyze path/to/training/dataset/root <Num_structures_to_analyze>`
                          greatly improves accuracy.""")
             build_with_on_diag_analysis = False
     else:
         log.warning("""Analysis not found!
-                     Analyzing using `slh analyze path/to/dataset/root <Num_structures_to_analyze>
+                     Analyzing using `slh analyze path/to/training/dataset/root <Num_structures_to_analyze>`
                      greatly improves accuracy.""")
         build_with_off_diag_analysis = False
         build_with_on_diag_analysis = False
