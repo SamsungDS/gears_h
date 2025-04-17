@@ -32,10 +32,19 @@ class OnDiagonalScaleShift(nn.Module):
     shifts: Float[Array, "num_elements num_features"]
     scales: Float[Array, "num_elements num_features"]
 
+    def setup(self):
+        self.learnable_scales = self.param("on_diag_learnable_scales",
+                                           nn.initializers.constant(self.scales),
+                                           shape = self.scales.shape)
+        self.learnable_shifts = self.param("on_diag_learnable_shifts",
+                                           nn.initializers.constant(self.shifts),
+                                           shape = self.shifts.shape)
+
     def __call__(self, 
                  x: Float[Array, '... 1 (in_max_degree+1)**2 in_features'],
                  atomic_numbers: Int[Array, ' num_atoms']):
-        x = x.at[..., 0, 0, :].multiply(self.scales[atomic_numbers])
+        
+        x = x.at[..., 0, 0, :].multiply(jnp.abs(self.learnable_scales[atomic_numbers]))
         # x = e3x.nn.add(self.shifts[atomic_numbers], x)
-        x = x.at[..., 0, 0, :].add(self.shifts[atomic_numbers])
+        x = x.at[..., 0, 0, :].add(self.learnable_shifts[atomic_numbers])
         return x
