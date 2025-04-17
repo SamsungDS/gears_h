@@ -169,14 +169,14 @@ def run(user_config, log_level="error"):
     sample_input = train_ds.init_input()
 
     model_builder = ModelBuilder(config.model.model_dump())
-    if build_with_off_diag_analysis * build_with_on_diag_analysis:
-        log.info("Building model with analysis")
+    if build_with_off_diag_analysis * build_with_on_diag_analysis: # Only true if both are true.
+        log.info("Building model with input from dataset analysis.")
         model = model_builder.build_lcao_hamiltonian_model(**readout_parameters,
                                                            build_with_analysis=True,
                                                            off_diagonal_analysis_dict=off_diag_analysis_dict,
                                                            on_diagonal_analysis_dict=on_diag_analysis_dict)
     else:
-        log.info("Building model without analysis")
+        log.info("Building model without input from dataset analysis.")
         model = model_builder.build_lcao_hamiltonian_model(**readout_parameters,
                                                            build_with_analysis=False)
 
