@@ -166,10 +166,10 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
                              deg)
             y.append(td)
 
-        y = [e3x.nn.features.change_max_degree_or_type(desc, 
-                                                       self.max_tensordense_degree, 
-                                                       include_pseudotensors=True) for desc in y]
-        y = jnp.concatenate(y, axis=-1)
+        # y = [e3x.nn.features.change_max_degree_or_type(desc, 
+        #                                                self.max_tensordense_degree, 
+        #                                                include_pseudotensors=True) for desc in y]
+        # y = jnp.concatenate(y, axis=-1)
 
         # y = y * self.embedding_transformation(self.embedding(Z_i))
 
@@ -187,10 +187,18 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
             )
             y = LayerNorm()(y)
 
-        y0 = e3x.nn.Dense(self.embedding_transformation.features)(y)
-        y = LayerNorm()(y0)
-        y = e3x.nn.bent_identity(y)
-        y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y0
+        yout = []
+        for y_ in y:
+            y0 = e3x.nn.Dense(y_.shape[-1])(y_)
+            y_ = LayerNorm()(y0)
+            y_ = e3x.nn.bent_identity(y_)
+            y_ = e3x.nn.Dense(y_.shape[-1])(y_) + y0
+            yout.append(y_)
+
+        y = [e3x.nn.features.change_max_degree_or_type(desc, 
+                                                       self.max_tensordense_degree, 
+                                                       include_pseudotensors=True) for desc in yout]
+        y = jnp.concatenate(y, axis=-1)
 
         return y
     
