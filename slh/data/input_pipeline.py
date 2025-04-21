@@ -20,6 +20,9 @@ from slh.hblockmapper import (
     make_mapper_from_elements,
 )
 
+import grain
+import jax.numpy as jnp
+
 # (Atoms, {Z: [0, 1, 2, ...]}, ij, D, hblocks)
 DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list, list]]
 
@@ -38,12 +41,13 @@ def initialize_dataset_from_list(
 ):
     train_idx, val_idx = split_idxs(len(dataset_as_list), num_train, num_val)
     train_ds_list, val_ds_list = split_dataset(dataset_as_list, train_idx, val_idx)
-    train_ds, val_ds = (PureInMemoryDataset(train_ds_list,
+    train_ds, val_ds = (
+        make_grain_dataset(train_ds_list,
                                             batch_size = batch_size,
                                             n_epochs = n_epochs,
                                             bond_fraction = bond_fraction,
                                             sampling_alpha = sampling_alpha),
-                        PureInMemoryDataset(val_ds_list,
+        make_grain_dataset(val_ds_list,
                                             batch_size = val_batch_size,
                                             n_epochs = n_epochs,
                                             bond_fraction = bond_fraction,
@@ -340,297 +344,372 @@ def prepare_label_dict(
 
     return labels_dict
 
+def make_grain_dataset(dataset_as_list: DatasetList,
+                       batch_size: int,
+                       n_epochs: int,
+                       bond_fraction: float = 1.0,
+                       sampling_alpha: float = 0.0,
+                       is_inference: bool = False,
+                       seed: int = 42,
+                       ):
+    
+    # TODO This is uhhhh not ready for production
+    ds = GrainDataset(dataset_as_list=dataset_as_list)
+    return ds
 
-class InMemoryDataset:
+
+# class BatchSpec:
+#     atoms_pad_multiple:int = 10
+#     nl_pad_multiple: int = 1000
+
+#     def __call__(list_of_batching_inputs):
+#         inputs, labels = list(map(list, zip(*list_of_batching_inputs)))
+#         atoms_padded_length = 
+
+
+
+class GrainDataset:
     def __init__(
         self,
         dataset_as_list: DatasetList,
-        batch_size: int,
-        n_epochs: int,
+        batch_size: int=1,
+        n_epochs: int=-1,
         bond_fraction: float = 1.0,
         sampling_alpha: float = 0.0,
         is_inference: bool = False,
-        buffer_size=100,
-        cache_path=".",
+        seed: int=42,
+        n_cpus:int=8,
     ):
-        self.n_data = len(dataset_as_list)
         
-        dataset_as_list = dataset_as_list[:self.n_data]
-        
-        self.n_epochs = n_epochs
-        self.bond_fraction = bond_fraction
-        self.sampling_alpha = sampling_alpha
-        self.batch_size = min(self.n_data, batch_size)
-        self.is_inference = is_inference
-
-        self.count = 0
-        # self.maxcount = self.n_epochs * self.steps_per_epoch
-        # self.current_gencount = 0
-
-        self.buffer = deque()
-        self.buffer_size = min(buffer_size, self.n_data)
-        self.cache_file = Path(cache_path) / str(uuid.uuid4())
-
-        self.sample_data = dataset_as_list[0]
-
+        self._steps_per_epoch = len(dataset_as_list) // batch_size # We drop remainder
         self.hmap, self.species_ells_dict = get_hamiltonian_mapper_from_dataset(dataset_as_list=dataset_as_list)
-
         self.max_ell, self.readout_nfeatures = get_max_ell_and_max_features(self.hmap)
-
-        self.max_natoms, self.bc_max_nneighbours, self.ac_max_nneighbours = get_max_natoms_and_nneighbours(
-            dataset_as_list
-        )
-
-        # We overwrite this here since this is what we actually care about
-        self.bc_max_nneighbours = int(self.bond_fraction*self.bc_max_nneighbours)
-
-        self.dataset_mask_dict = get_mask_dict(
-            self.max_ell, self.readout_nfeatures, self.hmap
-        )
+        self.dataset_mask_dict = get_mask_dict(self.max_ell, self.readout_nfeatures, self.hmap)
 
         self.inputs = prepare_input_dict(dataset_as_list)
-
-        if not self.is_inference:
-            self.labels = prepare_label_dict(
-                dataset_as_list,
-                self.hmap,
-                self.dataset_mask_dict,
-                self.max_ell,
-                self.readout_nfeatures,
-            )
-
-        self.enqueue(min(self.buffer_size, self.n_data))
+        self.labels = prepare_label_dict(
+                        dataset_as_list,
+                        self.hmap,
+                        self.dataset_mask_dict,
+                        self.max_ell,
+                        self.readout_nfeatures,
+                    )
+        inputs_lod = [dict((k, v[i]) for k, v in self.inputs.items()) for i in range(len(dataset_as_list))]
+        labels_lod = [dict((k, v[i]) for k, v in self.labels.items()) for i in range(len(dataset_as_list))]
+        batch_lod = [(inputs, labels) for inputs, labels in zip(inputs_lod, labels_lod, strict=True)]
+        self.ds = iter(
+            grain.MapDataset.source(batch_lod)
+            .seed(seed)
+            .shuffle()
+            .repeat(1000) # TODO we need an actual repeat count here ofc.
+            .batch(batch_size=1)
+            .to_iter_dataset()
+            .mp_prefetch(grain.multiprocessing.MultiprocessingOptions(num_workers=n_cpus))
+        )
 
     def init_input(self):
         """Returns first batch of inputs and labels to init the model."""
-        inputs, _ = self.prepare_single_snapshot(0)
-        return inputs
+        checkpoint = self.ds.get_state()
+        # Recover the iterator to the state after the first produced element.
+        inputs, _ = next(self.ds)
+        self.ds.set_state(checkpoint)
+        return dict((k, v[0]) for k, v in inputs.items())
     
     @property
     def steps_per_epoch(self):
-        # This throws away a bit of the training data, but at most 1 batch worth.
-        # A typical batch is 1-16 large so this is fine.
-        return self.n_data // self.batch_size
+        return self._steps_per_epoch
 
-    def make_signature(self) -> tf.TensorSpec:
-        # Taken from https://github.com/apax-hub/apax/blob/dev/apax/data/input_pipeline.py#L135C1-L167C25
-        # and changed to our needs
-        input_signature = {}
-        # input_signature["n_atoms"] = tf.TensorSpec((), dtype=tf.int16, name="n_atoms")
-        input_signature["numbers"] = tf.TensorSpec(
-            (self.max_natoms,), dtype=tf.int16, name="numbers"
-        )
-        input_signature["positions"] = tf.TensorSpec(
-            (self.max_natoms, 3), dtype=tf.float32, name="positions"
-        )
-        # input_signature["box"] = tf.TensorSpec((3, 3), dtype=tf.float64, name="box")
-        input_signature["bc_ij"] = tf.TensorSpec(
-            (self.bc_max_nneighbours, 2), dtype=tf.int16, name="bc_ij"
-        )
-        input_signature["bc_D"] = tf.TensorSpec(
-            (self.bc_max_nneighbours, 3), dtype=tf.float32, name="bc_D"
-        )
 
-        input_signature["ac_ij"] = tf.TensorSpec(
-            (self.ac_max_nneighbours, 2), dtype=tf.int16, name="ac_ij"
-        )
-        input_signature["ac_D"] = tf.TensorSpec(
-            (self.ac_max_nneighbours, 3), dtype=tf.float32, name="ac_D"
-        )
-
-        if self.is_inference:
-            return input_signature
-
-        label_signature = {}
-        label_signature["h_irreps_off_diagonal"] = tf.TensorSpec(
-            (self.bc_max_nneighbours, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
-            dtype=tf.float64,
-            name="h_irreps_off_diagonal",
-        )
-        label_signature["mask_off_diagonal"] = tf.TensorSpec(
-            (self.bc_max_nneighbours, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
-            dtype=tf.int16,
-            name="mask_off_diagonal",
-        )
-        label_signature["h_irreps_on_diagonal"] = tf.TensorSpec(
-            (self.max_natoms, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
-            dtype=tf.float64,
-            name="h_irreps_on_diagonal",
-        )
-        label_signature["mask_on_diagonal"] = tf.TensorSpec(
-            (self.max_natoms, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
-            dtype=tf.int16,
-            name="mask_on_diagonal",
-        )
-        signature = (input_signature, label_signature)
-        return signature
-
-    def enqueue(self, num_snapshots):
-        for _ in range(num_snapshots):
-            data = self.prepare_single_snapshot(self.count % self.n_data)
-            self.buffer.append(data)
-            self.count += 1
-            # self.count %= self.n_data
-
-    def prepare_single_snapshot(self, i):
-        inputs = self.inputs
-        inputs = {k: v[i] for k, v in inputs.items()}
-
-        natoms_zeros_to_add = self.max_natoms - len(inputs["numbers"])
-        inputs["positions"] = np.pad(
-            inputs["positions"], ((0, natoms_zeros_to_add), (0, 0)), "constant"
-        ).astype(np.float32)
-        inputs["numbers"] = np.pad(
-            inputs["numbers"], (0, natoms_zeros_to_add), "constant"
-        ).astype(np.int16)
-
-        # Padding can be <0, since we only send a subset of bonds to the GPU
-        # but that's meaningless so we clip
-        bc_neighbour_zeros_to_add = max(0, self.bc_max_nneighbours - len(inputs["bc_ij"]))
+# class InMemoryDataset:
+#     def __init__(
+#         self,
+#         dataset_as_list: DatasetList,
+#         batch_size: int,
+#         n_epochs: int,
+#         bond_fraction: float = 1.0,
+#         sampling_alpha: float = 0.0,
+#         is_inference: bool = False,
+#         buffer_size=100,
+#         cache_path=".",
+#     ):
+#         self.n_data = len(dataset_as_list)
         
-        unpadded_neighbour_count = len(inputs["bc_ij"])
-        d_unpadded = np.linalg.norm(inputs["bc_D"], axis=-1)
-        inverse_d = np.reciprocal(d_unpadded, where = d_unpadded > 0.1)
-        dprobs = (inverse_d ** self.sampling_alpha) / np.sum(inverse_d ** self.sampling_alpha)
-        bc_idx = np.random.choice(unpadded_neighbour_count, size=self.bc_max_nneighbours, replace=False, p=dprobs)
+#         dataset_as_list = dataset_as_list[:self.n_data]
         
-        inputs["bc_ij"] = np.pad(
-            inputs["bc_ij"][bc_idx],
-            ((0, bc_neighbour_zeros_to_add), (0, 0)),
-            "constant",
-            constant_values=self.max_natoms + 1,
-        ).astype(np.int16)
-        inputs["bc_D"] = np.pad(
-            inputs["bc_D"][bc_idx], ((0, bc_neighbour_zeros_to_add), (0, 0)), "constant"
-        ).astype(np.float32)
+#         self.n_epochs = n_epochs
+#         self.bond_fraction = bond_fraction
+#         self.sampling_alpha = sampling_alpha
+#         self.batch_size = min(self.n_data, batch_size)
+#         self.is_inference = is_inference
 
+#         self.count = 0
+#         # self.maxcount = self.n_epochs * self.steps_per_epoch
+#         # self.current_gencount = 0
 
-        ac_neighbour_zeros_to_add = self.ac_max_nneighbours - len(inputs["ac_ij"])
-        inputs["ac_ij"] = np.pad(
-            inputs["ac_ij"],
-            ((0, ac_neighbour_zeros_to_add), (0, 0)),
-            "constant",
-            constant_values=self.max_natoms + 1,
-        ).astype(np.int16)
-        inputs["ac_D"] = np.pad(
-            inputs["ac_D"], ((0, ac_neighbour_zeros_to_add), (0, 0)), "constant"
-        ).astype(np.float32)
+#         self.buffer = deque()
+#         self.buffer_size = min(buffer_size, self.n_data)
+#         self.cache_file = Path(cache_path) / str(uuid.uuid4())
 
-        if self.is_inference:
-            return inputs
+#         self.sample_data = dataset_as_list[0]
+
+#         self.hmap, self.species_ells_dict = get_hamiltonian_mapper_from_dataset(dataset_as_list=dataset_as_list)
+
+#         self.max_ell, self.readout_nfeatures = get_max_ell_and_max_features(self.hmap)
+
+#         self.max_natoms, self.bc_max_nneighbours, self.ac_max_nneighbours = get_max_natoms_and_nneighbours(
+#             dataset_as_list
+#         )
+
+#         # We overwrite this here since this is what we actually care about
+#         self.bc_max_nneighbours = int(self.bond_fraction*self.bc_max_nneighbours)
+
+#         self.dataset_mask_dict = get_mask_dict(
+#             self.max_ell, self.readout_nfeatures, self.hmap
+#         )
+
+#         self.inputs = prepare_input_dict(dataset_as_list)
+
+#         if not self.is_inference:
+#             self.labels = prepare_label_dict(
+#                 dataset_as_list,
+#                 self.hmap,
+#                 self.dataset_mask_dict,
+#                 self.max_ell,
+#                 self.readout_nfeatures,
+#             )
+
+#         self.enqueue(min(self.buffer_size, self.n_data))
+
+#     def init_input(self):
+#         """Returns first batch of inputs and labels to init the model."""
+#         inputs, _ = self.prepare_single_snapshot(0)
+#         return inputs
+    
+#     @property
+#     def steps_per_epoch(self):
+#         # This throws away a bit of the training data, but at most 1 batch worth.
+#         # A typical batch is 1-16 large so this is fine.
+#         return self.n_data // self.batch_size
+
+#     def make_signature(self) -> tf.TensorSpec:
+#         # Taken from https://github.com/apax-hub/apax/blob/dev/apax/data/input_pipeline.py#L135C1-L167C25
+#         # and changed to our needs
+#         input_signature = {}
+#         # input_signature["n_atoms"] = tf.TensorSpec((), dtype=tf.int16, name="n_atoms")
+#         input_signature["numbers"] = tf.TensorSpec(
+#             (self.max_natoms,), dtype=tf.int16, name="numbers"
+#         )
+#         input_signature["positions"] = tf.TensorSpec(
+#             (self.max_natoms, 3), dtype=tf.float32, name="positions"
+#         )
+#         # input_signature["box"] = tf.TensorSpec((3, 3), dtype=tf.float64, name="box")
+#         input_signature["bc_ij"] = tf.TensorSpec(
+#             (self.bc_max_nneighbours, 2), dtype=tf.int16, name="bc_ij"
+#         )
+#         input_signature["bc_D"] = tf.TensorSpec(
+#             (self.bc_max_nneighbours, 3), dtype=tf.float32, name="bc_D"
+#         )
+
+#         input_signature["ac_ij"] = tf.TensorSpec(
+#             (self.ac_max_nneighbours, 2), dtype=tf.int16, name="ac_ij"
+#         )
+#         input_signature["ac_D"] = tf.TensorSpec(
+#             (self.ac_max_nneighbours, 3), dtype=tf.float32, name="ac_D"
+#         )
+
+#         if self.is_inference:
+#             return input_signature
+
+#         label_signature = {}
+#         label_signature["h_irreps_off_diagonal"] = tf.TensorSpec(
+#             (self.bc_max_nneighbours, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
+#             dtype=tf.float64,
+#             name="h_irreps_off_diagonal",
+#         )
+#         label_signature["mask_off_diagonal"] = tf.TensorSpec(
+#             (self.bc_max_nneighbours, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
+#             dtype=tf.int16,
+#             name="mask_off_diagonal",
+#         )
+#         label_signature["h_irreps_on_diagonal"] = tf.TensorSpec(
+#             (self.max_natoms, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
+#             dtype=tf.float64,
+#             name="h_irreps_on_diagonal",
+#         )
+#         label_signature["mask_on_diagonal"] = tf.TensorSpec(
+#             (self.max_natoms, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
+#             dtype=tf.int16,
+#             name="mask_on_diagonal",
+#         )
+#         signature = (input_signature, label_signature)
+#         return signature
+
+#     def enqueue(self, num_snapshots):
+#         for _ in range(num_snapshots):
+#             data = self.prepare_single_snapshot(self.count % self.n_data)
+#             self.buffer.append(data)
+#             self.count += 1
+#             # self.count %= self.n_data
+
+#     def prepare_single_snapshot(self, i):
+#         inputs = self.inputs
+#         inputs = {k: v[i] for k, v in inputs.items()}
+
+#         natoms_zeros_to_add = self.max_natoms - len(inputs["numbers"])
+#         inputs["positions"] = np.pad(
+#             inputs["positions"], ((0, natoms_zeros_to_add), (0, 0)), "constant"
+#         ).astype(np.float32)
+#         inputs["numbers"] = np.pad(
+#             inputs["numbers"], (0, natoms_zeros_to_add), "constant"
+#         ).astype(np.int16)
+
+#         # Padding can be <0, since we only send a subset of bonds to the GPU
+#         # but that's meaningless so we clip
+#         bc_neighbour_zeros_to_add = max(0, self.bc_max_nneighbours - len(inputs["bc_ij"]))
         
-        labels = self.labels
-        labels = {k: v[i] for k, v in labels.items()}
-        labels["h_irreps_off_diagonal"] = np.pad(
-            labels["h_irreps_off_diagonal"][bc_idx],
-            (
-                (0, bc_neighbour_zeros_to_add),
-                (0, 0),  # Parity dim
-                (0, 0),  # irreps dim
-                (0, 0),  # Feature dim
-            ),  
-            "constant",
-        ).astype(np.float32)
-        labels["mask_off_diagonal"] = np.pad(
-            labels["mask_off_diagonal"][bc_idx],
-            (
-                (0, bc_neighbour_zeros_to_add),
-                (0, 0),  # Parity dim
-                (0, 0),  # irreps dim
-                (0, 0),  # Feature dim
-            ),
-            "constant",
-        ).astype(np.int8)
-
-        labels["h_irreps_on_diagonal"] = np.pad(
-            labels["h_irreps_on_diagonal"],
-            (
-                (0, natoms_zeros_to_add),
-                (0, 0),  # Parity dim
-                (0, 0),  # irreps dim
-                (0, 0),  # Feature dim
-            ),
-            "constant",
-        ).astype(np.float32)
-        labels["mask_on_diagonal"] = np.pad(
-            labels["mask_on_diagonal"],
-            (
-                (0, natoms_zeros_to_add),
-                (0, 0),  # Parity dim
-                (0, 0),  # irreps dim
-                (0, 0),  # Feature dim
-            ),
-            "constant",
-        ).astype(np.int8)
-
-        inputs = {k: tf.constant(v) for k, v in inputs.items()}
-        labels = {k: tf.constant(v) for k, v in labels.items()}
-        return (inputs, labels)
-
-    def __iter__(self):
-        raise NotImplementedError
-
-    def shuffle_and_batch(self):
-        raise NotImplementedError
-
-    def batch(self):
-        raise NotImplementedError
-
-    def cleanup(self):
-        pass
+#         unpadded_neighbour_count = len(inputs["bc_ij"])
+#         d_unpadded = np.linalg.norm(inputs["bc_D"], axis=-1)
+#         inverse_d = np.reciprocal(d_unpadded, where = d_unpadded > 0.1)
+#         dprobs = (inverse_d ** self.sampling_alpha) / np.sum(inverse_d ** self.sampling_alpha)
+#         bc_idx = np.random.choice(unpadded_neighbour_count, size=self.bc_max_nneighbours, replace=False, p=dprobs)
+        
+#         inputs["bc_ij"] = np.pad(
+#             inputs["bc_ij"][bc_idx],
+#             ((0, bc_neighbour_zeros_to_add), (0, 0)),
+#             "constant",
+#             constant_values=self.max_natoms + 1,
+#         ).astype(np.int16)
+#         inputs["bc_D"] = np.pad(
+#             inputs["bc_D"][bc_idx], ((0, bc_neighbour_zeros_to_add), (0, 0)), "constant"
+#         ).astype(np.float32)
 
 
-class PureInMemoryDataset(InMemoryDataset):
-    # def __iter__(self):
-    #     while self.current_gencount < self.maxcount or len(self.buffer) > 0: # self.count < self.n_data or len(self.buffer) > 0:
-    #         yield self.buffer.popleft()
+#         ac_neighbour_zeros_to_add = self.ac_max_nneighbours - len(inputs["ac_ij"])
+#         inputs["ac_ij"] = np.pad(
+#             inputs["ac_ij"],
+#             ((0, ac_neighbour_zeros_to_add), (0, 0)),
+#             "constant",
+#             constant_values=self.max_natoms + 1,
+#         ).astype(np.int16)
+#         inputs["ac_D"] = np.pad(
+#             inputs["ac_D"], ((0, ac_neighbour_zeros_to_add), (0, 0)), "constant"
+#         ).astype(np.float32)
 
-    #         space = self.buffer_size - len(self.buffer)
-    #         # if self.count + space > self.n_data:
-    #         #     space = self.n_data - self.count
-    #         self.enqueue(space)
-    #         self.current_gencount += 1
+#         if self.is_inference:
+#             return inputs
+        
+#         labels = self.labels
+#         labels = {k: v[i] for k, v in labels.items()}
+#         labels["h_irreps_off_diagonal"] = np.pad(
+#             labels["h_irreps_off_diagonal"][bc_idx],
+#             (
+#                 (0, bc_neighbour_zeros_to_add),
+#                 (0, 0),  # Parity dim
+#                 (0, 0),  # irreps dim
+#                 (0, 0),  # Feature dim
+#             ),  
+#             "constant",
+#         ).astype(np.float32)
+#         labels["mask_off_diagonal"] = np.pad(
+#             labels["mask_off_diagonal"][bc_idx],
+#             (
+#                 (0, bc_neighbour_zeros_to_add),
+#                 (0, 0),  # Parity dim
+#                 (0, 0),  # irreps dim
+#                 (0, 0),  # Feature dim
+#             ),
+#             "constant",
+#         ).astype(np.int8)
 
-    def __iter__(self):
-        total_iterator_size = (self.n_data * self.n_epochs)
-        while self.count < total_iterator_size or len(self.buffer) > 0:
-            yield self.buffer.popleft()
-            space = self.buffer_size - len(self.buffer)
-            if self.count + space > total_iterator_size:
-                space = total_iterator_size - self.count
-            self.enqueue(space)
+#         labels["h_irreps_on_diagonal"] = np.pad(
+#             labels["h_irreps_on_diagonal"],
+#             (
+#                 (0, natoms_zeros_to_add),
+#                 (0, 0),  # Parity dim
+#                 (0, 0),  # irreps dim
+#                 (0, 0),  # Feature dim
+#             ),
+#             "constant",
+#         ).astype(np.float32)
+#         labels["mask_on_diagonal"] = np.pad(
+#             labels["mask_on_diagonal"],
+#             (
+#                 (0, natoms_zeros_to_add),
+#                 (0, 0),  # Parity dim
+#                 (0, 0),  # irreps dim
+#                 (0, 0),  # Feature dim
+#             ),
+#             "constant",
+#         ).astype(np.int8)
 
-    def shuffle_and_batch(self):
-        ds = (
-            tf.data.Dataset.from_generator(
-                lambda: self, output_signature=self.make_signature()
-            )
-            # .cache(
-            #     self.cache_file.as_posix()
-            # )  # This is required to cache the generator so a successful repeat can happen.
-            .repeat(self.n_epochs)
-        )
+#         inputs = {k: tf.constant(v) for k, v in inputs.items()}
+#         labels = {k: tf.constant(v) for k, v in labels.items()}
+#         return (inputs, labels)
 
-        ds = ds.shuffle(
-            buffer_size=self.buffer_size, reshuffle_each_iteration=True,
-        ).batch(batch_size=self.batch_size)
-        # if self.n_jit_steps > 1:
-        #     ds = ds.batch(batch_size=self.n_jit_steps)
-        ds = prefetch_to_single_device(ds.as_numpy_iterator(), 20)
-        return ds
+#     def __iter__(self):
+#         raise NotImplementedError
 
-    # def batch(self) -> Iterator[jax.Array]:
-    #     ds = (
-    #         tf.data.Dataset.from_generator(
-    #             lambda: self, output_signature=self.make_signature()
-    #         )
-    #         .repeat(self.n_epochs)
-    #     )
-    #     ds = ds.batch(batch_size=self.batch_size)
-    #     ds = prefetch_to_single_device(ds.as_numpy_iterator(), 2)
-    #     return ds
+#     def shuffle_and_batch(self):
+#         raise NotImplementedError
 
-    def cleanup(self):
-        for p in self.cache_file.parent.glob(f"{self.cache_file.name}.*"):
-            p.unlink()
+#     def batch(self):
+#         raise NotImplementedError
+
+#     def cleanup(self):
+#         pass
+
+
+# class PureInMemoryDataset(InMemoryDataset):
+#     # def __iter__(self):
+#     #     while self.current_gencount < self.maxcount or len(self.buffer) > 0: # self.count < self.n_data or len(self.buffer) > 0:
+#     #         yield self.buffer.popleft()
+
+#     #         space = self.buffer_size - len(self.buffer)
+#     #         # if self.count + space > self.n_data:
+#     #         #     space = self.n_data - self.count
+#     #         self.enqueue(space)
+#     #         self.current_gencount += 1
+
+#     def __iter__(self):
+#         total_iterator_size = (self.n_data * self.n_epochs)
+#         while self.count < total_iterator_size or len(self.buffer) > 0:
+#             yield self.buffer.popleft()
+#             space = self.buffer_size - len(self.buffer)
+#             if self.count + space > total_iterator_size:
+#                 space = total_iterator_size - self.count
+#             self.enqueue(space)
+
+#     def shuffle_and_batch(self):
+#         ds = (
+#             tf.data.Dataset.from_generator(
+#                 lambda: self, output_signature=self.make_signature()
+#             )
+#             # .cache(
+#             #     self.cache_file.as_posix()
+#             # )  # This is required to cache the generator so a successful repeat can happen.
+#             .repeat(self.n_epochs)
+#         )
+
+#         ds = ds.shuffle(
+#             buffer_size=self.buffer_size, reshuffle_each_iteration=True,
+#         ).batch(batch_size=self.batch_size)
+#         # if self.n_jit_steps > 1:
+#         #     ds = ds.batch(batch_size=self.n_jit_steps)
+#         ds = prefetch_to_single_device(ds.as_numpy_iterator(), 20)
+#         return ds
+
+#     # def batch(self) -> Iterator[jax.Array]:
+#     #     ds = (
+#     #         tf.data.Dataset.from_generator(
+#     #             lambda: self, output_signature=self.make_signature()
+#     #         )
+#     #         .repeat(self.n_epochs)
+#     #     )
+#     #     ds = ds.batch(batch_size=self.batch_size)
+#     #     ds = prefetch_to_single_device(ds.as_numpy_iterator(), 2)
+#     #     return ds
+
+#     def cleanup(self):
+#         for p in self.cache_file.parent.glob(f"{self.cache_file.name}.*"):
+#             p.unlink()
             
