@@ -65,7 +65,6 @@ def create_params(model, rng_key, sample_input: dict, n_models: int):
             jnp.array(sample_input["bc_D"]),
             jnp.array(sample_input["ac_ij"]),
             jnp.array(sample_input["ac_D"]),
-            jnp.array(sample_input["idx_bonds"])
         )
         # params = model.init(jax.random.PRNGKey(245), *sample_input)
     elif n_models > 1:

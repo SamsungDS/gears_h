@@ -181,7 +181,7 @@ def run(user_config, log_level="error"):
                                                            build_with_analysis=False)
 
     batched_model = jax.vmap(
-        model.apply, in_axes=(None, 0, 0, 0, 0, 0, 0), axis_name="batch"
+        model.apply, in_axes=(None, 0, 0, 0, 0, 0), axis_name="batch"
     )
 
     params, rng_key = create_params(model, rng_key, sample_input, 1)
@@ -219,7 +219,9 @@ def run(user_config, log_level="error"):
         opt = optax.with_extra_args_support(opt)
         opt = optax.chain(opt,
                           optax.zero_nans(),
-                          optax.clip(1))
+                          # optax.add_noise(eta=0.1, gamma=1.0, seed=42),
+                          optax.centralize(),
+                          optax.clip_by_block_rms(1))
 
     state = create_train_state(batched_model, params, opt)
 

@@ -30,16 +30,16 @@ class HamiltonianModel(nn.Module):
                  bc_neighbour_indices, 
                  bc_neighbour_displacements,
                  ac_neighbour_indices, 
-                 ac_neighbour_displacements,
-                 bond_indices=None):
+                 ac_neighbour_displacements
+                 ):
         atom_centered_descriptors = self.atom_centered(atomic_numbers,
                                                        ac_neighbour_indices, 
                                                        ac_neighbour_displacements
                                                       )
 
         bc_features = self.bond_centered(atom_centered_descriptors, 
-                                         bc_neighbour_indices.at[bond_indices].get(), 
-                                         bc_neighbour_displacements.at[bond_indices].get()
+                                         bc_neighbour_indices, 
+                                         bc_neighbour_displacements
                                         )
 
         bc_features = bc_features.astype(jnp.float32)
@@ -48,9 +48,9 @@ class HamiltonianModel(nn.Module):
         off_diagonal_denseout = LayerNorm()(off_diagonal_denseout)
         off_diagonal_irreps = self.off_diag_readout(off_diagonal_denseout)
         scaled_off_diagonal_irreps = self.off_diag_scale_shift(off_diagonal_irreps,
-                                                               jnp.linalg.norm(bc_neighbour_displacements.at[bond_indices].get(), axis=1),
-                                                               atomic_numbers[bc_neighbour_indices.at[bond_indices].get()[:,0]],
-                                                               atomic_numbers[bc_neighbour_indices.at[bond_indices].get()[:,1]]
+                                                               jnp.linalg.norm(bc_neighbour_displacements, axis=1),
+                                                               atomic_numbers[bc_neighbour_indices[:,0]],
+                                                               atomic_numbers[bc_neighbour_indices[:,1]]
                                                                )
 
         on_diagonal_denseout = self.dense(atom_centered_descriptors)

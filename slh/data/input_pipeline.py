@@ -381,7 +381,8 @@ class InMemoryDataset:
             dataset_as_list
         )
 
-        self.n_bonds = int(self.bond_fraction*self.bc_max_nneighbours)
+        # We overwrite this here since this is what we actually care about
+        self.bc_max_nneighbours = int(self.bond_fraction*self.bc_max_nneighbours)
 
         self.dataset_mask_dict = get_mask_dict(
             self.max_ell, self.readout_nfeatures, self.hmap
@@ -440,17 +441,14 @@ class InMemoryDataset:
         if self.is_inference:
             return input_signature
 
-        input_signature["idx_bonds"] = tf.TensorSpec(
-            (self.n_bonds,), dtype=tf.int32, name="idx_bonds"
-        )
         label_signature = {}
         label_signature["h_irreps_off_diagonal"] = tf.TensorSpec(
-            (self.n_bonds, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
+            (self.bc_max_nneighbours, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
             dtype=tf.float64,
             name="h_irreps_off_diagonal",
         )
         label_signature["mask_off_diagonal"] = tf.TensorSpec(
-            (self.n_bonds, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
+            (self.bc_max_nneighbours, 2, (self.max_ell + 1) ** 2, self.readout_nfeatures),
             dtype=tf.int16,
             name="mask_off_diagonal",
         )
@@ -486,28 +484,26 @@ class InMemoryDataset:
             inputs["numbers"], (0, natoms_zeros_to_add), "constant"
         ).astype(np.int16)
 
-        bc_neighbour_zeros_to_add = self.bc_max_nneighbours - len(inputs["bc_ij"])
+        # Padding can be <0, since we only send a subset of bonds to the GPU
+        # but that's meaningless so we clip
+        bc_neighbour_zeros_to_add = max(0, self.bc_max_nneighbours - len(inputs["bc_ij"]))
+        
+        unpadded_neighbour_count = len(inputs["bc_ij"])
+        d_unpadded = np.linalg.norm(inputs["bc_D"], axis=-1)
+        inverse_d = np.reciprocal(d_unpadded, where = d_unpadded > 0.1)
+        dprobs = (inverse_d ** self.sampling_alpha) / np.sum(inverse_d ** self.sampling_alpha)
+        bc_idx = np.random.choice(unpadded_neighbour_count, size=self.bc_max_nneighbours, replace=False, p=dprobs)
+        
         inputs["bc_ij"] = np.pad(
-            inputs["bc_ij"],
+            inputs["bc_ij"][bc_idx],
             ((0, bc_neighbour_zeros_to_add), (0, 0)),
             "constant",
             constant_values=self.max_natoms + 1,
         ).astype(np.int16)
         inputs["bc_D"] = np.pad(
-            inputs["bc_D"], ((0, bc_neighbour_zeros_to_add), (0, 0)), "constant"
+            inputs["bc_D"][bc_idx], ((0, bc_neighbour_zeros_to_add), (0, 0)), "constant"
         ).astype(np.float32)
 
-        # TODO rename idx_bonds
-        # TODO do this faster elsewhere maybe?
-        if self.n_bonds != self.bc_max_nneighbours:
-            unpadded_neighbour_count = self.bc_max_nneighbours - bc_neighbour_zeros_to_add
-            d_unpadded = np.linalg.norm(inputs["bc_D"][:unpadded_neighbour_count], axis=-1)
-            inverse_d = np.reciprocal(d_unpadded, where = d_unpadded > 0.1)
-            # alpha = np.random.rand() * 3 + 1.0
-            dprobs = (inverse_d ** self.sampling_alpha) / np.sum(inverse_d ** self.sampling_alpha)
-            inputs["idx_bonds"] = np.random.choice(unpadded_neighbour_count, size=self.n_bonds, replace=False, p=dprobs)
-        else:
-            inputs["idx_bonds"] = np.arange(self.bc_max_nneighbours)
 
         ac_neighbour_zeros_to_add = self.ac_max_nneighbours - len(inputs["ac_ij"])
         inputs["ac_ij"] = np.pad(
@@ -525,19 +521,18 @@ class InMemoryDataset:
         
         labels = self.labels
         labels = {k: v[i] for k, v in labels.items()}
-        # log.debug(f"{i}, {labels['h_irreps']}")
         labels["h_irreps_off_diagonal"] = np.pad(
-            labels["h_irreps_off_diagonal"],
+            labels["h_irreps_off_diagonal"][bc_idx],
             (
                 (0, bc_neighbour_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
-                (0, 0),
-            ),  # Feature dim
+                (0, 0),  # Feature dim
+            ),  
             "constant",
-        ).astype(np.float32)[inputs["idx_bonds"]]
+        ).astype(np.float32)
         labels["mask_off_diagonal"] = np.pad(
-            labels["mask_off_diagonal"],
+            labels["mask_off_diagonal"][bc_idx],
             (
                 (0, bc_neighbour_zeros_to_add),
                 (0, 0),  # Parity dim
@@ -545,7 +540,7 @@ class InMemoryDataset:
                 (0, 0),  # Feature dim
             ),
             "constant",
-        ).astype(np.int8)[inputs["idx_bonds"]]
+        ).astype(np.int8)
 
         labels["h_irreps_on_diagonal"] = np.pad(
             labels["h_irreps_on_diagonal"],
@@ -553,8 +548,8 @@ class InMemoryDataset:
                 (0, natoms_zeros_to_add),
                 (0, 0),  # Parity dim
                 (0, 0),  # irreps dim
-                (0, 0),
-            ),  # Feature dim
+                (0, 0),  # Feature dim
+            ),
             "constant",
         ).astype(np.float32)
         labels["mask_on_diagonal"] = np.pad(
@@ -621,7 +616,7 @@ class PureInMemoryDataset(InMemoryDataset):
         ).batch(batch_size=self.batch_size)
         # if self.n_jit_steps > 1:
         #     ds = ds.batch(batch_size=self.n_jit_steps)
-        ds = prefetch_to_single_device(ds.as_numpy_iterator(), 2)
+        ds = prefetch_to_single_device(ds.as_numpy_iterator(), 20)
         return ds
 
     # def batch(self) -> Iterator[jax.Array]:
