@@ -13,7 +13,7 @@ from optax import tree_utils as otu
 from tensorflow.keras.callbacks import CallbackList
 from tqdm import trange
 
-from slh.data.input_pipeline import PureInMemoryDataset
+from slh.data.input_pipeline import GrainDataset
 from slh.train.checkpoints import CheckpointManager, load_state
 
 log = logging.getLogger(__name__)
@@ -22,8 +22,8 @@ def lr_tree_filter(path, value: Any) -> bool:
     return isinstance(value, jnp.ndarray)
 
 def fit(state: TrainState,
-        train_dataset: PureInMemoryDataset,
-        val_dataset: PureInMemoryDataset,
+        train_dataset: GrainDataset,
+        val_dataset: GrainDataset,
         loss_function: callable,
         logging_metrics: metrics.Collection,
         callbacks: CallbackList,
@@ -63,8 +63,8 @@ def fit(state: TrainState,
     train_batches_per_epoch = train_dataset.steps_per_epoch
     val_batches_per_epoch = val_dataset.steps_per_epoch 
 
-    batch_train_dataset = train_dataset.shuffle_and_batch()
-    batch_val_dataset = val_dataset.shuffle_and_batch()
+    batch_train_dataset = train_dataset
+    batch_val_dataset = val_dataset
 
     # Create train_step and val_step functions
     train_step, val_step = make_step_functions(logging_metrics,
@@ -122,7 +122,7 @@ def fit(state: TrainState,
         # Training set loop - actual training
         for train_batch in range(train_batches_per_epoch // n_grad_acc):
             callbacks.on_train_batch_begin(batch=train_batch)
-            batch_data_list = [next(batch_train_dataset) for _ in range(n_grad_acc)]
+            batch_data_list = [next(batch_train_dataset.ds) for _ in range(n_grad_acc)]
             # TODO refactor train_step for gradient accumulation and remove the hardcoded first element of the list below.
             loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss, state = train_step(state, batch_data_list[0])
             
@@ -162,7 +162,7 @@ def fit(state: TrainState,
         )
         # Validation set loop - actual training
         for val_batch in range(val_batches_per_epoch // n_grad_acc):
-            batch_data_list = [next(batch_val_dataset) for _ in range(n_grad_acc)]
+            batch_data_list = [next(batch_val_dataset.ds) for _ in range(n_grad_acc)]
             # TODO refactor train_step for gradient accumulation and remove the hardcoded first element of the list below.
             loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss = val_step(state, batch_data_list[0])
 
@@ -202,8 +202,8 @@ def fit(state: TrainState,
         epoch_pbar.update()
     epoch_pbar.close()
     callbacks.on_train_end()
-    train_dataset.cleanup()
-    val_dataset.cleanup()
+    # train_dataset.cleanup()
+    # val_dataset.cleanup()
 
 
     return
