@@ -10,7 +10,7 @@ import optax
 
 import slh
 from slh.config.common import parse_config
-from slh.data import PureInMemoryDataset
+from slh.data import GrainDataset
 from slh.data.input_pipeline import initialize_dataset_from_list, read_dataset_as_list
 from slh.model.builder import ModelBuilder
 
@@ -35,7 +35,7 @@ def setup_logging(log_file, log_level):
     while len(logging.root.handlers) > 0:
         logging.root.removeHandler(logging.root.handlers[-1])
 
-    logging.getLogger("absl").setLevel(logging.WARNING)
+    logging.getLogger("absl").setLevel(logging.ERROR)
 
     logging.basicConfig(
         level=log_levels[log_level],
@@ -166,6 +166,7 @@ def run(user_config, log_level="error"):
         build_with_off_diag_analysis = False
         build_with_on_diag_analysis = False
 
+    # TODO This will need to get fixed
     sample_input = train_ds.init_input()
 
     model_builder = ModelBuilder(config.model.model_dump())
