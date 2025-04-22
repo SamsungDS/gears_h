@@ -7,6 +7,8 @@ from pathlib import Path
 
 from ase import Atoms
 from ase.io import read
+import jax
+import flax.jax_utils
 from matscipy.neighbours import neighbour_list
 import numpy as np
 import tensorflow as tf
@@ -19,6 +21,7 @@ from slh.hblockmapper import (
     get_mask_dict,
     make_mapper_from_elements,
 )
+from multiprocessing import Pool
 
 import grain
 import jax.numpy as jnp
@@ -124,18 +127,20 @@ def read_dataset_as_list(
 
     log.info(f"Using {len(dataset_dirlist)} snapshots.")
 
-    dataset_as_list = [
-        snapshot_from_directory(fd, ac_nl_rcut=atomcentered_cutoff)
-        for fd in tqdm(dataset_dirlist, desc="Reading dataset", ncols=100)
-    ]
-    # with Pool(nprocs) as pool:
-    #     with tqdm(total=len(dataset_dirlist)) as pbar:
-    #         # TODO We eventually want to partial this
-    #         for datatuple in pool.imap_unordered(
-    #             func=snapshot_tuple_from_directory, iterable=dataset_dirlist
-    #         ):
-    #             dataset_as_list.append(datatuple)
-    #             pbar.update()
+    # dataset_as_list = [
+    #     snapshot_from_directory(fd, ac_nl_rcut=atomcentered_cutoff)
+    #     for fd in tqdm(dataset_dirlist, desc="Reading dataset", ncols=100)
+    # ]
+    from functools import partial
+    dataset_as_list = []
+    with Pool(24) as pool:
+        with tqdm(total=len(dataset_dirlist)) as pbar:
+            # TODO We eventually want to partial this
+            for datatuple in pool.imap(
+                func=partial(snapshot_from_directory, ac_nl_rcut=atomcentered_cutoff), iterable=dataset_dirlist
+            ):
+                dataset_as_list.append(datatuple)
+                pbar.update()
 
     return dataset_as_list
 
@@ -353,8 +358,14 @@ def make_grain_dataset(dataset_as_list: DatasetList,
                        seed: int = 42,
                        ):
     
-    # TODO This is uhhhh not ready for production
-    ds = GrainDataset(dataset_as_list=dataset_as_list)
+    # TODO This is just a passed on call surely we can be better
+    ds = GrainDataset(dataset_as_list=dataset_as_list,
+                      batch_size=batch_size,
+                      n_epochs=n_epochs,
+                      bond_fraction=bond_fraction,
+                      sampling_alpha=sampling_alpha,
+                      is_inference=is_inference,
+                      seed=seed)
     return ds
 
 
@@ -365,18 +376,21 @@ def pad_end_to(arr, size, constant_value):
 def pad_to_and_stack(arrs, size_stride, constant_value):
     return np.stack([pad_end_to(arr, size_stride, constant_value) for arr in arrs])
 
+def next_multiple(x, mul):
+    return (x // mul + 1) * mul
+
 class BatchSpec:
-    atoms_pad_multiple:int = 10
-    nl_pad_multiple: int = 1000
+    atoms_pad_multiple:int = 50
+    nl_pad_multiple: int = 10000
 
     def __call__(self, list_of_batchables):
         # list_of_batchables is a list of tuples, each of which represents an (input, label) pair of dicts
         # Our goal is to return the same pytree-ish object but with the arrays (leaves) stacked
         # along a new 'batch' dimension.
         inputs, labels = [x[0] for x in list_of_batchables], [x[1] for x in list_of_batchables]
-        atoms_padded_length = 128# max(len(x['numbers']) for x in inputs)
-        ac_nl_padded_length = 7000# max(len(x['ac_ij']) for x in inputs)
-        bc_nl_padded_length = 7000 # max(len(x['bc_ij']) for x in inputs)
+        atoms_padded_length = next_multiple(max(len(x['numbers']) for x in inputs), self.atoms_pad_multiple)
+        ac_nl_padded_length = next_multiple(max(len(x['ac_ij']) for x in inputs), self.nl_pad_multiple)
+        bc_nl_padded_length = next_multiple(max(len(x['bc_ij']) for x in inputs), self.nl_pad_multiple)
 
         atoms_padded_value = atoms_padded_length + 1
     
@@ -396,7 +410,25 @@ class BatchSpec:
         # print("Batching done")
         return (inputs_batched, labels_batched)
 
+def drop_bonds(snapshot, rng: np.random.Generator, bond_fraction=1.0):
+    if bond_fraction == 1.0:
+        return snapshot
+    from copy import deepcopy
+    snapshot = deepcopy(snapshot)
+    inputs, labels = snapshot
+    # print([(k, len(v)) for k, v in inputs.items()])
+    # print([(k, len(v)) for k, v in labels.items()])
 
+    len_atom_pairs = len(inputs['bc_ij'])
+    idx_bonds = rng.choice(len_atom_pairs, size=int(bond_fraction * len_atom_pairs), replace=False)
+
+    inputs['bc_ij'] = inputs['bc_ij'][idx_bonds]
+    inputs['bc_D'] = inputs['bc_D'][idx_bonds]
+
+    labels['mask_off_diagonal'] = labels['mask_off_diagonal'][idx_bonds]
+    labels['h_irreps_off_diagonal'] = labels['h_irreps_off_diagonal'][idx_bonds]
+
+    return snapshot
 
 class GrainDataset:
     def __init__(
@@ -410,7 +442,7 @@ class GrainDataset:
         seed: int=42,
         n_cpus:int=8,
     ):
-        
+        # print(batch_size, n_epochs, bond_fraction, sampling_alpha)
         self._steps_per_epoch = len(dataset_as_list) // batch_size # We drop remainder
         self.hmap, self.species_ells_dict = get_hamiltonian_mapper_from_dataset(dataset_as_list=dataset_as_list)
         self.max_ell, self.readout_nfeatures = get_max_ell_and_max_features(self.hmap)
@@ -427,14 +459,17 @@ class GrainDataset:
         inputs_lod = [dict((k, v[i]) for k, v in self.inputs.items()) for i in range(len(dataset_as_list))]
         labels_lod = [dict((k, v[i]) for k, v in self.labels.items()) for i in range(len(dataset_as_list))]
         batch_lod = [(inputs, labels) for inputs, labels in zip(inputs_lod, labels_lod, strict=True)]
+
+        from functools import partial
         self.ds = iter(
             grain.MapDataset.source(batch_lod)
             .seed(seed)
             .shuffle()
-            .repeat(1000) # TODO we need an actual repeat count here ofc.
-            .batch(batch_size=2, batch_fn=BatchSpec())
-            .to_iter_dataset()
-            .mp_prefetch(grain.multiprocessing.MultiprocessingOptions(num_workers=n_cpus))
+            .random_map(partial(drop_bonds, bond_fraction=bond_fraction))
+            .repeat(n_epochs)
+            .batch(batch_size=batch_size, batch_fn=BatchSpec())
+            .to_iter_dataset(grain.sources.ReadOptions(num_threads=n_cpus, prefetch_buffer_size=n_cpus))
+            .mp_prefetch(grain.multiprocessing.MultiprocessingOptions(num_workers=1, per_worker_buffer_size=1))
         )
 
     def init_input(self):
@@ -448,6 +483,9 @@ class GrainDataset:
     @property
     def steps_per_epoch(self):
         return self._steps_per_epoch
+    
+    def __iter__(self):
+        return prefetch_to_single_device(self.ds, 2)
 
 
 # class InMemoryDataset:

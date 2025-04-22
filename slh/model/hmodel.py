@@ -46,6 +46,7 @@ class HamiltonianModel(nn.Module):
 
         off_diagonal_denseout = self.dense(bc_features)
         off_diagonal_denseout = LayerNorm()(off_diagonal_denseout)
+        
         off_diagonal_irreps = self.off_diag_readout(off_diagonal_denseout)
         scaled_off_diagonal_irreps = self.off_diag_scale_shift(off_diagonal_irreps,
                                                                jnp.linalg.norm(bc_neighbour_displacements, axis=1),
@@ -55,6 +56,7 @@ class HamiltonianModel(nn.Module):
 
         on_diagonal_denseout = self.dense(atom_centered_descriptors)
         on_diagonal_denseout = LayerNorm()(on_diagonal_denseout)
+        
         on_diagonal_irreps = self.on_diag_readout(on_diagonal_denseout)
         scaled_on_diagonal_irreps = self.on_diag_scale_shift(on_diagonal_irreps,
                                                              atomic_numbers)

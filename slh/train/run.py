@@ -166,7 +166,6 @@ def run(user_config, log_level="error"):
         build_with_off_diag_analysis = False
         build_with_on_diag_analysis = False
 
-    # TODO This will need to get fixed
     sample_input = train_ds.init_input()
 
     model_builder = ModelBuilder(config.model.model_dump())
