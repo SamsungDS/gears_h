@@ -358,13 +358,43 @@ def make_grain_dataset(dataset_as_list: DatasetList,
     return ds
 
 
-# class BatchSpec:
-#     atoms_pad_multiple:int = 10
-#     nl_pad_multiple: int = 1000
+def pad_end_to(arr, size, constant_value):
+    extra_zero_tuples = [(0, 0)] * (len(arr.shape) - 1)
+    return np.pad(arr, [(0, size - len(arr)), *extra_zero_tuples], constant_values=constant_value)
 
-#     def __call__(list_of_batching_inputs):
-#         inputs, labels = list(map(list, zip(*list_of_batching_inputs)))
-#         atoms_padded_length = 
+def pad_to_and_stack(arrs, size_stride, constant_value):
+    return np.stack([pad_end_to(arr, size_stride, constant_value) for arr in arrs])
+
+class BatchSpec:
+    atoms_pad_multiple:int = 10
+    nl_pad_multiple: int = 1000
+
+    def __call__(self, list_of_batchables):
+        # list_of_batchables is a list of tuples, each of which represents an (input, label) pair of dicts
+        # Our goal is to return the same pytree-ish object but with the arrays (leaves) stacked
+        # along a new 'batch' dimension.
+        inputs, labels = [x[0] for x in list_of_batchables], [x[1] for x in list_of_batchables]
+        atoms_padded_length = 128# max(len(x['numbers']) for x in inputs)
+        ac_nl_padded_length = 7000# max(len(x['ac_ij']) for x in inputs)
+        bc_nl_padded_length = 7000 # max(len(x['bc_ij']) for x in inputs)
+
+        atoms_padded_value = atoms_padded_length + 1
+    
+        inputs_batched = {}
+        inputs_batched['numbers'] = pad_to_and_stack([x['numbers'] for x in inputs], atoms_padded_length, atoms_padded_value)
+        inputs_batched['bc_ij'] = pad_to_and_stack([x['bc_ij'] for x in inputs], bc_nl_padded_length, atoms_padded_value)
+        inputs_batched['bc_D'] = pad_to_and_stack([x['bc_D'] for x in inputs], bc_nl_padded_length, atoms_padded_value)
+        inputs_batched['ac_ij'] = pad_to_and_stack([x['ac_ij'] for x in inputs], ac_nl_padded_length, atoms_padded_value)
+        inputs_batched['ac_D'] = pad_to_and_stack([x['ac_D'] for x in inputs], ac_nl_padded_length, atoms_padded_value)
+
+        labels_batched = {}
+        labels_batched['mask_off_diagonal'] = pad_to_and_stack([x['mask_off_diagonal'] for x in labels], bc_nl_padded_length, 0)
+        labels_batched['h_irreps_off_diagonal'] = pad_to_and_stack([x['h_irreps_off_diagonal'] for x in labels], bc_nl_padded_length, 0)
+        labels_batched['mask_on_diagonal'] = pad_to_and_stack([x['mask_on_diagonal'] for x in labels], atoms_padded_length, 0)
+        labels_batched['h_irreps_on_diagonal'] = pad_to_and_stack([x['h_irreps_on_diagonal'] for x in labels], atoms_padded_length, 0)
+
+        # print("Batching done")
+        return (inputs_batched, labels_batched)
 
 
 
@@ -402,7 +432,7 @@ class GrainDataset:
             .seed(seed)
             .shuffle()
             .repeat(1000) # TODO we need an actual repeat count here ofc.
-            .batch(batch_size=1)
+            .batch(batch_size=2, batch_fn=BatchSpec())
             .to_iter_dataset()
             .mp_prefetch(grain.multiprocessing.MultiprocessingOptions(num_workers=n_cpus))
         )
