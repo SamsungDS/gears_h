@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ase import Atoms
 from ase.io import read
-import grain
+import grain.python as grain
 from matscipy.neighbours import neighbour_list
 import numpy as np
 from tqdm import tqdm
