@@ -469,8 +469,8 @@ class GrainDataset:
             .repeat(n_epochs)
             .random_map(partial(drop_bonds, bond_fraction=bond_fraction, distance_weight_exponent=sampling_alpha))
             .batch(batch_size=batch_size, batch_fn=BatchSpec())
-            .to_iter_dataset(grain.sources.ReadOptions(num_threads=n_cpus, prefetch_buffer_size=n_cpus))
-            .mp_prefetch(grain.multiprocessing.MultiprocessingOptions(num_workers=1, per_worker_buffer_size=1))
+            .to_iter_dataset(grain.ReadOptions(num_threads=n_cpus, prefetch_buffer_size=n_cpus))
+            .mp_prefetch(grain.MultiprocessingOptions(num_workers=1, per_worker_buffer_size=1))
         )
 
     def init_input(self):
