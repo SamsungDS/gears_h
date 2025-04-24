@@ -1,17 +1,14 @@
 import itertools
 import json
 import logging
-import uuid
-from collections import deque
+from multiprocessing import Pool
 from pathlib import Path
 
 from ase import Atoms
 from ase.io import read
-import jax
-import flax.jax_utils
+import grain
 from matscipy.neighbours import neighbour_list
 import numpy as np
-import tensorflow as tf
 from tqdm import tqdm
 
 from slh.data.preprocessing import prefetch_to_single_device
@@ -21,10 +18,7 @@ from slh.hblockmapper import (
     get_mask_dict,
     make_mapper_from_elements,
 )
-from multiprocessing import Pool
 
-import grain
-import jax.numpy as jnp
 
 # (Atoms, {Z: [0, 1, 2, ...]}, ij, D, hblocks)
 DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list, list]]
@@ -417,15 +411,18 @@ def drop_bonds(snapshot, rng: np.random.Generator, bond_fraction=1.0, distance_w
     snapshot = deepcopy(snapshot)
     inputs, labels = snapshot
 
-
+    # Compute number of target bonds
+    len_atom_pairs = len(inputs['bc_ij'])
     target_bond_count = int(bond_fraction * len_atom_pairs)
+    # Calculate probability of a bond being selected using sampling_alpha
     d = np.linalg.norm(inputs["bc_D"], axis=-1)
     inverse_d = np.reciprocal(d, where = d > 0.1)
     dprobs = (inverse_d ** distance_weight_exponent) / np.sum(inverse_d ** distance_weight_exponent)
 
-    len_atom_pairs = len(inputs['bc_ij'])
+    # Choose selected bond indices
     idx_bonds = rng.choice(len_atom_pairs, size=target_bond_count, replace=False, p=dprobs)
 
+    # Update inputs and labels to use selected bonds only
     inputs['bc_ij'] = inputs['bc_ij'][idx_bonds]
     inputs['bc_D'] = inputs['bc_D'][idx_bonds]
 
