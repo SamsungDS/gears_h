@@ -1,7 +1,7 @@
+import concurrent.futures
 import itertools
 import json
 import logging
-from multiprocessing import Pool
 from pathlib import Path
 
 from ase import Atoms
@@ -127,14 +127,21 @@ def read_dataset_as_list(
     # ]
     from functools import partial
     dataset_as_list = []
-    with Pool(24) as pool:
-        with tqdm(total=len(dataset_dirlist)) as pbar:
-            # TODO We eventually want to partial this
-            for datatuple in pool.imap(
-                func=partial(snapshot_from_directory, ac_nl_rcut=atomcentered_cutoff), iterable=dataset_dirlist
-            ):
-                dataset_as_list.append(datatuple)
-                pbar.update()
+    # with Pool(24) as pool:
+    #     with tqdm(total=len(dataset_dirlist)) as pbar:
+    #         # TODO We eventually want to partial this
+    #         for datatuple in pool.imap(
+    #             func=partial(snapshot_from_directory, ac_nl_rcut=atomcentered_cutoff), iterable=dataset_dirlist
+    #         ):
+    #             dataset_as_list.append(datatuple)
+    #             pbar.update()
+
+    # TODO make number of threads controllable
+    load_func = partial(snapshot_from_directory, ac_nl_rcut=atomcentered_cutoff)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=24) as executor:
+        future_to_dataset_list = [executor.submit(load_func, dir) for dir in dataset_dirlist]
+        for future in concurrent.futures.as_completed(future_to_dataset_list):
+            dataset_as_list.append(future.result())
 
     return dataset_as_list
 
