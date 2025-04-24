@@ -4,8 +4,6 @@ import sys
 from pathlib import Path
 
 import typer
-import yaml
-from pydantic import ValidationError
 from rich.console import Console
 
 from slh.cli import templates
@@ -58,7 +56,7 @@ def infer(
 
     from slh.infer.infer import infer
 
-    infer(model_path, structure_path)
+    infer(model_path, structure_path, return_H=False)
 
 
 analyze_app = typer.Typer(

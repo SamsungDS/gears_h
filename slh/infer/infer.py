@@ -179,7 +179,8 @@ def make_hmatrix(numbers, offblocks, onblocks, species_basis_size_dict):
         return 0.5 * (hmatrix + hmatrix.T.conj())
 
 def infer(model_path: Path | str, 
-          structure_path: Path | str):
+          structure_path: Path | str,
+          return_H = False):
     model_path = Path(model_path).resolve()
     structure_path = Path(structure_path)
     # Set up logging
@@ -223,6 +224,9 @@ def infer(model_path: Path | str,
                               species_basis_size_dict)
     
     # Write H matrix
-    np.savez(structure_path.parent / "inferred_H.npz", H_MM = inferred_H, allow_pickle=True)
-    log.info("Inference complete! You can now read in the inferred Hamiltonian with the following command:")
-    log.info("infH = np.array(np.load('/path/to/inferred_H.npz', allow_pickle=True)['H_MM'][None][0])")
+    if not return_H:
+        np.savez(structure_path.parent / "inferred_H.npz", H_MM = inferred_H, allow_pickle=True)
+        log.info("Inference complete! You can now read in the inferred Hamiltonian with the following command:")
+        log.info("infH = np.array(np.load('/path/to/inferred_H.npz', allow_pickle=True)['H_MM'][None][0])")
+    elif return_H:
+        return inferred_H
