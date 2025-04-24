@@ -443,6 +443,7 @@ class GrainDataset:
         seed: int=42,
         n_cpus:int=8,
     ):
+        rng = np.random.default_rng(seed = seed)
         # print(batch_size, n_epochs, bond_fraction, sampling_alpha)
         self._steps_per_epoch = len(dataset_as_list) // batch_size # We drop remainder
         self.hmap, self.species_ells_dict = get_hamiltonian_mapper_from_dataset(dataset_as_list=dataset_as_list)
@@ -467,7 +468,7 @@ class GrainDataset:
             .seed(seed)
             .shuffle()
             .repeat(n_epochs)
-            .random_map(partial(drop_bonds, bond_fraction=bond_fraction, distance_weight_exponent=sampling_alpha))
+            .random_map(partial(drop_bonds, rng = rng, bond_fraction=bond_fraction, distance_weight_exponent=sampling_alpha))
             .batch(batch_size=batch_size, batch_fn=BatchSpec())
             .to_iter_dataset(grain.ReadOptions(num_threads=n_cpus, prefetch_buffer_size=n_cpus))
             .mp_prefetch(grain.MultiprocessingOptions(num_workers=1, per_worker_buffer_size=1))
