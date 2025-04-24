@@ -138,9 +138,10 @@ def read_dataset_as_list(
 
     # TODO make number of threads controllable
     load_func = partial(snapshot_from_directory, ac_nl_rcut=atomcentered_cutoff)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=24) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=48) as executor:
         future_to_dataset_list = [executor.submit(load_func, dir) for dir in dataset_dirlist]
-        for future in concurrent.futures.as_completed(future_to_dataset_list):
+        for future in tqdm(concurrent.futures.as_completed(future_to_dataset_list),
+                            desc="Reading dataset", ncols=100, total=len(future_to_dataset_list)):
             dataset_as_list.append(future.result())
 
     return dataset_as_list
