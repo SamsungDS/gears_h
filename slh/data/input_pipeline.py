@@ -410,17 +410,21 @@ class BatchSpec:
         # print("Batching done")
         return (inputs_batched, labels_batched)
 
-def drop_bonds(snapshot, rng: np.random.Generator, bond_fraction=1.0):
+def drop_bonds(snapshot, rng: np.random.Generator, bond_fraction=1.0, distance_weight_exponent=0.0):
     if bond_fraction == 1.0:
         return snapshot
     from copy import deepcopy
     snapshot = deepcopy(snapshot)
     inputs, labels = snapshot
-    # print([(k, len(v)) for k, v in inputs.items()])
-    # print([(k, len(v)) for k, v in labels.items()])
+
+
+    target_bond_count = int(bond_fraction * len_atom_pairs)
+    d = np.linalg.norm(inputs["bc_D"], axis=-1)
+    inverse_d = np.reciprocal(d, where = d > 0.1)
+    dprobs = (inverse_d ** distance_weight_exponent) / np.sum(inverse_d ** distance_weight_exponent)
 
     len_atom_pairs = len(inputs['bc_ij'])
-    idx_bonds = rng.choice(len_atom_pairs, size=int(bond_fraction * len_atom_pairs), replace=False)
+    idx_bonds = rng.choice(len_atom_pairs, size=target_bond_count, replace=False, p=dprobs)
 
     inputs['bc_ij'] = inputs['bc_ij'][idx_bonds]
     inputs['bc_D'] = inputs['bc_D'][idx_bonds]
@@ -435,7 +439,7 @@ class GrainDataset:
         self,
         dataset_as_list: DatasetList,
         batch_size: int=1,
-        n_epochs: int=-1,
+        n_epochs: int=1,
         bond_fraction: float = 1.0,
         sampling_alpha: float = 0.0,
         is_inference: bool = False,
@@ -465,8 +469,8 @@ class GrainDataset:
             grain.MapDataset.source(batch_lod)
             .seed(seed)
             .shuffle()
-            .random_map(partial(drop_bonds, bond_fraction=bond_fraction))
             .repeat(n_epochs)
+            .random_map(partial(drop_bonds, bond_fraction=bond_fraction, distance_weight_exponent=sampling_alpha))
             .batch(batch_size=batch_size, batch_fn=BatchSpec())
             .to_iter_dataset(grain.sources.ReadOptions(num_threads=n_cpus, prefetch_buffer_size=n_cpus))
             .mp_prefetch(grain.multiprocessing.MultiprocessingOptions(num_workers=1, per_worker_buffer_size=1))
