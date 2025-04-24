@@ -15,26 +15,6 @@ from slh.train.run import setup_logging
 
 log = logging.getLogger(__name__)
 
-
-def on_diag_analysis(input_dict: dict[str],
-                     label_dict: dict[str]
-                     ):
-    numbers = np.concatenate([v for v in input_dict['numbers']], axis=0)
-    l0shifts = np.concatenate([v[:, 0, 0, :] for v in label_dict['h_irreps_on_diagonal']], axis=0)
-
-    l0_dict = {}
-    for atomic_number in np.unique(numbers):
-        shifts = []
-        scales = []
-        for i in range(l0shifts.shape[-1]): # N_features
-            meanl0 = np.mean(l0shifts[numbers == atomic_number, i])
-            stdevl0 = np.std(l0shifts[numbers == atomic_number, i])
-            shifts.append(float(meanl0))
-            scales.append(float(stdevl0))
-        l0_dict[int(atomic_number)] = {"shift" : shifts,
-                                       "scale" : scales}
-    return l0_dict
-
 def off_diag_fitting_function(r, coeffs):
     a, length_scale, b = coeffs[:3]
     polycoeffs = [1.0, *coeffs[3:]]
@@ -58,7 +38,7 @@ def off_diag_analysis(input_dict: dict[str],
 
     atomic_pairs = np.unique(zz, axis=0)
 
-    l0_fit_param_dict = {}
+    feature_fit_param_dict = {}
 
     for zi, zj in atomic_pairs:
         fit_params = []
@@ -81,11 +61,36 @@ def off_diag_analysis(input_dict: dict[str],
                                  restart_temp_ratio=0.1
                                 )
             fit_params.append(res.x.tolist())
-        l0_fit_param_dict[f"{zi} {zj}"] = fit_params # N_unique_pairs x N_features x 3
+        feature_fit_param_dict[f"{zi} {zj}"] = fit_params # N_unique_pairs x N_features x 3
+    
+    l0_fit_param_dict = {}
+    for k, v in feature_fit_param_dict.items():
+        l0_fit_param_dict[k] = {}
+        v = np.array(v).T
+        l0_fit_param_dict[k]['exp_prefactors'] = v[0].tolist()
+        l0_fit_param_dict[k]['exp_lengthscales'] = v[1].tolist()
+        l0_fit_param_dict[k]['exp_powers'] = v[2].tolist()
 
     return l0_fit_param_dict
 
+def on_diag_analysis(input_dict: dict[str],
+                     label_dict: dict[str]
+                     ):
+    numbers = np.concatenate([v for v in input_dict['numbers']], axis=0)
+    l0shifts = np.concatenate([v[:, 0, 0, :] for v in label_dict['h_irreps_on_diagonal']], axis=0)
 
+    l0_dict = {}
+    for atomic_number in np.unique(numbers):
+        shifts = []
+        scales = []
+        for i in range(l0shifts.shape[-1]): # N_features
+            meanl0 = np.mean(l0shifts[numbers == atomic_number, i])
+            stdevl0 = np.std(l0shifts[numbers == atomic_number, i])
+            shifts.append(float(meanl0))
+            scales.append(float(stdevl0))
+        l0_dict[int(atomic_number)] = {"shifts" : shifts,
+                                       "scales" : scales}
+    return l0_dict
 
 def analyze(dataset_root: Path | str,
             num_snapshots: int):
@@ -96,6 +101,9 @@ def analyze(dataset_root: Path | str,
     log.info("Reading datalist")
     dslist = read_dataset_as_list(dataset_root, 1., 
                                   num_snapshots=num_snapshots)
+    if len(dslist) == 0:
+        # TODO put this in read_dataset_as_list
+        raise(f"No data found in {dataset_root}")
     hmap, species_ells_dict = get_hamiltonian_mapper_from_dataset(dataset_as_list=dslist)
     max_ell, readout_nfeatures = get_max_ell_and_max_features(hmap)
     dataset_mask_dict = get_mask_dict(max_ell, 

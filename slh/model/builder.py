@@ -2,6 +2,7 @@ from functools import partial
 
 import e3x
 import jax.numpy as jnp
+import numpy as np
 
 import slh
 from slh.config.train_config import ModelConfig
@@ -11,6 +12,7 @@ from slh.layers.descriptor import (
 )
 from slh.layers.readout import Readout
 from slh.layers.residual_dense import DenseBlock
+from slh.layers.scale_shift import OffDiagonalScaleShift, OnDiagonalScaleShift
 from slh.model.hmodel import HamiltonianModel
 
 class ModelBuilder:
@@ -65,14 +67,65 @@ class ModelBuilder:
     def build_readout(self, readout_nfeatures: int, max_ell: int):
         return Readout(readout_nfeatures, max_ell=max_ell)
     
-    def build_lcao_hamiltonian_model(self, readout_nfeatures: int, max_ell: int):
+    def build_off_diagonal_scale_shift(self,
+                                       readout_nfeatures,
+                                       off_diagonal_analysis_dict):
+        exp_prefactors = jnp.zeros((83,83,readout_nfeatures))
+        exp_lengthscales = jnp.zeros((83,83,readout_nfeatures))
+        exp_powers = jnp.zeros((83,83,readout_nfeatures))
+        for (Zi, Zj), v in off_diagonal_analysis_dict.items():
+            exp_prefactors = exp_prefactors.at[Zi,Zj].set(v['exp_prefactors'])
+            exp_lengthscales = exp_lengthscales.at[Zi,Zj].set(v['exp_lengthscales'])
+            exp_powers = exp_powers.at[Zi,Zj].set(v['exp_powers'])
+        return OffDiagonalScaleShift(exp_prefactors = exp_prefactors,
+                                     exp_lengthscales = exp_lengthscales,
+                                     exp_powers = exp_powers)
+        
+    def build_on_diagonal_scale_shift(self,
+                                      readout_nfeatures,
+                                      on_diagonal_analysis_dict):
+        shifts = jnp.zeros((83,readout_nfeatures))
+        scales = jnp.zeros((83,readout_nfeatures))
+        for Zi, v in on_diagonal_analysis_dict.items():
+            shifts = shifts.at[Zi].set(v['shifts'])
+            scales = scales.at[Zi].set(v['scales'])
+        return OnDiagonalScaleShift(shifts = shifts,
+                                    scales = scales)
+    
+    def scale_shift_placeholder(self, *args):
+        return args[0]
+
+    def build_lcao_hamiltonian_model(self, 
+                                     readout_nfeatures: int, 
+                                     max_ell: int,
+                                     build_with_analysis: bool,
+                                     *,
+                                     off_diagonal_analysis_dict = None,
+                                     on_diagonal_analysis_dict = None
+                                    ):
         acd = self.build_atom_centered_descriptor()
         bcd = self.build_bond_centered_descriptor()
         mlp = self.build_mlp()
-        readout = self.build_readout(readout_nfeatures, max_ell=max_ell)
+        off_dro = self.build_readout(readout_nfeatures,
+                                     max_ell)
+        on_dro = self.build_readout(readout_nfeatures,
+                                    max_ell)
+        if build_with_analysis:
+            off_dss = self.build_off_diagonal_scale_shift(readout_nfeatures,
+                                                          off_diagonal_analysis_dict)
+            on_dss = self.build_on_diagonal_scale_shift(readout_nfeatures,
+                                                        on_diagonal_analysis_dict)
+        else:
+            off_dss = self.scale_shift_placeholder
+            on_dss = self.scale_shift_placeholder
+        
         hmodel = HamiltonianModel(atom_centered=acd,
                                   bond_centered=bcd,
                                   dense=mlp,
-                                  readout=readout
+                                  off_diag_readout=off_dro,
+                                  on_diag_readout=on_dro,
+                                  off_diag_scale_shift = off_dss,
+                                  on_diag_scale_shift = on_dss
                                  )
+        
         return hmodel

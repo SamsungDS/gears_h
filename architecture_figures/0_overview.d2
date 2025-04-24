@@ -27,14 +27,16 @@ bc: Bond-Centered {class: bc}
 rd: Residual Dense {class: rd}
 ondro: On-diagonal \nTensorDense Readout {class: ro}
 offdro: Off-diagonal \nTensorDense Readout {class: ro}
+onscsh: On-diagonal \nScale Shift {class: scaleshift}
+offscsh: Off-diagonal \nScale Shift {class: scaleshift}
 outs: H Irreps. {class: outs}
 
 ac -> rd: {style: {stroke: "#000000"}}
 z -> sarb -> ac -> bc -> rd: {style: {stroke: "#000000"}}
 r -> sarb: {style: {stroke: "#000000"}}
 r -> bc: {style: {stroke: "#000000"}}
-rd -> ondro -> outs: {style: {stroke: "#000000"}}
-rd -> offdro -> outs: {style: {stroke: "#000000"}}
+rd -> ondro -> onscsh -> outs: {style: {stroke: "#000000"}}
+rd -> offdro -> offscsh -> outs: {style: {stroke: "#000000"}}
 
 classes: {
   empty: {
@@ -73,6 +75,12 @@ classes: {
   ro: {
     style: {
       fill: "#FFAABB"
+      stroke: "#000000"
+    }
+  }
+  scaleshift: {
+    style: {
+      fill: "#77AADD"
       stroke: "#000000"
     }
   }
