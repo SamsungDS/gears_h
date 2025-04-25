@@ -271,21 +271,23 @@ def get_irreps_mask_on_diagonal(
         mask[i] = mask_dict[(atomic_number, atomic_number)]
     return mask
 
-def prepare_input_dict(dataset_as_list: DatasetList):
-    inputs_dict = {}
-    inputs_dict["numbers"] = [snapshot['atoms'].numbers for snapshot in dataset_as_list]
-    inputs_dict["positions"] = [snapshot['atoms'].positions for snapshot in dataset_as_list]
+def prepare_input_dicts(dataset_as_list: DatasetList):
+    
+    input_dicts = []
 
-    inputs_dict["ac_ij"] = [snapshot['ac_ij'] for snapshot in dataset_as_list]
-    inputs_dict["ac_D"] = [snapshot['ac_D'] for snapshot in dataset_as_list]
+    for snapshot in dataset_as_list:
+        snapshot_dict = {"numbers"   : snapshot['atoms'].numbers,
+                         "positions" : snapshot['atoms'].positions,
+                         "ac_ij"     : snapshot['ac_ij'],
+                         "ac_D"      : snapshot['ac_D'],
+                         "bc_ij"     : snapshot['bc_ij'],
+                         "bc_D"      : snapshot['bc_D'],
+                        }
+        input_dicts.append(snapshot_dict)
 
-    inputs_dict["bc_ij"] = [snapshot['bc_ij'] for snapshot in dataset_as_list]
-    inputs_dict["bc_D"] = [snapshot['bc_D'] for snapshot in dataset_as_list]
+    return input_dicts
 
-    return inputs_dict
-
-
-def prepare_label_dict(
+def prepare_label_dicts(
     dataset_as_list: DatasetList,
     hmapper: MultiElementPairHBlockMapper,
     mask_dict: dict,
@@ -335,7 +337,9 @@ def prepare_label_dict(
         for snapshot in tqdm(dataset_as_list, desc="Making on-diagonal irreps masks", ncols=100)
     ]
 
-    return labels_dict
+    labels_lod = [dict((k, v[i]) for k, v in labels_dict.items()) for i in range(len(dataset_as_list))]
+
+    return labels_lod
 
 def make_grain_dataset(dataset_as_list: DatasetList,
                        batch_size: int,
@@ -446,17 +450,20 @@ class GrainDataset:
         self.max_ell, self.readout_nfeatures = get_max_ell_and_max_features(self.hmap)
         self.dataset_mask_dict = get_mask_dict(self.max_ell, self.readout_nfeatures, self.hmap)
 
-        self.inputs = prepare_input_dict(dataset_as_list)
-        self.labels = prepare_label_dict(
-                        dataset_as_list,
-                        self.hmap,
-                        self.dataset_mask_dict,
-                        self.max_ell,
-                        self.readout_nfeatures,
-                    )
-        inputs_lod = [dict((k, v[i]) for k, v in self.inputs.items()) for i in range(len(dataset_as_list))]
-        labels_lod = [dict((k, v[i]) for k, v in self.labels.items()) for i in range(len(dataset_as_list))]
-        batch_lod = [(inputs, labels) for inputs, labels in zip(inputs_lod, labels_lod, strict=True)]
+        self.inputs = prepare_input_dicts(dataset_as_list)
+        
+        self.is_inference = is_inference
+        if not self.is_inference:
+            self.labels = prepare_label_dicts(
+                            dataset_as_list,
+                            self.hmap,
+                            self.dataset_mask_dict,
+                            self.max_ell,
+                            self.readout_nfeatures,
+                        )
+            batch_lod = [(inputs, labels) for inputs, labels in zip(self.inputs, self.labels, strict=True)]
+        elif self.is_inference:
+            batch_lod = [(inputs,) for inputs in self.inputs]
 
         from functools import partial
         self.ds = iter(

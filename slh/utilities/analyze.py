@@ -8,9 +8,9 @@ from scipy.optimize import dual_annealing
 from slh.data.input_pipeline import (get_hamiltonian_mapper_from_dataset, 
                                      get_max_ell_and_max_features, 
                                      get_mask_dict, 
-                                     prepare_label_dict, 
+                                     prepare_label_dicts, 
                                      read_dataset_as_list, 
-                                     prepare_input_dict)
+                                     prepare_input_dicts)
 from slh.train.run import setup_logging
 
 log = logging.getLogger(__name__)
@@ -111,8 +111,8 @@ def analyze(dataset_root: Path | str,
                                       hmap)
     
     log.info("Preparing inputs and labels.")
-    input_dict = prepare_input_dict(dslist)
-    label_dict = prepare_label_dict(
+    input_dict = prepare_input_dicts(dslist)
+    label_dict = prepare_label_dicts(
                     dslist,
                     hmap,
                     dataset_mask_dict,
