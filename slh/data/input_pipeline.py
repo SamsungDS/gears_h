@@ -36,7 +36,9 @@ def initialize_dataset_from_list(
     sampling_alpha: float,
     train_seed: int,
     val_seed: int,
-    n_cpus: int
+    n_cpus: int,
+    atoms_pad_multiple: int,
+    nl_pad_multiple: int
 ):
     train_idx, val_idx = split_idxs(len(dataset_as_list), num_train, num_val)
     train_ds_list, val_ds_list = split_dataset(dataset_as_list, train_idx, val_idx)
@@ -47,7 +49,9 @@ def initialize_dataset_from_list(
                            bond_fraction = bond_fraction,
                            sampling_alpha = sampling_alpha,
                            seed = train_seed,
-                           n_cpus=n_cpus
+                           n_cpus=n_cpus,
+                           atoms_pad_multiple=atoms_pad_multiple,
+                           nl_pad_multiple=nl_pad_multiple
                           ),
         make_grain_dataset(val_ds_list,
                            batch_size = val_batch_size,
@@ -55,7 +59,9 @@ def initialize_dataset_from_list(
                            bond_fraction = bond_fraction,
                            sampling_alpha = sampling_alpha,
                            seed = val_seed,
-                           n_cpus=n_cpus
+                           n_cpus=n_cpus,
+                           atoms_pad_multiple=atoms_pad_multiple,
+                           nl_pad_multiple=nl_pad_multiple
                           )
                        )
     return train_ds, val_ds
@@ -352,8 +358,10 @@ def make_grain_dataset(dataset_as_list: DatasetList,
                        sampling_alpha: float = 0.0,
                        is_inference: bool = False,
                        seed: int = 42,
-                       n_cpus: int = 4
-                       ):
+                       n_cpus: int = 4,
+                       atoms_pad_multiple: int = 50,
+                       nl_pad_multiple: int = 5000
+                      ):
     
     # TODO This is just a passed on call surely we can be better
     ds = GrainDataset(dataset_as_list=dataset_as_list,
@@ -363,7 +371,9 @@ def make_grain_dataset(dataset_as_list: DatasetList,
                       sampling_alpha=sampling_alpha,
                       is_inference=is_inference,
                       seed=seed,
-                      n_cpus=n_cpus
+                      n_cpus=n_cpus,
+                      atoms_pad_multiple=atoms_pad_multiple,
+                      nl_pad_multiple=nl_pad_multiple
                      )
     return ds
 
@@ -379,8 +389,13 @@ def next_multiple(x, mul):
     return (x // mul + 1) * mul
 
 class BatchSpec:
-    atoms_pad_multiple:int = 50
-    nl_pad_multiple: int = 10000
+
+    def __init__(self, 
+                 atoms_pad_multiple: int = 50, 
+                 nl_pad_multiple: int = 5000):
+        
+        self.atoms_pad_multiple = atoms_pad_multiple
+        self.nl_pad_multiple = nl_pad_multiple
 
     def __call__(self, list_of_batchables):
         # list_of_batchables is a list of tuples, each of which represents an (input, label) pair of dicts
@@ -447,6 +462,8 @@ class GrainDataset:
         is_inference: bool = False,
         seed: int = 42,
         n_cpus: int = 8,
+        atoms_pad_multiple: int = 50,
+        nl_pad_multiple: int = 5000
     ):
         # print(batch_size, n_epochs, bond_fraction, sampling_alpha)
         self._steps_per_epoch = len(dataset_as_list) // batch_size # We drop remainder
@@ -476,7 +493,7 @@ class GrainDataset:
             .shuffle()
             .repeat(n_epochs)
             .random_map(partial(drop_bonds, bond_fraction=bond_fraction, distance_weight_exponent=sampling_alpha))
-            .batch(batch_size=batch_size, batch_fn=BatchSpec())
+            .batch(batch_size=batch_size, batch_fn=BatchSpec(atoms_pad_multiple, nl_pad_multiple))
             .to_iter_dataset(grain.ReadOptions(num_threads=n_cpus, prefetch_buffer_size=n_cpus))
             .mp_prefetch(grain.MultiprocessingOptions(num_workers=1, per_worker_buffer_size=1))
         )

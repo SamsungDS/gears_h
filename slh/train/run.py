@@ -96,7 +96,9 @@ def run(user_config, log_level="error"):
             sampling_alpha = config.data.sampling_alpha,
             train_seed = train_rng_seed,
             val_seed = val_rng_seed,
-            n_cpus= config.data.n_cpus
+            n_cpus= config.data.n_cpus,
+            atoms_pad_multiple=config.data.atoms_pad_multiple,
+            nl_pad_multiple=config.data.nl_pad_multiple
         )
     elif config.data.data_path is None:
         assert config.data.train_data_path is not None, "train_data_path must be provided when data_path is not."
@@ -119,7 +121,9 @@ def run(user_config, log_level="error"):
                                          bond_fraction = config.data.bond_fraction,
                                          sampling_alpha = config.data.sampling_alpha,
                                          seed = train_rng_seed,
-                                         n_cpus = config.data.n_cpus
+                                         n_cpus = config.data.n_cpus,
+                                         atoms_pad_multiple=config.data.atoms_pad_multiple,
+                                         nl_pad_multiple=config.data.nl_pad_multiple
                                         ),
                             GrainDataset(val_ds_list,
                                          batch_size = config.data.valid_batch_size,
@@ -127,7 +131,9 @@ def run(user_config, log_level="error"):
                                          bond_fraction = config.data.bond_fraction,
                                          sampling_alpha = config.data.sampling_alpha,
                                          seed = val_rng_seed,
-                                         n_cpus = config.data.n_cpus
+                                         n_cpus = config.data.n_cpus,
+                                         atoms_pad_multiple=config.data.atoms_pad_multiple,
+                                         nl_pad_multiple=config.data.nl_pad_multiple
                                         )
                            )
 

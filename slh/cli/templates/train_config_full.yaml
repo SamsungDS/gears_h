@@ -16,6 +16,8 @@ data:
   energy_unit: eV
   pos_unit: Ang
   n_cpus: 4
+  atoms_pad_multiple: 50
+  nl_pad_multiple: 5000
 
 model:
   atom_centered:

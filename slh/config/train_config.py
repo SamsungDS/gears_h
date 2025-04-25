@@ -45,6 +45,8 @@ class DataConfig(BaseModel, extra="forbid"):
     energy_unit: Optional[str] = "eV"
 
     n_cpus: PositiveInt = 4
+    atoms_pad_multiple: NonNegativeInt = 50
+    nl_pad_multiple: NonNegativeInt = 5000
 
     @model_validator(mode="after")
     def set_data_or_train_val_path(self):
