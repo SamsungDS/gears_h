@@ -33,21 +33,26 @@ def initialize_dataset_from_list(
     val_batch_size: int,
     n_epochs: int,
     bond_fraction: float,
-    sampling_alpha: float
+    sampling_alpha: float,
+    n_cpus: int
 ):
     train_idx, val_idx = split_idxs(len(dataset_as_list), num_train, num_val)
     train_ds_list, val_ds_list = split_dataset(dataset_as_list, train_idx, val_idx)
     train_ds, val_ds = (
         make_grain_dataset(train_ds_list,
-                                            batch_size = batch_size,
-                                            n_epochs = n_epochs,
-                                            bond_fraction = bond_fraction,
-                                            sampling_alpha = sampling_alpha),
+                           batch_size = batch_size,
+                           n_epochs = n_epochs,
+                           bond_fraction = bond_fraction,
+                           sampling_alpha = sampling_alpha,
+                           n_cpus=n_cpus
+                          ),
         make_grain_dataset(val_ds_list,
-                                            batch_size = val_batch_size,
-                                            n_epochs = n_epochs,
-                                            bond_fraction = bond_fraction,
-                                            sampling_alpha = sampling_alpha)
+                           batch_size = val_batch_size,
+                           n_epochs = n_epochs,
+                           bond_fraction = bond_fraction,
+                           sampling_alpha = sampling_alpha,
+                           n_cpus=n_cpus
+                          )
                        )
     return train_ds, val_ds
 
@@ -339,6 +344,7 @@ def make_grain_dataset(dataset_as_list: DatasetList,
                        sampling_alpha: float = 0.0,
                        is_inference: bool = False,
                        seed: int = 42,
+                       n_cpus: int = 4
                        ):
     
     # TODO This is just a passed on call surely we can be better
@@ -348,7 +354,9 @@ def make_grain_dataset(dataset_as_list: DatasetList,
                       bond_fraction=bond_fraction,
                       sampling_alpha=sampling_alpha,
                       is_inference=is_inference,
-                      seed=seed)
+                      seed=seed,
+                      n_cpus=n_cpus
+                     )
     return ds
 
 
@@ -424,13 +432,13 @@ class GrainDataset:
     def __init__(
         self,
         dataset_as_list: DatasetList,
-        batch_size: int=1,
-        n_epochs: int=1,
+        batch_size: int = 1,
+        n_epochs: int = 1,
         bond_fraction: float = 1.0,
         sampling_alpha: float = 0.0,
         is_inference: bool = False,
-        seed: int=42,
-        n_cpus:int=8,
+        seed: int = 42,
+        n_cpus: int = 8,
     ):
         # print(batch_size, n_epochs, bond_fraction, sampling_alpha)
         self._steps_per_epoch = len(dataset_as_list) // batch_size # We drop remainder

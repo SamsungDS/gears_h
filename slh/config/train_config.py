@@ -44,6 +44,8 @@ class DataConfig(BaseModel, extra="forbid"):
     pos_unit: Optional[str] = "Ang"
     energy_unit: Optional[str] = "eV"
 
+    n_cpus: PositiveInt = 4
+
     @model_validator(mode="after")
     def set_data_or_train_val_path(self):
         not_data_path = self.data_path is None

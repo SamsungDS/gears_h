@@ -87,7 +87,8 @@ def run(user_config, log_level="error"):
             val_batch_size=config.data.valid_batch_size,
             n_epochs=config.n_epochs,
             bond_fraction=config.data.bond_fraction,
-            sampling_alpha = config.data.sampling_alpha
+            sampling_alpha = config.data.sampling_alpha,
+            n_cpus= config.data.n_cpus
         )
     elif config.data.data_path is None:
         assert config.data.train_data_path is not None, "train_data_path must be provided when data_path is not."
@@ -105,15 +106,19 @@ def run(user_config, log_level="error"):
             num_snapshots = num_val,
         )
         train_ds, val_ds = (GrainDataset(train_ds_list,
-                                                batch_size = config.data.batch_size,
-                                                n_epochs = config.n_epochs,
-                                                bond_fraction = config.data.bond_fraction,
-                                                sampling_alpha = config.data.sampling_alpha),
+                                         batch_size = config.data.batch_size,
+                                         n_epochs = config.n_epochs,
+                                         bond_fraction = config.data.bond_fraction,
+                                         sampling_alpha = config.data.sampling_alpha,
+                                         n_cpus = config.data.n_cpus
+                                        ),
                             GrainDataset(val_ds_list,
-                                                batch_size = config.data.valid_batch_size,
-                                                n_epochs = config.n_epochs,
-                                                bond_fraction = config.data.bond_fraction,
-                                                sampling_alpha = config.data.sampling_alpha)
+                                         batch_size = config.data.valid_batch_size,
+                                         n_epochs = config.n_epochs,
+                                         bond_fraction = config.data.bond_fraction,
+                                         sampling_alpha = config.data.sampling_alpha,
+                                         n_cpus = config.data.n_cpus
+                                        )
                            )
 
     log.info("Writing readout parameters and orbital ells dictionary.")
