@@ -34,6 +34,8 @@ def initialize_dataset_from_list(
     n_epochs: int,
     bond_fraction: float,
     sampling_alpha: float,
+    train_seed: int,
+    val_seed: int,
     n_cpus: int
 ):
     train_idx, val_idx = split_idxs(len(dataset_as_list), num_train, num_val)
@@ -44,6 +46,7 @@ def initialize_dataset_from_list(
                            n_epochs = n_epochs,
                            bond_fraction = bond_fraction,
                            sampling_alpha = sampling_alpha,
+                           seed = train_seed,
                            n_cpus=n_cpus
                           ),
         make_grain_dataset(val_ds_list,
@@ -51,6 +54,7 @@ def initialize_dataset_from_list(
                            n_epochs = n_epochs,
                            bond_fraction = bond_fraction,
                            sampling_alpha = sampling_alpha,
+                           seed = val_seed,
                            n_cpus=n_cpus
                           )
                        )

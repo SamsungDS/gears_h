@@ -49,6 +49,12 @@ def run(user_config, log_level="error"):
     config = parse_config(user_config)
     seed_py_np_tf(config.seed)
     rng_key = jax.random.PRNGKey(config.seed)
+    train_rng_seed, val_rng_seed = jax.random.randint(rng_key, 
+                                                      shape=2, 
+                                                      minval=0,
+                                                      maxval=2**30, # Overflow error when using 2**32-1 for some reason...
+                                                      dtype = jnp.uint32)
+    train_rng_seed, val_rng_seed = int(train_rng_seed), int(val_rng_seed)
 
     log.info("Initializing directories")
     config.data.model_version_path.mkdir(parents=True, exist_ok=True)
@@ -88,6 +94,8 @@ def run(user_config, log_level="error"):
             n_epochs=config.n_epochs,
             bond_fraction=config.data.bond_fraction,
             sampling_alpha = config.data.sampling_alpha,
+            train_seed = train_rng_seed,
+            val_seed = val_rng_seed,
             n_cpus= config.data.n_cpus
         )
     elif config.data.data_path is None:
@@ -110,6 +118,7 @@ def run(user_config, log_level="error"):
                                          n_epochs = config.n_epochs,
                                          bond_fraction = config.data.bond_fraction,
                                          sampling_alpha = config.data.sampling_alpha,
+                                         seed = train_rng_seed,
                                          n_cpus = config.data.n_cpus
                                         ),
                             GrainDataset(val_ds_list,
@@ -117,6 +126,7 @@ def run(user_config, log_level="error"):
                                          n_epochs = config.n_epochs,
                                          bond_fraction = config.data.bond_fraction,
                                          sampling_alpha = config.data.sampling_alpha,
+                                         seed = val_rng_seed,
                                          n_cpus = config.data.n_cpus
                                         )
                            )
