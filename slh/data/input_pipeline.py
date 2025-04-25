@@ -1,4 +1,3 @@
-import concurrent.futures
 import itertools
 import json
 import logging
@@ -121,28 +120,10 @@ def read_dataset_as_list(
 
     log.info(f"Using {len(dataset_dirlist)} snapshots.")
 
-    # dataset_as_list = [
-    #     snapshot_from_directory(fd, ac_nl_rcut=atomcentered_cutoff)
-    #     for fd in tqdm(dataset_dirlist, desc="Reading dataset", ncols=100)
-    # ]
-    from functools import partial
-    dataset_as_list = []
-    # with Pool(24) as pool:
-    #     with tqdm(total=len(dataset_dirlist)) as pbar:
-    #         # TODO We eventually want to partial this
-    #         for datatuple in pool.imap(
-    #             func=partial(snapshot_from_directory, ac_nl_rcut=atomcentered_cutoff), iterable=dataset_dirlist
-    #         ):
-    #             dataset_as_list.append(datatuple)
-    #             pbar.update()
-
-    # TODO make number of threads controllable
-    load_func = partial(snapshot_from_directory, ac_nl_rcut=atomcentered_cutoff)
-    with concurrent.futures.ThreadPoolExecutor(max_workers=48) as executor:
-        future_to_dataset_list = [executor.submit(load_func, dir) for dir in dataset_dirlist]
-        for future in tqdm(concurrent.futures.as_completed(future_to_dataset_list),
-                            desc="Reading dataset", ncols=100, total=len(future_to_dataset_list)):
-            dataset_as_list.append(future.result())
+    dataset_as_list = [
+        snapshot_from_directory(fd, ac_nl_rcut=atomcentered_cutoff)
+        for fd in tqdm(dataset_dirlist, desc="Reading dataset", ncols=100)
+    ]
 
     return dataset_as_list
 
