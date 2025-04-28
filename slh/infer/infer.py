@@ -26,14 +26,13 @@ def process_structure_for_inference(structure_path: Path,
     numbers = atoms.get_atomic_numbers()
     bc_ij, bc_D = get_neighbourlist_ijD(atoms, bc_cutoff, unique_pairs = False)
     ac_ij, ac_D = get_neighbourlist_ijD(atoms, ac_cutoff, unique_pairs = False)
-    bonds = np.arange(len(bc_D))
     
     return (numbers[None,...], 
             bc_ij[None,...], 
             bc_D[None,...],
             ac_ij[None,...], 
             ac_D[None,...],  
-            bonds[None,...])
+           )
 
 def create_inference_state(model_path: Path | str):
     model_path = Path(model_path)
@@ -78,7 +77,7 @@ def create_inference_state(model_path: Path | str):
                                                            build_with_analysis=False)
 
     batched_model = jax.vmap(
-        model.apply, in_axes=(None, 0, 0, 0, 0, 0, 0), axis_name="batch"
+        model.apply, in_axes=(None, 0, 0, 0, 0, 0), axis_name="batch"
     )
 
     log.info("Loading model parameters")
@@ -89,12 +88,12 @@ def create_inference_state(model_path: Path | str):
 
     return state
 
-def infer_h_irreps(apply_fn, params, numbers, bc_ij, bc_D, ac_ij, ac_D, B):
+def infer_h_irreps(apply_fn, params, numbers, bc_ij, bc_D, ac_ij, ac_D):
     h_irreps_off_diagonal, h_irreps_on_diagonal = apply_fn(params, 
                                                            numbers, 
                                                            bc_ij, bc_D,
-                                                           ac_ij, ac_D,
-                                                           B)
+                                                           ac_ij, ac_D
+                                                          )
     return h_irreps_off_diagonal, h_irreps_on_diagonal
 
 def get_h_blocks(
