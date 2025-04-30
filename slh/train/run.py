@@ -1,6 +1,5 @@
 import logging
 import sys
-from pathlib import Path
 import yaml
 
 import jax
@@ -10,8 +9,7 @@ import optax
 
 import slh
 from slh.config.common import parse_config
-from slh.data import GrainDataset
-from slh.data.input_pipeline import initialize_dataset_from_list, read_dataset_as_list
+from slh.data.input_pipeline import load_dataset_from_config
 from slh.model.builder import ModelBuilder
 
 from slh.train.callbacks import initialize_callbacks
@@ -66,76 +64,7 @@ def run(user_config, log_level="error"):
     # loss_fn = initialize_loss_fn(config.loss)
     # logging_metrics = initialize_metrics(config.metrics)
 
-    num_train = config.data.n_train
-    num_val = config.data.n_valid
-
-    atomcentered_cutoff = config.model.atom_centered.radial_basis.cutoff
-
-    if config.data.data_path is not None:
-        assert config.data.train_data_path is None, "train_data_path must not be provided when data_path is."
-        assert config.data.val_data_path is None, "val_data_path must not be provided when data_path is."
-        data_root = Path(config.data.data_path)
-        ds_list = read_dataset_as_list(
-            directory = data_root,
-            atomcentered_cutoff = atomcentered_cutoff,
-            num_snapshots= num_train + num_val,
-        )
-        if len(ds_list) == 0:
-            raise FileNotFoundError(
-                f"Did not find any snapshots at {data_root}"
-            )
-    
-        train_ds, val_ds = initialize_dataset_from_list(
-            dataset_as_list=ds_list,
-            num_train=num_train,
-            num_val=num_val,
-            batch_size=config.data.batch_size,
-            val_batch_size=config.data.valid_batch_size,
-            n_epochs=config.n_epochs,
-            bond_fraction=config.data.bond_fraction,
-            sampling_alpha = config.data.sampling_alpha,
-            train_seed = train_rng_seed,
-            val_seed = val_rng_seed,
-            n_cpus= config.data.n_cpus,
-            atoms_pad_multiple=config.data.atoms_pad_multiple,
-            nl_pad_multiple=config.data.nl_pad_multiple
-        )
-    elif config.data.data_path is None:
-        assert config.data.train_data_path is not None, "train_data_path must be provided when data_path is not."
-        assert config.data.val_data_path is not None, "val_data_path must be provided when data_path is not."
-        data_root = Path(config.data.train_data_path)
-        val_data_root = Path(config.data.val_data_path)
-        train_ds_list = read_dataset_as_list(
-            directory = data_root,
-            atomcentered_cutoff = atomcentered_cutoff,
-            num_snapshots = num_train,
-        )
-        val_ds_list = read_dataset_as_list(
-            directory = val_data_root,
-            atomcentered_cutoff = atomcentered_cutoff,
-            num_snapshots = num_val,
-        )
-        train_ds, val_ds = (GrainDataset(train_ds_list,
-                                         batch_size = config.data.batch_size,
-                                         n_epochs = config.n_epochs,
-                                         bond_fraction = config.data.bond_fraction,
-                                         sampling_alpha = config.data.sampling_alpha,
-                                         seed = train_rng_seed,
-                                         n_cpus = config.data.n_cpus,
-                                         atoms_pad_multiple=config.data.atoms_pad_multiple,
-                                         nl_pad_multiple=config.data.nl_pad_multiple
-                                        ),
-                            GrainDataset(val_ds_list,
-                                         batch_size = config.data.valid_batch_size,
-                                         n_epochs = config.n_epochs,
-                                         bond_fraction = config.data.bond_fraction,
-                                         sampling_alpha = config.data.sampling_alpha,
-                                         seed = val_rng_seed,
-                                         n_cpus = config.data.n_cpus,
-                                         atoms_pad_multiple=config.data.atoms_pad_multiple,
-                                         nl_pad_multiple=config.data.nl_pad_multiple
-                                        )
-                           )
+    train_ds, val_ds, data_root = load_dataset_from_config(config, train_rng_seed, val_rng_seed)
 
     log.info("Writing readout parameters and orbital ells dictionary.")
     readout_parameters = {"max_ell" : train_ds.max_ell,

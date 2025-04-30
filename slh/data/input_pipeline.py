@@ -10,6 +10,7 @@ from matscipy.neighbours import neighbour_list
 import numpy as np
 from tqdm import tqdm
 
+from slh.config.train_config import TrainConfig
 from slh.data.preprocessing import prefetch_to_single_device
 from slh.data.utilities import split_dataset, split_idxs
 from slh.hblockmapper import (
@@ -142,15 +143,96 @@ def read_dataset_as_list(
 
     return dataset_as_list
 
+def load_dataset_from_config(config: TrainConfig,
+                             train_rng_seed: int,
+                             val_rng_seed: int):
+    num_train = config.data.n_train
+    num_val = config.data.n_valid
+
+    atomcentered_cutoff = config.model.atom_centered.radial_basis.cutoff
+
+    if config.data.data_path is not None:
+        assert config.data.train_data_path is None, "train_data_path must not be provided when data_path is."
+        assert config.data.val_data_path is None, "val_data_path must not be provided when data_path is."
+        data_root = Path(config.data.data_path)
+        ds_list = read_dataset_as_list(
+            directory = data_root,
+            atomcentered_cutoff = atomcentered_cutoff,
+            num_snapshots= num_train + num_val,
+        )
+        log.info("Dataset information:")
+        _,_,_ = get_max_natoms_and_nneighbours(ds_list) # For logging
+        if len(ds_list) == 0:
+            raise FileNotFoundError(
+                f"Did not find any snapshots at {data_root}"
+            )
+    
+        train_ds, val_ds = initialize_dataset_from_list(
+            dataset_as_list=ds_list,
+            num_train=num_train,
+            num_val=num_val,
+            batch_size=config.data.batch_size,
+            val_batch_size=config.data.valid_batch_size,
+            n_epochs=config.n_epochs,
+            bond_fraction=config.data.bond_fraction,
+            sampling_alpha = config.data.sampling_alpha,
+            train_seed = train_rng_seed,
+            val_seed = val_rng_seed,
+            n_cpus= config.data.n_cpus,
+            atoms_pad_multiple=config.data.atoms_pad_multiple,
+            nl_pad_multiple=config.data.nl_pad_multiple
+        )
+    elif config.data.data_path is None:
+        assert config.data.train_data_path is not None, "train_data_path must be provided when data_path is not."
+        assert config.data.val_data_path is not None, "val_data_path must be provided when data_path is not."
+        data_root = Path(config.data.train_data_path)
+        val_data_root = Path(config.data.val_data_path)
+        train_ds_list = read_dataset_as_list(
+            directory = data_root,
+            atomcentered_cutoff = atomcentered_cutoff,
+            num_snapshots = num_train,
+        )
+        val_ds_list = read_dataset_as_list(
+            directory = val_data_root,
+            atomcentered_cutoff = atomcentered_cutoff,
+            num_snapshots = num_val,
+        )
+        log.info("Train dataset information:")
+        _,_,_ = get_max_natoms_and_nneighbours(train_ds_list) # For logging
+        log.info("Validation dataset information:")
+        _,_,_ = get_max_natoms_and_nneighbours(val_ds_list) # For logging
+        train_ds, val_ds = (GrainDataset(train_ds_list,
+                                         batch_size = config.data.batch_size,
+                                         n_epochs = config.n_epochs,
+                                         bond_fraction = config.data.bond_fraction,
+                                         sampling_alpha = config.data.sampling_alpha,
+                                         seed = train_rng_seed,
+                                         n_cpus = config.data.n_cpus,
+                                         atoms_pad_multiple=config.data.atoms_pad_multiple,
+                                         nl_pad_multiple=config.data.nl_pad_multiple
+                                        ),
+                            GrainDataset(val_ds_list,
+                                         batch_size = config.data.valid_batch_size,
+                                         n_epochs = config.n_epochs,
+                                         bond_fraction = config.data.bond_fraction,
+                                         sampling_alpha = config.data.sampling_alpha,
+                                         seed = val_rng_seed,
+                                         n_cpus = config.data.n_cpus,
+                                         atoms_pad_multiple=config.data.atoms_pad_multiple,
+                                         nl_pad_multiple=config.data.nl_pad_multiple
+                                        )
+                           )
+
+    return train_ds, val_ds, data_root
 
 def get_max_natoms_and_nneighbours(dataset_as_list):
     max_natoms = max([len(snapshot['atoms']) for snapshot in dataset_as_list])
     max_bc_nneighbours = max([len(snapshot['bc_ij']) for snapshot in dataset_as_list])
     max_ac_nneighbours = max([len(snapshot['ac_ij']) for snapshot in dataset_as_list])
 
-    log.info(f"Max natoms: {max_natoms}")
-    log.info(f"Max bond-centered neighbours: {max_bc_nneighbours}")
-    log.info(f"Max atom-centered neighbours: {max_ac_nneighbours}")
+    log.info(f"\tMax natoms: {max_natoms}")
+    log.info(f"\tMax bond-centered neighbours: {max_bc_nneighbours}")
+    log.info(f"\tMax atom-centered neighbours: {max_ac_nneighbours}")
 
     return max_natoms, max_bc_nneighbours, max_ac_nneighbours
 
