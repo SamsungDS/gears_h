@@ -13,7 +13,7 @@ from optax import tree_utils as otu
 from tensorflow.keras.callbacks import CallbackList
 from tqdm import trange
 
-from slh.data.input_pipeline import PureInMemoryDataset
+from slh.data.input_pipeline import GrainDataset
 from slh.train.checkpoints import CheckpointManager, load_state
 
 log = logging.getLogger(__name__)
@@ -22,8 +22,8 @@ def lr_tree_filter(path, value: Any) -> bool:
     return isinstance(value, jnp.ndarray)
 
 def fit(state: TrainState,
-        train_dataset: PureInMemoryDataset,
-        val_dataset: PureInMemoryDataset,
+        train_dataset: GrainDataset,
+        val_dataset: GrainDataset,
         loss_function: callable,
         logging_metrics: metrics.Collection,
         callbacks: CallbackList,
@@ -63,8 +63,8 @@ def fit(state: TrainState,
     train_batches_per_epoch = train_dataset.steps_per_epoch
     val_batches_per_epoch = val_dataset.steps_per_epoch 
 
-    batch_train_dataset = train_dataset.shuffle_and_batch()
-    batch_val_dataset = val_dataset.shuffle_and_batch()
+    batch_train_dataset = iter(train_dataset)
+    batch_val_dataset = iter(val_dataset)
 
     # Create train_step and val_step functions
     train_step, val_step = make_step_functions(logging_metrics,
@@ -202,8 +202,8 @@ def fit(state: TrainState,
         epoch_pbar.update()
     epoch_pbar.close()
     callbacks.on_train_end()
-    train_dataset.cleanup()
-    val_dataset.cleanup()
+    # train_dataset.cleanup()
+    # val_dataset.cleanup()
 
 
     return
@@ -218,7 +218,6 @@ def calculate_loss(params, batch_full, loss_function, apply_function):
         batch["bc_D"],
         batch["ac_ij"],
         batch["ac_D"],
-        batch["idx_bonds"]
     )
 
     # TODO Remove this when we make the readout layer size automatically calculated.

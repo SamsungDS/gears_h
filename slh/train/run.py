@@ -1,6 +1,5 @@
 import logging
 import sys
-from pathlib import Path
 import yaml
 
 import jax
@@ -10,8 +9,7 @@ import optax
 
 import slh
 from slh.config.common import parse_config
-from slh.data import PureInMemoryDataset
-from slh.data.input_pipeline import initialize_dataset_from_list, read_dataset_as_list
+from slh.data.input_pipeline import load_dataset_from_config
 from slh.model.builder import ModelBuilder
 
 from slh.train.callbacks import initialize_callbacks
@@ -35,7 +33,7 @@ def setup_logging(log_file, log_level):
     while len(logging.root.handlers) > 0:
         logging.root.removeHandler(logging.root.handlers[-1])
 
-    logging.getLogger("absl").setLevel(logging.WARNING)
+    logging.getLogger("absl").setLevel(logging.ERROR)
 
     logging.basicConfig(
         level=log_levels[log_level],
@@ -49,6 +47,12 @@ def run(user_config, log_level="error"):
     config = parse_config(user_config)
     seed_py_np_tf(config.seed)
     rng_key = jax.random.PRNGKey(config.seed)
+    train_rng_seed, val_rng_seed = jax.random.randint(rng_key, 
+                                                      shape=2, 
+                                                      minval=0,
+                                                      maxval=2**30, # Overflow error when using 2**32-1 for some reason...
+                                                      dtype = jnp.uint32)
+    train_rng_seed, val_rng_seed = int(train_rng_seed), int(val_rng_seed)
 
     log.info("Initializing directories")
     config.data.model_version_path.mkdir(parents=True, exist_ok=True)
@@ -60,61 +64,7 @@ def run(user_config, log_level="error"):
     # loss_fn = initialize_loss_fn(config.loss)
     # logging_metrics = initialize_metrics(config.metrics)
 
-    num_train = config.data.n_train
-    num_val = config.data.n_valid
-
-    atomcentered_cutoff = config.model.atom_centered.radial_basis.cutoff
-
-    if config.data.data_path is not None:
-        assert config.data.train_data_path is None, "train_data_path must not be provided when data_path is."
-        assert config.data.val_data_path is None, "val_data_path must not be provided when data_path is."
-        data_root = Path(config.data.data_path)
-        ds_list = read_dataset_as_list(
-            directory = data_root,
-            atomcentered_cutoff = atomcentered_cutoff,
-            num_snapshots= num_train + num_val,
-        )
-        if len(ds_list) == 0:
-            raise FileNotFoundError(
-                f"Did not find any snapshots at {data_root}"
-            )
-    
-        train_ds, val_ds = initialize_dataset_from_list(
-            dataset_as_list=ds_list,
-            num_train=num_train,
-            num_val=num_val,
-            batch_size=config.data.batch_size,
-            val_batch_size=config.data.valid_batch_size,
-            n_epochs=config.n_epochs,
-            bond_fraction=config.data.bond_fraction,
-            sampling_alpha = config.data.sampling_alpha
-        )
-    elif config.data.data_path is None:
-        assert config.data.train_data_path is not None, "train_data_path must be provided when data_path is not."
-        assert config.data.val_data_path is not None, "val_data_path must be provided when data_path is not."
-        data_root = Path(config.data.train_data_path)
-        val_data_root = Path(config.data.val_data_path)
-        train_ds_list = read_dataset_as_list(
-            directory = data_root,
-            atomcentered_cutoff = atomcentered_cutoff,
-            num_snapshots = num_train,
-        )
-        val_ds_list = read_dataset_as_list(
-            directory = val_data_root,
-            atomcentered_cutoff = atomcentered_cutoff,
-            num_snapshots = num_val,
-        )
-        train_ds, val_ds = (PureInMemoryDataset(train_ds_list,
-                                                batch_size = config.data.batch_size,
-                                                n_epochs = config.n_epochs,
-                                                bond_fraction = config.data.bond_fraction,
-                                                sampling_alpha = config.data.sampling_alpha),
-                            PureInMemoryDataset(val_ds_list,
-                                                batch_size = config.data.valid_batch_size,
-                                                n_epochs = config.n_epochs,
-                                                bond_fraction = config.data.bond_fraction,
-                                                sampling_alpha = config.data.sampling_alpha)
-                           )
+    train_ds, val_ds, data_root = load_dataset_from_config(config, train_rng_seed, val_rng_seed)
 
     log.info("Writing readout parameters and orbital ells dictionary.")
     readout_parameters = {"max_ell" : train_ds.max_ell,
@@ -181,7 +131,7 @@ def run(user_config, log_level="error"):
                                                            build_with_analysis=False)
 
     batched_model = jax.vmap(
-        model.apply, in_axes=(None, 0, 0, 0, 0, 0, 0), axis_name="batch"
+        model.apply, in_axes=(None, 0, 0, 0, 0, 0), axis_name="batch"
     )
 
     params, rng_key = create_params(model, rng_key, sample_input, 1)
@@ -219,7 +169,9 @@ def run(user_config, log_level="error"):
         opt = optax.with_extra_args_support(opt)
         opt = optax.chain(opt,
                           optax.zero_nans(),
-                          optax.clip(1))
+                          # optax.add_noise(eta=0.1, gamma=1.0, seed=42),
+                          optax.centralize(),
+                          optax.clip_by_block_rms(1))
 
     state = create_train_state(batched_model, params, opt)
 
