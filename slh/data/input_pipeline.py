@@ -194,6 +194,7 @@ def load_dataset_from_config(config: TrainConfig,
                 num_snapshots = num_train,
             )
         elif type(config.data.train_data_path) is list:
+            data_root = [Path(p) for p in config.data.train_data_path]
             train_ds_list = []
             for p in set(config.data.train_data_path):
                 p = Path(p)
