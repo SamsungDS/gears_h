@@ -2,6 +2,7 @@ import itertools
 import json
 import logging
 from pathlib import Path
+import yaml
 
 from ase import Atoms
 from ase.io import read
@@ -244,6 +245,37 @@ def load_dataset_from_config(config: TrainConfig,
                            )
 
     return train_ds, val_ds, data_root
+
+def load_single_analysis(analysis_directory: Path):
+    ## Read off-diagonal analysis
+    off_diag_analysis_path = analysis_directory / "off_diag_analysis_results.yaml"
+    try:
+        with open(off_diag_analysis_path, 'r') as f:
+            temp_off_diag_analysis_dict = yaml.load(f, yaml.SafeLoader)
+        off_diag_analysis_dict = {}
+        for k, v in temp_off_diag_analysis_dict.items():
+            new_key = tuple(map(int, k.split()))
+            off_diag_analysis_dict[new_key] = {k2: np.array(v2) for k2,v2 in v.items()}
+    except FileNotFoundError:
+        log.warning(f"Off-diagonal analysis in {analysis_directory} not found.")
+        log.warning(f"Analyze using `slh analyze {analysis_directory.parent} <Num_structures_to_analyze>`")
+        off_diag_analysis_dict = None
+    ## Read on-diagonal analysis
+    on_diag_analysis_path = analysis_directory / "on_diag_analysis_results.yaml"
+    try:
+        with open(on_diag_analysis_path, 'r') as f:
+            temp_on_diag_analysis_dict = yaml.load(f, yaml.SafeLoader)
+        on_diag_analysis_dict = {}
+        for k, v in temp_on_diag_analysis_dict.items():
+            new_key = int(k)
+            on_diag_analysis_dict[new_key] = {k2: np.array(v2) for k2,v2 in v.items()}
+    except FileNotFoundError:
+        log.warning(f"On-diagonal analysis in {analysis_directory} not found.")
+        log.warning(f"Analyze using `slh analyze {analysis_directory.parent} <Num_structures_to_analyze>`")
+        on_diag_analysis_dict = None
+    
+    return off_diag_analysis_dict, on_diag_analysis_dict
+
 
 def get_max_natoms_and_nneighbours(dataset_as_list):
     max_natoms = max([len(snapshot['atoms']) for snapshot in dataset_as_list])
