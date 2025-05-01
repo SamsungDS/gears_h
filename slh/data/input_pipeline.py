@@ -352,6 +352,27 @@ def load_analyses(data_root: Path | list[Path]):
 
         return off_diag_analysis_dict, on_diag_analysis_dict, build_with_analysis
 
+def write_analysis(analysis_dict: dict, 
+                   write_root: Path):
+    # TODO find a better home for this
+    write_dict = {}
+    for k, v in analysis_dict.items():
+        if type(k) is tuple:
+            write_name = "off_diag_analysis_results.yaml"
+            new_key = "%s %s" % k
+            write_dict[new_key] = {}
+            for p, vals in v.items():
+                write_dict[new_key][p] = vals.tolist()
+        elif type(k) is int:
+            write_name = "on_diag_analysis_results.yaml"
+            write_dict[k] = {}
+            for p, vals in v.items():
+                write_dict[k][p] = vals.tolist()
+        
+    with open(write_root / write_name, "w") as f:
+        yaml.dump(write_dict, f)
+
+
 def get_max_natoms_and_nneighbours(dataset_as_list):
     max_natoms = max([len(snapshot['atoms']) for snapshot in dataset_as_list])
     max_bc_nneighbours = max([len(snapshot['bc_ij']) for snapshot in dataset_as_list])

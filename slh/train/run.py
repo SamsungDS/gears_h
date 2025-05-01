@@ -9,7 +9,7 @@ import optax
 
 import slh
 from slh.config.common import parse_config
-from slh.data.input_pipeline import load_dataset_from_config, load_analyses
+from slh.data.input_pipeline import load_dataset_from_config, load_analyses, write_analysis
 from slh.model.builder import ModelBuilder
 
 from slh.train.callbacks import initialize_callbacks
@@ -78,6 +78,11 @@ def run(user_config, log_level="error"):
 
     log.info("Checking for analysis...")
     off_diag_analysis_dict, on_diag_analysis_dict, build_with_analysis = load_analyses(data_root)
+
+    if off_diag_analysis_dict is not None:
+        write_analysis(off_diag_analysis_dict, config.data.model_version_path)
+    if on_diag_analysis_dict is not None:
+        write_analysis(on_diag_analysis_dict, config.data.model_version_path)
 
     sample_input = train_ds.init_input()
 
