@@ -185,18 +185,38 @@ def load_dataset_from_config(config: TrainConfig,
     elif config.data.data_path is None:
         assert config.data.train_data_path is not None, "train_data_path must be provided when data_path is not."
         assert config.data.val_data_path is not None, "val_data_path must be provided when data_path is not."
-        data_root = Path(config.data.train_data_path)
-        val_data_root = Path(config.data.val_data_path)
-        train_ds_list = read_dataset_as_list(
-            directory = data_root,
-            atomcentered_cutoff = atomcentered_cutoff,
-            num_snapshots = num_train,
-        )
-        val_ds_list = read_dataset_as_list(
-            directory = val_data_root,
-            atomcentered_cutoff = atomcentered_cutoff,
-            num_snapshots = num_val,
-        )
+        if type(config.data.train_data_path) is str:
+            data_root = Path(config.data.train_data_path)
+            train_ds_list = read_dataset_as_list(
+                directory = data_root,
+                atomcentered_cutoff = atomcentered_cutoff,
+                num_snapshots = num_train,
+            )
+        elif type(config.data.train_data_path) is list:
+            train_ds_list = []
+            for p in set(config.data.train_data_path):
+                p = Path(p)
+                train_ds_list += read_dataset_as_list(
+                    directory = p,
+                    atomcentered_cutoff = atomcentered_cutoff,
+                    num_snapshots = num_train,
+                )
+        if type(config.data.val_data_path) is str:
+            val_data_root = Path(config.data.val_data_path)
+            val_ds_list = read_dataset_as_list(
+                directory = val_data_root,
+                atomcentered_cutoff = atomcentered_cutoff,
+                num_snapshots = num_val,
+            )
+        elif type(config.data.val_data_path) is list:
+            val_ds_list = []
+            for p in set(config.data.val_data_path):
+                p = Path(p)
+                val_ds_list += read_dataset_as_list(
+                    directory = p,
+                    atomcentered_cutoff = atomcentered_cutoff,
+                    num_snapshots = num_val,
+                )
         log.info("Train dataset information:")
         _,_,_ = get_max_natoms_and_nneighbours(train_ds_list) # For logging
         log.info("Validation dataset information:")
