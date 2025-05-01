@@ -277,6 +277,80 @@ def load_single_analysis(analysis_directory: Path):
     
     return off_diag_analysis_dict, on_diag_analysis_dict
 
+def load_analyses(data_root: Path | list[Path]):
+    if type(data_root) is Path:
+        analysis_dir = data_root / "analysis"
+        build_with_off_diag_analysis = False
+        build_with_on_diag_analysis = False
+        off_diag_analysis_dict, on_diag_analysis_dict = load_single_analysis(analysis_dir)
+        if off_diag_analysis_dict is not None:
+            build_with_off_diag_analysis = True
+        if on_diag_analysis_dict is not None:
+            build_with_on_diag_analysis = True
+        # Only true if both are true.
+        build_with_analysis = build_with_off_diag_analysis * build_with_on_diag_analysis
+        return off_diag_analysis_dict, on_diag_analysis_dict, build_with_analysis
+    elif type(data_root) is list:
+        from collections import defaultdict
+        off_diag_analyses = []
+        on_diag_analyses = []
+        build_with_off_diag_analysis = []
+        build_with_on_diag_analysis = []
+        # Read all analyses and store in the lists above
+        for p in data_root:
+            analysis_dir = p / "analysis"
+            temp_off_diag_analysis_dict, temp_on_diag_analysis_dict = load_single_analysis(analysis_dir)
+            # Only store successful reads
+            if temp_off_diag_analysis_dict is not None:
+                off_diag_analyses.append(temp_off_diag_analysis_dict)
+                build_with_off_diag_analysis.append(True)
+            else:
+                build_with_off_diag_analysis.append(False)
+            if temp_on_diag_analysis_dict is not None:
+                on_diag_analyses.append(temp_on_diag_analysis_dict)
+                build_with_on_diag_analysis.append(True)
+        # If we have no successful reads, set analysis flags to false and return               
+        if build_with_off_diag_analysis == []:
+            build_with_off_diag_analysis = False
+        else:
+            build_with_off_diag_analysis = True
+        if build_with_on_diag_analysis == []:
+            build_with_on_diag_analysis = False
+        else:
+            build_with_on_diag_analysis = True
+        build_with_analysis = build_with_off_diag_analysis * build_with_on_diag_analysis
+        if not build_with_analysis:
+            return None, None, build_with_analysis
+        # Merge off-diag dicts
+        off_diag_analysis_dict = defaultdict(dict) # Each atom tuple key has a dict value
+        off_diag_keys = set(k for d in off_diag_analyses for k in d)
+        for k in off_diag_keys:
+            # Each dict has a param: array, we're replacing this with param : list(array)
+            off_diag_analysis_dict[k] = defaultdict(list)
+        for d in off_diag_analyses:
+            for atom_pair_tuple, fit_dict  in d.items():
+                for param_name, values in fit_dict.items():
+                    off_diag_analysis_dict[atom_pair_tuple][param_name] += [values]
+        # Average combined values
+        for atom_pair_tuple, fit_dict in off_diag_analysis_dict.items():
+            for param_name, values in fit_dict.items():
+                fit_dict[param_name] = np.mean(values, axis=0)
+        # Merge on-diag dicts
+        on_diag_analysis_dict = defaultdict(list) # Each atom key has a dict value
+        on_diag_keys = set(k for d in on_diag_analyses for k in d)
+        for k in on_diag_keys:
+            # Each dict has a param: array, we're replacing this with param : list(array)
+            on_diag_analysis_dict[k] = defaultdict(list)
+        for d in on_diag_analyses:
+            for atom_key, fit_dict in d.items():
+                for param_name, values in fit_dict.items():
+                    on_diag_analysis_dict[atom_key][param_name] += [values]
+        # Average combined values
+        for atom_key, fit_dict in on_diag_analysis_dict.items():
+            for param_name, values in fit_dict.items():
+                fit_dict[param_name] = np.mean(values, axis=0)
+
+        return off_diag_analysis_dict, on_diag_analysis_dict, build_with_analysis
 
 def get_max_natoms_and_nneighbours(dataset_as_list):
     max_natoms = max([len(snapshot['atoms']) for snapshot in dataset_as_list])
