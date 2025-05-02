@@ -147,12 +147,19 @@ def load_dataset_from_config(config: TrainConfig,
                              val_rng_seed: int):
     num_train = config.data.n_train
     num_val = config.data.n_valid
-
     atomcentered_cutoff = config.model.atom_centered.radial_basis.cutoff
 
     if config.data.data_path is not None:
         assert config.data.train_data_path is None, "train_data_path must not be provided when data_path is."
         assert config.data.val_data_path is None, "val_data_path must not be provided when data_path is."
+        if type(num_train) is list:
+            assert len(num_train) == 1, "n_train must have only one value when data_path is provided."
+            num_train = num_train[0]
+        if type(num_val) is list:
+                assert len(num_val) == 1, "n_valid must have only one value when data_path is provided."
+                num_val = num_val[0]
+        assert type(num_train) is int, "n_train must be an int when data_path is provided"
+        assert type(num_val) is int, "n_valid must be an int when data_path is provided"
         data_root = Path(config.data.data_path)
         ds_list = read_dataset_as_list(
             directory = data_root,
@@ -185,6 +192,9 @@ def load_dataset_from_config(config: TrainConfig,
         assert config.data.train_data_path is not None, "train_data_path must be provided when data_path is not."
         assert config.data.val_data_path is not None, "val_data_path must be provided when data_path is not."
         if type(config.data.train_data_path) is str:
+            if type(num_train) is list:
+                assert len(num_train) == 1, "n_train must have only one value when one train_data_path is provided."
+                num_train = num_train[0]
             data_root = Path(config.data.train_data_path)
             train_ds_list = read_dataset_as_list(
                 directory = data_root,
@@ -192,16 +202,36 @@ def load_dataset_from_config(config: TrainConfig,
                 num_snapshots = num_train,
             )
         elif type(config.data.train_data_path) is list:
-            data_root = [Path(p) for p in config.data.train_data_path]
+            data_root = sorted([Path(p) for p in config.data.train_data_path])
+            assert sorted(set(data_root)) == data_root, "Training set paths must be unique."
+            if type(num_train) is int:
+                iterate_over_num = False
+            elif type(num_train) is list and len(num_train) == 1:
+                num_train = num_train[0]
+                iterate_over_num = False
+            elif type(num_train) is list and len(num_train) > 1:
+                assert(len(num_train)) == len(data_root), "Lists of training paths and numbers of structures to use must have equal length if both are > 0."
+                iterate_over_num = True
+            
             train_ds_list = []
-            for p in set(config.data.train_data_path):
-                p = Path(p)
-                train_ds_list += read_dataset_as_list(
-                    directory = p,
-                    atomcentered_cutoff = atomcentered_cutoff,
-                    num_snapshots = num_train,
-                )
+            if not iterate_over_num:
+                for p in data_root:
+                    train_ds_list += read_dataset_as_list(
+                        directory = p,
+                        atomcentered_cutoff = atomcentered_cutoff,
+                        num_snapshots = num_train,
+                    )
+            elif iterate_over_num:
+                for num, p in zip(num_train, data_root):
+                    train_ds_list += read_dataset_as_list(
+                        directory = p,
+                        atomcentered_cutoff = atomcentered_cutoff,
+                        num_snapshots = num,
+                    )
         if type(config.data.val_data_path) is str:
+            if type(num_val) is list:
+                assert len(num_val) == 1, "n_valid must have only one value when one train_data_path is provided."
+                num_val = num_val[0]
             val_data_root = Path(config.data.val_data_path)
             val_ds_list = read_dataset_as_list(
                 directory = val_data_root,
@@ -209,14 +239,33 @@ def load_dataset_from_config(config: TrainConfig,
                 num_snapshots = num_val,
             )
         elif type(config.data.val_data_path) is list:
+            val_data_root = sorted([Path(p) for p in config.data.val_data_path])
+            assert sorted(set(val_data_root)) == val_data_root, "Validation set paths must be unique."
+            if type(num_val) is int:
+                iterate_over_num = False
+            elif type(num_val) is list and len(num_val) == 1:
+                num_val = num_val[0]
+                iterate_over_num = False
+            elif type(num_val) is list and len(num_val) > 1:
+                assert(len(num_val)) == len(val_data_root), "Lists of validation paths and numbers of structures to use must have equal length if both are > 0."
+                iterate_over_num = True
             val_ds_list = []
-            for p in set(config.data.val_data_path):
-                p = Path(p)
-                val_ds_list += read_dataset_as_list(
-                    directory = p,
-                    atomcentered_cutoff = atomcentered_cutoff,
-                    num_snapshots = num_val,
-                )
+            if not iterate_over_num:
+                for p in val_data_root:
+                    p = Path(p)
+                    val_ds_list += read_dataset_as_list(
+                        directory = p,
+                        atomcentered_cutoff = atomcentered_cutoff,
+                        num_snapshots = num_val,
+                    )
+            elif iterate_over_num:
+                for num, p in zip(num_val, val_data_root):
+                    p = Path(p)
+                    val_ds_list += read_dataset_as_list(
+                        directory = p,
+                        atomcentered_cutoff = atomcentered_cutoff,
+                        num_snapshots = num,
+                    )
         log.info("Train dataset information:")
         _,_,_ = get_max_natoms_and_nneighbours(train_ds_list) # For logging
         log.info("Validation dataset information:")
