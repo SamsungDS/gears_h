@@ -27,8 +27,8 @@ class DataConfig(BaseModel, extra="forbid"):
     experiment: str = "default"
     # ds_type: Literal["cached", "otf"] = "cached"
     data_path: Optional[str] = None
-    train_data_path: Optional[str] = None
-    val_data_path: Optional[str] = None
+    train_data_path: Optional[str | list[str]] = None
+    val_data_path: Optional[str| list[str]] = None
     test_data_path: Optional[str] = None
 
     n_train: PositiveInt = 1000

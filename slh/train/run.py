@@ -9,13 +9,14 @@ import optax
 
 import slh
 from slh.config.common import parse_config
-from slh.data.input_pipeline import load_dataset_from_config
+from slh.data.input_pipeline import load_dataset_from_config, load_analyses
 from slh.model.builder import ModelBuilder
-
 from slh.train.callbacks import initialize_callbacks
 # from slh.train.metrics import initialize_metrics
 from slh.train.checkpoints import create_params, create_train_state
 from slh.train.trainer import fit
+from slh.utilities import analyze
+# TODO fix the circular import problem so we can get just write_analysis
 from slh.utilities.random import seed_py_np_tf
 
 log = logging.getLogger(__name__)
@@ -77,56 +78,24 @@ def run(user_config, log_level="error"):
         yaml.dump(species_ells_dict, f)
 
     log.info("Checking for analysis...")
-    analysis_dir = data_root / "analysis"
-    if analysis_dir.is_dir():
-        try:
-            with open(analysis_dir / "off_diag_analysis_results.yaml") as f:
-                temp_off_diag_analysis_dict = yaml.load(f, yaml.SafeLoader)
-            with open(config.data.model_version_path / "off_diag_analysis_results.yaml", "w") as f:
-                yaml.dump(temp_off_diag_analysis_dict, f)
-            build_with_off_diag_analysis = True
-            off_diag_analysis_dict = {}
-            for k, v in temp_off_diag_analysis_dict.items():
-                new_key = tuple(map(int, k.split()))
-                off_diag_analysis_dict[new_key] = {k2: jnp.array(v2) for k2,v2 in v.items()}
-        except FileNotFoundError:
-            log.warning("""Off-diagonal analysis not found!
-                         Analyzing using `slh analyze path/to/training/dataset/root <Num_structures_to_analyze>`
-                         greatly improves accuracy.""")
-            build_with_off_diag_analysis = False
-        try:
-            with open(analysis_dir / "on_diag_analysis_results.yaml") as f:
-                temp_on_diag_analysis_dict = yaml.load(f, yaml.SafeLoader)
-            with open(config.data.model_version_path / "on_diag_analysis_results.yaml", "w") as f:
-                yaml.dump(temp_on_diag_analysis_dict, f)
-            build_with_on_diag_analysis = True
-            on_diag_analysis_dict = {}
-            for k, v in temp_on_diag_analysis_dict.items():
-                new_key = int(k)
-                on_diag_analysis_dict[new_key] = {k2: jnp.array(v2) for k2,v2 in v.items()}
-        except FileNotFoundError:
-            log.warning("""On-diagonal analysis not found!
-                         Analyzing using `slh analyze path/to/training/dataset/root <Num_structures_to_analyze>`
-                         greatly improves accuracy.""")
-            build_with_on_diag_analysis = False
-    else:
-        log.warning("""Analysis not found!
-                     Analyzing using `slh analyze path/to/training/dataset/root <Num_structures_to_analyze>`
-                     greatly improves accuracy.""")
-        build_with_off_diag_analysis = False
-        build_with_on_diag_analysis = False
+    off_diag_analysis_dict, on_diag_analysis_dict, build_with_analysis = load_analyses(data_root)
+
+    if off_diag_analysis_dict is not None:
+        analyze.write_analysis(off_diag_analysis_dict, config.data.model_version_path)
+    if on_diag_analysis_dict is not None:
+        analyze.write_analysis(on_diag_analysis_dict, config.data.model_version_path)
 
     sample_input = train_ds.init_input()
 
     model_builder = ModelBuilder(config.model.model_dump())
-    if build_with_off_diag_analysis * build_with_on_diag_analysis: # Only true if both are true.
+    if build_with_analysis: # Only true if both are true.
         log.info("Building model with input from dataset analysis.")
         model = model_builder.build_lcao_hamiltonian_model(**readout_parameters,
                                                            build_with_analysis=True,
                                                            off_diagonal_analysis_dict=off_diag_analysis_dict,
                                                            on_diagonal_analysis_dict=on_diag_analysis_dict)
     else:
-        log.info("Building model without input from dataset analysis.")
+        log.info("Building model *without* input from dataset analysis.")
         model = model_builder.build_lcao_hamiltonian_model(**readout_parameters,
                                                            build_with_analysis=False)
 
