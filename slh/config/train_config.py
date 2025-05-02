@@ -31,8 +31,8 @@ class DataConfig(BaseModel, extra="forbid"):
     val_data_path: Optional[str| list[str]] = None
     test_data_path: Optional[str] = None
 
-    n_train: PositiveInt = 1000
-    n_valid: PositiveInt = 100
+    n_train: PositiveInt | list[PositiveInt] = 1000
+    n_valid: PositiveInt | list[PositiveInt] = 100
     batch_size: PositiveInt = 32
     valid_batch_size: PositiveInt = 100
     shuffle_buffer_size: PositiveInt = 1000
