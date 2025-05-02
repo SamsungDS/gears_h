@@ -4,7 +4,6 @@ import logging
 from pathlib import Path
 import yaml
 
-from ase import Atoms
 from ase.io import read
 import grain.python as grain
 from matscipy.neighbours import neighbour_list
@@ -22,10 +21,9 @@ from slh.hblockmapper import (
 
 
 # (Atoms, {Z: [0, 1, 2, ...]}, ij, D, hblocks)
-DatasetList = list[tuple[Atoms, dict[int, list[int]], np.ndarray, np.ndarray, list, list]]
+DatasetList = list[dict[str]]
 
 log = logging.getLogger(__name__)
-
 
 def initialize_dataset_from_list(
     dataset_as_list: DatasetList,
