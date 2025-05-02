@@ -325,7 +325,7 @@ def load_single_analysis(analysis_directory: Path):
     return off_diag_analysis_dict, on_diag_analysis_dict
 
 def load_analyses(data_root: Path | list[Path]):
-    if type(data_root) is Path:
+    if isinstance(data_root, Path):
         analysis_dir = data_root / "analysis"
         build_with_off_diag_analysis = False
         build_with_on_diag_analysis = False
