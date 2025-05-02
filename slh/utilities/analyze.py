@@ -11,7 +11,8 @@ from slh.data.input_pipeline import (get_hamiltonian_mapper_from_dataset,
                                      prepare_label_dicts, 
                                      read_dataset_as_list, 
                                      prepare_input_dicts)
-from slh.train.run import setup_logging
+from slh.train import run
+# TODO fix the circular import problem so we can get just setup_logging
 
 log = logging.getLogger(__name__)
 
@@ -92,12 +93,32 @@ def on_diag_analysis(input_dicts: list[dict[str]],
                                        "scales" : np.array(scales)}
     return l0_dict
 
+def write_analysis(analysis_dict: dict, 
+                   write_root: Path):
+    # TODO find a better home for this
+    write_dict = {}
+    for k, v in analysis_dict.items():
+        if type(k) is tuple:
+            write_name = "off_diag_analysis_results.yaml"
+            new_key = "%s %s" % k
+            write_dict[new_key] = {}
+            for p, vals in v.items():
+                write_dict[new_key][p] = vals.tolist()
+        elif type(k) is int:
+            write_name = "on_diag_analysis_results.yaml"
+            write_dict[k] = {}
+            for p, vals in v.items():
+                write_dict[k][p] = vals.tolist()
+        
+    with open(write_root / write_name, "w") as f:
+        yaml.dump(write_dict, f)
+
 def analyze(dataset_root: Path | str,
             num_snapshots: int):
     dataset_root = Path(dataset_root).resolve()
     analysis_root = dataset_root / "analysis"
     analysis_root.mkdir(exist_ok=True)
-    setup_logging(analysis_root / "analysis.log", "info")
+    run.setup_logging(analysis_root / "analysis.log", "info")
     log.info("Reading datalist")
     dslist = read_dataset_as_list(dataset_root, 1., 
                                   num_snapshots=num_snapshots)
@@ -121,15 +142,13 @@ def analyze(dataset_root: Path | str,
                  )
     
     log.info("Analyzing off-diagonal elements.")
-    off_diag_analysis_results = off_diag_analysis(input_dict=input_dict,
-                                                  label_dict=label_dict)
-    with open(analysis_root / "off_diag_analysis_results.yaml", "w") as f:
-        yaml.dump(off_diag_analysis_results, f)
+    off_diag_analysis_results = off_diag_analysis(input_dicts=input_dict,
+                                                  label_dicts=label_dict)
+    write_analysis(off_diag_analysis_results, analysis_root)
 
     log.info("Analyzing on-diagonal elements.")
-    on_diag_analysis_results = on_diag_analysis(input_dict=input_dict,
-                                                label_dict=label_dict)
-    with open(analysis_root / "on_diag_analysis_results.yaml", "w") as f:
-        yaml.dump(on_diag_analysis_results, f)
+    on_diag_analysis_results = on_diag_analysis(input_dicts=input_dict,
+                                                label_dicts=label_dict)
+    write_analysis(on_diag_analysis_results, analysis_root)
     
     log.info(f"Analysis complete! View output in {analysis_root}")
