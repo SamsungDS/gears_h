@@ -24,17 +24,17 @@ def off_diag_fitting_function(r, coeffs):
 def off_diag_obj_func(coeffs, r, data):
     return np.sum((off_diag_fitting_function(r, coeffs) - data)** 2) + 1e-4 * np.sum(np.abs(coeffs))
 
-def off_diag_analysis(input_dict: dict[str],
-                      label_dict: dict[str]
+def off_diag_analysis(input_dicts: list[dict[str]],
+                      label_dicts: list[dict[str]]
                       ):
-    D = np.linalg.norm(np.concatenate([v for v in input_dict['bc_D']], axis=0), axis=1)
-    ij = [v for v in input_dict['bc_ij']]
-    z = [v for v in input_dict['numbers']]
+    D = np.linalg.norm(np.concatenate([d['bc_D'] for d in input_dicts], axis=0), axis=1)
+    ij = [d['bc_ij'] for d in input_dicts]
+    z = [d['numbers'] for d in input_dicts]
     zz = [z_[ij_] for z_, ij_ in zip(z, ij)]
 
     zz = np.concatenate(zz, axis=0)
 
-    l0shifts = np.concatenate([v[:, 0, 0, :] for v in label_dict['h_irreps_off_diagonal']], axis=0)
+    l0shifts = np.concatenate([d['h_irreps_off_diagonal'][:, 0, 0, :] for d in label_dicts], axis=0)
 
     atomic_pairs = np.unique(zz, axis=0)
 
@@ -61,23 +61,23 @@ def off_diag_analysis(input_dict: dict[str],
                                  restart_temp_ratio=0.1
                                 )
             fit_params.append(res.x.tolist())
-        feature_fit_param_dict[f"{zi} {zj}"] = fit_params # N_unique_pairs x N_features x 3
+        feature_fit_param_dict[(zi,zj)] = fit_params # N_unique_pairs x N_features x 3
     
     l0_fit_param_dict = {}
     for k, v in feature_fit_param_dict.items():
         l0_fit_param_dict[k] = {}
         v = np.array(v).T
-        l0_fit_param_dict[k]['exp_prefactors'] = v[0].tolist()
-        l0_fit_param_dict[k]['exp_lengthscales'] = v[1].tolist()
-        l0_fit_param_dict[k]['exp_powers'] = v[2].tolist()
+        l0_fit_param_dict[k]['exp_prefactors'] = v[0]
+        l0_fit_param_dict[k]['exp_lengthscales'] = v[1]
+        l0_fit_param_dict[k]['exp_powers'] = v[2]
 
     return l0_fit_param_dict
 
-def on_diag_analysis(input_dict: dict[str],
-                     label_dict: dict[str]
+def on_diag_analysis(input_dicts: list[dict[str]],
+                     label_dicts: list[dict[str]]
                      ):
-    numbers = np.concatenate([v for v in input_dict['numbers']], axis=0)
-    l0shifts = np.concatenate([v[:, 0, 0, :] for v in label_dict['h_irreps_on_diagonal']], axis=0)
+    numbers = np.concatenate([d['numbers'] for d in input_dicts], axis=0)
+    l0shifts = np.concatenate([d['h_irreps_on_diagonal'][:, 0, 0, :] for d in label_dicts], axis=0)
 
     l0_dict = {}
     for atomic_number in np.unique(numbers):
@@ -88,8 +88,8 @@ def on_diag_analysis(input_dict: dict[str],
             stdevl0 = np.std(l0shifts[numbers == atomic_number, i])
             shifts.append(float(meanl0))
             scales.append(float(stdevl0))
-        l0_dict[int(atomic_number)] = {"shifts" : shifts,
-                                       "scales" : scales}
+        l0_dict[int(atomic_number)] = {"shifts" : np.array(shifts),
+                                       "scales" : np.array(scales)}
     return l0_dict
 
 def analyze(dataset_root: Path | str,
