@@ -635,14 +635,15 @@ class BatchSpec:
         ac_nl_padded_length = next_multiple(max(len(x['ac_ij']) for x in inputs), self.nl_pad_multiple)
         bc_nl_padded_length = next_multiple(max(len(x['bc_ij']) for x in inputs), self.nl_pad_multiple)
 
-        atoms_padded_value = atoms_padded_length + 1
+        atoms_padded_value = 0
+        nl_padded_value = atoms_padded_length + 1
     
         inputs_batched = {}
         inputs_batched['numbers'] = pad_to_and_stack([x['numbers'] for x in inputs], atoms_padded_length, atoms_padded_value)
-        inputs_batched['bc_ij'] = pad_to_and_stack([x['bc_ij'] for x in inputs], bc_nl_padded_length, atoms_padded_value)
-        inputs_batched['bc_D'] = pad_to_and_stack([x['bc_D'] for x in inputs], bc_nl_padded_length, atoms_padded_value)
-        inputs_batched['ac_ij'] = pad_to_and_stack([x['ac_ij'] for x in inputs], ac_nl_padded_length, atoms_padded_value)
-        inputs_batched['ac_D'] = pad_to_and_stack([x['ac_D'] for x in inputs], ac_nl_padded_length, atoms_padded_value)
+        inputs_batched['bc_ij'] = pad_to_and_stack([x['bc_ij'] for x in inputs], bc_nl_padded_length, nl_padded_value)
+        inputs_batched['bc_D'] = pad_to_and_stack([x['bc_D'] for x in inputs], bc_nl_padded_length, nl_padded_value)
+        inputs_batched['ac_ij'] = pad_to_and_stack([x['ac_ij'] for x in inputs], ac_nl_padded_length, nl_padded_value)
+        inputs_batched['ac_D'] = pad_to_and_stack([x['ac_D'] for x in inputs], ac_nl_padded_length, nl_padded_value)
 
         labels_batched = {}
         labels_batched['mask_off_diagonal'] = pad_to_and_stack([x['mask_off_diagonal'] for x in labels], bc_nl_padded_length, 0)
