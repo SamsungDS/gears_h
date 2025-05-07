@@ -26,7 +26,7 @@ class LayerNorm(nn.Module):
             # indexing along the angular momentum direction for l = 0 destroys relative magnitudes, so we normalize across the feature direction.
             # this is still equivariant for scalars only.
             if ell == 0:
-                feature_array_slice = feature_array_slice - jnp.mean(feature_array_slice)
+                feature_array_slice = feature_array_slice.at[..., 0, 0, :].subtract(jnp.mean(feature_array_slice[..., 0, 0, :]))
                 normalized_feature_array_slice = e3x.ops.normalize(feature_array_slice, axis=-1)
             # for l != 0,  to preserve equivariance, we normalize in the angular momentum
             # direction (per irrep) to scale all irrep components by the same scalar
@@ -34,4 +34,4 @@ class LayerNorm(nn.Module):
                 normalized_feature_array_slice = e3x.ops.normalize(feature_array_slice, axis=-2)
             normalized_feature_array = normalized_feature_array.at[..., ell**2 : (ell + 1)**2 ,:].set(normalized_feature_array_slice)
         
-        return irrepwise_scaling*normalized_feature_array
+        return irrepwise_scaling * normalized_feature_array
