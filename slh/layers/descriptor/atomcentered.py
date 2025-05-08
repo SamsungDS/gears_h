@@ -179,10 +179,10 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
 
         youts = []
         for yy in y:
-            y0 = e3x.nn.Dense(self.embedding_transformation.features)(yy)
+            y0 = e3x.nn.Dense(yy.shape[-1])(yy)
             yy = LayerNorm()(y0)
             yy = e3x.nn.bent_identity(yy)
-            yy = e3x.nn.Dense(self.embedding_transformation.features)(yy) + y0
+            yy = e3x.nn.Dense(yy.shape[-1])(yy) + y0
             youts.append(yy)
 
 
