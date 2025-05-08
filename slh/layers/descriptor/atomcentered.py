@@ -166,16 +166,6 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
                              deg)
             y.append(td)
 
-        y = [e3x.nn.features.change_max_degree_or_type(desc, 
-                                                       self.max_tensordense_degree, 
-                                                       include_pseudotensors=True) for desc in y]
-        y = jnp.concatenate(y, axis=-1)
-
-        # y = y * self.embedding_transformation(self.embedding(Z_i))
-
-        # num_atoms x 1 x L x F
-        # y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
-
         for _ in range(self.mp_steps):
             y = self.mp_block()(
                 inputs=y,
@@ -187,10 +177,19 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
             )
             y = LayerNorm()(y)
 
-        y0 = e3x.nn.Dense(self.embedding_transformation.features)(y)
-        y = LayerNorm()(y0)
-        y = e3x.nn.bent_identity(y)
-        y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y0
+        youts = []
+        for yy in y:
+            y0 = e3x.nn.Dense(self.embedding_transformation.features)(yy)
+            yy = LayerNorm()(y0)
+            yy = e3x.nn.bent_identity(yy)
+            yy = e3x.nn.Dense(self.embedding_transformation.features)(yy) + y0
+            youts.append(yy)
+
+
+        y = [e3x.nn.features.change_max_degree_or_type(desc, 
+                                                       self.max_tensordense_degree, 
+                                                       include_pseudotensors=True) for desc in youts]
+        y = jnp.concatenate(y, axis=-1)
 
         return y
     
