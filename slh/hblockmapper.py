@@ -83,7 +83,7 @@ def make_mapper_from_elements(species_ells_dict: dict[int, list[int]]):
             num_features_for_pair,
         ) = get_mapping_spec(ells1, ells2)
 
-        log.info(
+        log.debug(
             f"Pair: {Z_i}, {Z_j}, max_ell: {max_ell_for_pair}, num_features:{num_features_for_pair}"
         )
 
