@@ -166,6 +166,7 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
                              deg)
             y.append(td)
 
+        # SelfAttention block
         for yy in y:
             for _ in range(self.mp_steps):
                 yy = self.mp_block()(
@@ -178,18 +179,17 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
                 )
                 yy = LayerNorm()(yy)
 
-        youts = []
+        # Nonlinear block
         for yy in y:
             y0 = e3x.nn.Dense(yy.shape[-1])(yy)
             yy = LayerNorm()(y0)
             yy = e3x.nn.bent_identity(yy)
             yy = e3x.nn.Dense(yy.shape[-1])(yy) + y0
-            youts.append(yy)
 
-
+        # Combine features into one array.
         y = [e3x.nn.features.change_max_degree_or_type(desc, 
                                                        self.max_tensordense_degree, 
-                                                       include_pseudotensors=True) for desc in youts]
+                                                       include_pseudotensors=True) for desc in yy]
         y = jnp.concatenate(y, axis=-1)
 
         return y
