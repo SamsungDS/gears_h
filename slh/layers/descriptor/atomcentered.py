@@ -166,16 +166,17 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
                              deg)
             y.append(td)
 
-        for _ in range(self.mp_steps):
-            y = self.mp_block()(
-                inputs=y,
-                basis=self.mp_basis(neighbour_displacements),
-                src_idx=idx_j,
-                dst_idx=idx_i,
-                num_segments=len(atomic_numbers),
-                cutoff_value=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff)(jnp.linalg.norm(neighbour_displacements, axis=1)),
-            )
-            y = LayerNorm()(y)
+        for yy in y:
+            for _ in range(self.mp_steps):
+                yy = self.mp_block()(
+                    inputs=yy,
+                    basis=self.mp_basis(neighbour_displacements),
+                    src_idx=idx_j,
+                    dst_idx=idx_i,
+                    num_segments=len(atomic_numbers),
+                    cutoff_value=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff)(jnp.linalg.norm(neighbour_displacements, axis=1)),
+                )
+                yy = LayerNorm()(yy)
 
         youts = []
         for yy in y:
