@@ -166,31 +166,33 @@ class ShallowTDSAAtomCenteredDescriptor(nn.Module):
                              deg)
             y.append(td)
 
+        # SelfAttention block
+        for yy in y:
+            for _ in range(self.mp_steps):
+                yy = self.mp_block()(
+                    inputs=yy,
+                    basis=self.mp_basis(neighbour_displacements),
+                    src_idx=idx_j,
+                    dst_idx=idx_i,
+                    num_segments=len(atomic_numbers),
+                    cutoff_value=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff)(jnp.linalg.norm(neighbour_displacements, axis=1)),
+                )
+                yy = LayerNorm()(yy)
+
+        # Nonlinear block
+        yout = []
+        for yy in y:
+            y0 = e3x.nn.Dense(yy.shape[-1])(yy)
+            yy = LayerNorm()(y0)
+            yy = e3x.nn.bent_identity(yy)
+            yy = e3x.nn.Dense(yy.shape[-1])(yy) + y0
+            yout.append(yy)
+
+        # Combine features into one array.
         y = [e3x.nn.features.change_max_degree_or_type(desc, 
                                                        self.max_tensordense_degree, 
-                                                       include_pseudotensors=True) for desc in y]
+                                                       include_pseudotensors=True) for desc in yout]
         y = jnp.concatenate(y, axis=-1)
-
-        # y = y * self.embedding_transformation(self.embedding(Z_i))
-
-        # num_atoms x 1 x L x F
-        # y = e3x.ops.indexed_sum(y, dst_idx=idx_i, num_segments=len(atomic_numbers))
-
-        for _ in range(self.mp_steps):
-            y = self.mp_block()(
-                inputs=y,
-                basis=self.mp_basis(neighbour_displacements),
-                src_idx=idx_j,
-                dst_idx=idx_i,
-                num_segments=len(atomic_numbers),
-                cutoff_value=partial(e3x.nn.smooth_cutoff, cutoff=self.radial_basis.cutoff)(jnp.linalg.norm(neighbour_displacements, axis=1)),
-            )
-            y = LayerNorm()(y)
-
-        y0 = e3x.nn.Dense(self.embedding_transformation.features)(y)
-        y = LayerNorm()(y0)
-        y = e3x.nn.bent_identity(y)
-        y = e3x.nn.Dense(self.embedding_transformation.features)(y) + y0
 
         return y
     
