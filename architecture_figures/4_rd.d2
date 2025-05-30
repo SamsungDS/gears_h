@@ -31,7 +31,7 @@ rd: Residual Dense Block {
         class: in_module
         style: {stroke-dash: 3; multiple: true}
         label: ""
-        ob_act: Nonlinear Activation {class: in_module}
+        ob_act: Nonlinear\nActivation {class: in_module}
         ob_dense: Dense {class: in_module}
         ob_act -> ob_dense: {style: {stroke: "#000000"; font-color: black}}
 
@@ -39,7 +39,7 @@ rd: Residual Dense Block {
 
     s1: ⊕ {class: operator}
     initial_dense -> optional_block: {style: {stroke: "#000000"; font-color: black}}
-    initial_dense -> s1: Learnable\nweight  {style: {stroke: "#000000"; font-color: black; font-size: 20}}
+    initial_dense -> s1: Learnable\nweight  {style: {stroke: "#000000"; font-color: black; font-size: 24}}
     optional_block -> s1: {style: {stroke: "#000000"; font-color: black}}
 
 }
@@ -53,6 +53,7 @@ classes: {
                height: 35
                style: {fill: "#FFFFFF"
                        stroke: "#000000"
+                       font-size: 24
                       }
     }
     empty: {
@@ -68,12 +69,14 @@ classes: {
         style: {
             fill: "#44BB99"
             stroke: "#000000"
+            font-size: 24
         }
     }
     in_module: {
         style: {
             fill: "#FFFFFF"
             stroke: "#000000"
+            font-size: 24
         }
     }
     ac: {
@@ -93,6 +96,7 @@ classes: {
             fill: "#EE8866"
             stroke: "#000000"
             bold: true
+            font-size: 28
         }
     }
     ro: {
