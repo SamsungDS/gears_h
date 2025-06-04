@@ -18,8 +18,9 @@ ac: Atom-Centered Descriptor \n Sub-modules {
         mpln: Layer Norm{class: in_module}
         sa -> mpln: {style: {stroke: "#000000"; font-color: black}}
     }
-    nl_block: Nonlinear Block {
+    nl_block: Nonlinear Blocks {
         class: in_module
+        style: {multiple: true}
         nld1: Dense {class: in_module}
         nld2: Dense {class: in_module}
         nlln: Layer Norm {class: in_module}
