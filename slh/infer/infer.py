@@ -259,7 +259,8 @@ def infer(model_path: Path | str,
             or to write it to file. Defaults to False.
 
     Returns:
-        _type_: _description_
+        None | np.ndarray: Return nothing when return_H is False, and return the Hamiltonian
+            matrix when return_H is True.
     """
     model_path = Path(model_path).resolve()
     structure_path = Path(structure_path)
