@@ -21,7 +21,18 @@ log = logging.getLogger(__name__)
 def process_structure_for_inference(structure_path: Path, 
                                     bc_cutoff: float,
                                     ac_cutoff: float):
+    """
+    Take input structure and generate input arrays for model using atom- and bond-centered cutoffs.
+    Adds batch dimension to all arrays.
 
+    Args:
+        structure_path (Path): Path object to the file containing the structure. Must be readable by ase.
+        bc_cutoff (float): Cutoff for bond-centered neighborlist.
+        ac_cutoff (float): Cutoff for atom-centered neighborlist.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Model inputs with batch dimension added.
+    """
     atoms = read(structure_path)
     numbers = atoms.get_atomic_numbers()
     bc_ij, bc_D = get_neighbourlist_ijD(atoms, bc_cutoff, unique_pairs = False)
@@ -35,6 +46,16 @@ def process_structure_for_inference(structure_path: Path,
            )
 
 def create_inference_state(model_path: Path | str):
+    """
+    Read in a model and its parameters and return a TrainStateExtraArgs for use during inference.
+
+    Args:
+        model_path (Path | str): Path object or string path to the model directory.
+
+    Returns:
+        TrainStateExtraArgs: slh.train.checkpoints.TrainStateExtraArgs object, an extension of 
+            the TrainState class from flax.
+    """
     model_path = Path(model_path)
     config = parse_config(model_path / "config.yaml")
     with open(model_path / "readout_parameters.yaml", "r") as f:
@@ -89,6 +110,21 @@ def create_inference_state(model_path: Path | str):
     return state
 
 def infer_h_irreps(apply_fn, params, numbers, bc_ij, bc_D, ac_ij, ac_D):
+    """Wrapper function for inferring Hamiltonian irreps using a model.
+
+    Args:
+        apply_fn (_type_): _description_
+        params (flax.core.FrozenDict[str, Any]): Pytree of model parameters.
+        numbers (np.ndarray): Array of atomic numbers.
+        bc_ij (np.ndarray): Array of atom pairs in the bond-centered neighborlist.
+        bc_D (np.ndarray): Displacement vectors of atom pairs in the bond-centered neighborlist.
+        ac_ij (np.ndarray): Array of neighbors in the atom-centered neighborlist.
+        ac_D (np.ndarray): Displacement vectors of atom pairs in the atom-centered neighborlist.
+
+    Returns:
+        tuple[list[np.ndarray], list[np.ndarray]]: A tuple with two elements, where the first is 
+            a list of off-diagonal Hamiltonian irreps, and the second is a list of on-diagonal irreps.
+    """
     h_irreps_off_diagonal, h_irreps_on_diagonal = apply_fn(params, 
                                                            numbers, 
                                                            bc_ij, bc_D,
@@ -97,16 +133,31 @@ def infer_h_irreps(apply_fn, params, numbers, bc_ij, bc_D, ac_ij, ac_D):
     return h_irreps_off_diagonal, h_irreps_on_diagonal
 
 def get_h_blocks(
-    hirreps_off_diagonal,
-    hirreps_on_diagonal,
-    atomic_numbers: np.ndarray,
-    neighbour_indices: np.ndarray,
-    hmapper,
-    species_basis_size_dict: dict[int, int],
-):
-    assert len(hirreps_off_diagonal) == len(neighbour_indices)
+     hirreps_off_diagonal: list[np.ndarray],
+     hirreps_on_diagonal: list[np.ndarray],
+     atomic_numbers: np.ndarray,
+     bond_neighbour_indices: np.ndarray,
+     hmapper: "slh.hblockmapper.MultiElementPairHBlockMapper",
+     species_basis_size_dict: dict[int, int],
+    ):
+    """Combines Hamiltonian irreps into Hamiltonian blocks.
 
-    atomic_number_pairs = atomic_numbers[neighbour_indices]
+    Args:
+        hirreps_off_diagonal (list[np.ndarray]): List of off-diagonal irreps.
+        hirreps_on_diagonal (list[np.ndarray]): List of on-diagonal irreps.
+        atomic_numbers (np.ndarray): Atomic numbers of the inference system.
+        bond_neighbour_indices (np.ndarray): Indices of atoms in the bond-centered neighborlist.
+        hmapper (slh.hblockmapper.MultiElementPairHBlockMapper): Mapper class to connected irreps and H blocks.
+        species_basis_size_dict (dict[int, int]): Dictionary in which the keys are atomic numbers and values 
+            are the number of basis functions for each atomic species.
+
+    Returns:
+        tuple[list[np.ndarray], list[np.ndarray]]: Tuple in which the elements are lists of the off- and on-diagonal 
+            Hamiltonian blocks, respectively.
+    """
+    assert len(hirreps_off_diagonal) == len(bond_neighbour_indices)
+
+    atomic_number_pairs = atomic_numbers[bond_neighbour_indices]
     assert atomic_number_pairs.shape[-1] == 2
     unique_elementpairs = np.unique(atomic_number_pairs, axis=0)
 
@@ -129,7 +180,7 @@ def get_h_blocks(
             pair[1],
         )
 
-        pair_hblocks_list.append((hblocks_of_pair, neighbour_indices[boolean_indices_of_pairs]))
+        pair_hblocks_list.append((hblocks_of_pair, bond_neighbour_indices[boolean_indices_of_pairs]))
 
     atom_number = np.arange(len(atomic_numbers))
     for number in np.unique(atomic_numbers):
@@ -148,7 +199,24 @@ def get_h_blocks(
     # TODO requires both on and off diagonal. Fix in future versions.
     return pair_hblocks_list, species_hblocks_list
 
-def make_hmatrix(numbers, offblocks, onblocks, species_basis_size_dict):
+def make_hmatrix(numbers: np.ndarray, 
+                 offblocks: list[np.ndarray], 
+                 onblocks: list[np.ndarray], 
+                 species_basis_size_dict: dict[int, int]):
+    """
+    Combine the sparse Hamilotonian blocks to make the Hamilotonian matrix.
+    Makes the resulting Hamiltonian Hermitian before it is returned.
+
+    Args:
+        numbers (np.ndarray): Atomic numbers of the inference system.
+        offblocks (list[np.ndarray]): List of the off-diagonal Hamiltonian blocks.
+        onblocks (list[np.ndarray]): List of the on-diagonal Hamiltonian blocks.
+        species_basis_size_dict (dict[int, int]): Dictionary in which the keys are atomic numbers and values 
+            are the number of basis functions for each atomic species.
+
+    Returns:
+        np.ndarray: The Hamiltonian matrix.
+    """
     spd = species_basis_size_dict
 
     idxs = np.array([0] + [spd[i] for i in numbers], dtype=np.int32)
@@ -179,7 +247,20 @@ def make_hmatrix(numbers, offblocks, onblocks, species_basis_size_dict):
 
 def infer(model_path: Path | str, 
           structure_path: Path | str,
-          return_H = False):
+          return_H: bool = False):
+    """
+    The full inference pipeline, assembled using the other functions in this file.
+
+    Args:
+        model_path (Path | str): Path object or string path to the model directory.
+        structure_path (Path | str): Path object to the file containing the structure. 
+            Must be readable by ase.
+        return_H (bool, optional): Whether to return the Hamiltonian (for interactive use)
+            or to write it to file. Defaults to False.
+
+    Returns:
+        _type_: _description_
+    """
     model_path = Path(model_path).resolve()
     structure_path = Path(structure_path)
     # Set up logging
@@ -211,7 +292,7 @@ def infer(model_path: Path | str,
     h_blocks_off_diagonal, h_blocks_on_diagonal = get_h_blocks(h_irreps_off_diagonal[0], # Remove batch dimension
                                                                h_irreps_on_diagonal[0], # Remove batch dimension
                                                                atomic_numbers=inputs[0][0], # Remove batch dimension
-                                                               neighbour_indices=inputs[1][0], # Remove batch dimension
+                                                               bond_neighbour_indices=inputs[1][0], # Remove batch dimension
                                                                hmapper=hmapper,
                                                                species_basis_size_dict=species_basis_size_dict)
 
