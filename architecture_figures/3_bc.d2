@@ -41,7 +41,7 @@ bc: Bond-Centered Descriptor {
     s1: ⊕ {class: operator}
     d1: Dense {class: in_module}
     ln: Layer Norm {class: in_module}
-    mish: mish Activation {class: in_module}
+    mish: mish\nActivation {class: in_module}
     d2: Dense {class: in_module}
     s1 -> d1 -> ln -> mish -> d2: {style: {stroke: "#000000"; font-color: black}}
     s2: ⊕ {class: operator}
@@ -50,7 +50,7 @@ bc: Bond-Centered Descriptor {
     bond_exp: Basis\nExpansion {class: in_module}
     d3be: Dense {class: in_module}
     bond_exp -> d3be: {style: {stroke: "#000000"; font-color: black}}
-    tm: Tensor Product {class: in_module}
+    tm: Tensor\nProduct {class: in_module}
     s2 -> tm: {style: {stroke: "#000000"; font-color: black}}
     d3be -> tm: {style: {stroke: "#000000"; font-color: black}}
 }
