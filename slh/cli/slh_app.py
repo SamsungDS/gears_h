@@ -70,13 +70,12 @@ def analyze(
 
     analyze(dataset_root, num_snapshots)
 
-@app.command()
-def docs():
-    """
-    Opens the documentation page once we eventually have one.
-    """
-    console.print("This will eventually open docs")
-    # typer.launch("https://apax.readthedocs.io/en/latest/")
+# @app.command()
+# def docs():
+#     """
+#     Opens the documentation page once we eventually have one.
+#     """
+#     console.print("This will eventually open docs")
 
 @template_app.command("train")
 def template_train_config(
@@ -103,9 +102,9 @@ def template_train_config(
 
 
 def version_callback(value: bool) -> None:
-    """Get the installed apax version."""
+    """Get the installed SLH version."""
     if value:
-        console.print(f"apax {importlib.metadata.version('apax')}")
+        console.print(f"SLH {importlib.metadata.version('slh')}")
         raise typer.Exit()
 
 
