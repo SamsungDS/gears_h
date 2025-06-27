@@ -14,19 +14,13 @@ app = typer.Typer(
     context_settings={"help_option_names": ["-h", "--help"]},
     pretty_exceptions_show_locals=False,
 )
-# validate_app = typer.Typer(
-#     pretty_exceptions_show_locals=False,
-#     context_settings={"help_option_names": ["-h", "--help"]},
-#     help="Validate training or inference files.",
-# )
+
 template_app = typer.Typer(
     pretty_exceptions_show_locals=False,
     context_settings={"help_option_names": ["-h", "--help"]},
     help="Create configuration file templates.",
 )
-# app.add_typer(validate_app, name="validate")
 app.add_typer(template_app, name="template")
-
 
 @app.command()
 def train(
@@ -76,29 +70,6 @@ def analyze(
 
     analyze(dataset_root, num_snapshots)
 
-
-# @app.command()
-# def eval(
-#     train_config_path: Path = typer.Argument(
-#         ..., help="Configuration YAML file that was used to train a model."
-#     ),
-#     n_data: int = typer.Option(
-#         -1,
-#         help=(
-#             "Number of test structures. (All structures are selected by not specifying"
-#             " it) Gets ignored if test_data_path is specified"
-#         ),
-#     ),
-# ):
-#     """
-#     Starts performing the evaluation of the test dataset
-#     with parameters provided by a configuration file.
-#     """
-#     from apax.train.eval import eval_model
-
-#     eval_model(train_config_path, n_data)
-
-
 @app.command()
 def docs():
     """
@@ -106,102 +77,6 @@ def docs():
     """
     console.print("This will eventually open docs")
     # typer.launch("https://apax.readthedocs.io/en/latest/")
-
-
-# @validate_app.command("train")
-# def validate_train_config(
-#     config_path: Path = typer.Argument(
-#         ..., help="Configuration YAML file to be validated."
-#     ),
-# ):
-#     """
-#     Validates a training configuration file.
-
-#     Parameters
-#     ----------
-#     config_path: Path to the training configuration file.
-#     """
-#     from apax.config import Config
-
-#     with open(config_path, "r") as stream:
-#         user_config = yaml.safe_load(stream)
-
-#     try:
-#         _ = Config.model_validate(user_config)
-#     except ValidationError as e:
-#         print(e)
-#         console.print("Configuration Invalid!", style="red3")
-#         raise typer.Exit(code=1)
-#     else:
-#         console.print("Success!", style="green3")
-#         console.print(f"{config_path} is a valid training config.")
-
-
-# @validate_app.command("md")
-# def validate_md_config(
-#     config_path: Path = typer.Argument(
-#         ..., help="Configuration YAML file to be validated."
-#     ),
-# ):
-#     """
-#     Validates a molecular dynamics configuration file.
-
-#     Parameters
-#     ----------
-#     config_path: Path to the molecular dynamics configuration file.
-#     """
-#     from apax.config import MDConfig
-
-#     with open(config_path, "r") as stream:
-#         user_config = yaml.safe_load(stream)
-
-#     try:
-#         _ = MDConfig.model_validate(user_config)
-#     except ValidationError as e:
-#         print(e)
-#         console.print("Configuration Invalid!", style="red3")
-#         raise typer.Exit(code=1)
-#     else:
-#         console.print("Success!", style="green3")
-#         console.print(f"{config_path} is a valid MD config.")
-
-
-# @app.command("visualize")
-# def visualize_model(
-#     config_path: Path = typer.Argument(
-#         ...,
-#         help=("This ideally visualizes the model you've configured."),
-#     )
-# ):
-#     """
-#     Visualizing models eventually.
-
-#     Parameters
-#     ----------
-#     config_path: Path to the training configuration file.
-#     """
-#     console.print("This will eventually print out the model")
-# import jax
-
-# from apax.config import Config
-# from apax.model.builder import ModelBuilder
-# from apax.utils.data import make_minimal_input
-
-# with open(config_path, "r") as stream:
-#     user_config = yaml.safe_load(stream)
-
-# try:
-#     config = Config.model_validate(user_config)
-# except ValidationError as e:
-#     print(e)
-#     console.print("Configuration Invalid!", style="red3")
-#     raise typer.Exit(code=1)
-
-# R, Z, idx, box, offsets = make_minimal_input()
-# builder = ModelBuilder(config.model.get_dict(), n_species=10)
-# model = builder.build_energy_model()
-# print(model.tabulate(jax.random.PRNGKey(0), R, Z, idx, box, offsets))
-
 
 @template_app.command("train")
 def template_train_config(
