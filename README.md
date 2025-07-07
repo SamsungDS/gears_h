@@ -1,6 +1,8 @@
-# Surrogate LCAO Hamiltonians
+# Surrogate LCAO Hamiltonians (GEARS H)
 
-SLH seeks to surrogatize and approximate density functional theory (or otherwise) hamiltonians and (optionally) overlap matrices in a basis of localized spherical orbitals.
+![Architecture overview.](architecture_figures/0_overview.svg)
+
+SLH seeks to surrogatize and approximate density functional theory (or otherwise) hamiltonians in a basis of localized spherical orbitals.
 
 # Installation
 
@@ -46,7 +48,3 @@ Finally, once the model is trained, you can use the model to infer by typing
 slh infer path/to/model/directory structure_file
 ```
 This will write out the inferred Hamiltonian from your model for the structure file you provided. Structure files must be readable by `ase`.
-
-# Architecture
-
-![Architecture overview.](architecture_figures/0_overview.svg)
