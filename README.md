@@ -33,6 +33,14 @@ slh template train --full
 ```
 This will write out a file name `config_full.yaml`, which you can edit to point to your dataset and to customize your model parameters.
 
+Before training, we recommend analyzing your dataset. 
+This sets up the scale-shift layers, which increases model accuracy.
+You can analyze an N-structure subset of your training so by running
+```console
+cd path/to/dataset
+slh analyze . N
+```
+
 Next, you can train your model by typing
 ```console
 slh train config_full.yaml
