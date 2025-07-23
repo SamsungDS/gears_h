@@ -2,6 +2,8 @@
 
 [![arxiv paper](https://img.shields.io/badge/cond--mat.mtrl--sci-arXiv%3A2506.10298-B31B1B.svg)](https://arxiv.org/abs/2506.10298)
 
+SLH seeks to surrogatize and approximate density functional theory (or otherwise) hamiltonians in a basis of localized spherical orbitals.
+
 ![Architecture overview.](architecture_figures/0_overview.svg)
 
 ## Table of contents
@@ -12,8 +14,6 @@
   - [Usage](#usage)
   - [Authors](#authors)
   - [References](#references)
-
-SLH seeks to surrogatize and approximate density functional theory (or otherwise) hamiltonians in a basis of localized spherical orbitals.
 
 ## Installation
 
