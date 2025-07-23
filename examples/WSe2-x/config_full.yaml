@@ -1,5 +1,5 @@
 n_epochs: 200
-disable_pbar: True
+disable_pbar: False
 callbacks: 
 - name: csv
 
