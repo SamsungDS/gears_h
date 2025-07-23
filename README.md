@@ -10,6 +10,7 @@
   - [Table of contents](#table-of-contents)
   - [Installation](#installation)
   - [Usage](#usage)
+  - [Authors](#authors)
   - [References](#references)
 
 SLH seeks to surrogatize and approximate density functional theory (or otherwise) hamiltonians in a basis of localized spherical orbitals.
@@ -66,6 +67,14 @@ Finally, once the model is trained, you can use the model to infer by typing
 slh infer path/to/model/directory structure_file
 ```
 This will write out the inferred Hamiltonian from your model for the structure file you provided. Structure files must be readable by `ase`.
+
+## Authors
+
+GEARS H was designed and built by
+- Anubhab Haldar
+- Ali K. Hamze
+
+under the supervision of Yongwoo Shin.
 
 ## References
 
