@@ -4,9 +4,17 @@
 
 ![Architecture overview.](architecture_figures/0_overview.svg)
 
+## Table of contents
+
+- [GEARS H](#surrogate-lcao-hamiltonians-gears-h)
+  - [Table of contents](#table-of-contents)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [References](#references)
+
 SLH seeks to surrogatize and approximate density functional theory (or otherwise) hamiltonians in a basis of localized spherical orbitals.
 
-# Installation
+## Installation
 
 Installation is easiest using `uv`. Follow their installation instructions [here](https://docs.astral.sh/uv/getting-started/installation/).
 Once you have `uv`, follow these steps to install SLH and activate your new python environment:
@@ -26,7 +34,7 @@ If you're a developer, we recommend making your install editable. Replace the `p
 uv pip install -e .
 ```
 
-# Usage
+## Usage
 
 First, you'll need a configuration file.
 You can start from a base template, which you can generate by:
