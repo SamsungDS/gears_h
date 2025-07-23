@@ -58,3 +58,25 @@ Finally, once the model is trained, you can use the model to infer by typing
 slh infer path/to/model/directory structure_file
 ```
 This will write out the inferred Hamiltonian from your model for the structure file you provided. Structure files must be readable by `ase`.
+
+## References
+
+If you use this code, please cite our paper:
+
+```bibtex
+@online{haldarGEARSAccurateMachinelearned2025,
+  title = {{{GEARS H}}: {{Accurate}} Machine-Learned {{Hamiltonians}} for next-Generation Device-Scale Modeling},
+  shorttitle = {{{GEARS H}}},
+  author = {Haldar, Anubhab and Hamze, Ali K. and Sivadas, Nikhil and Shin, Yongwoo},
+  date = {2025-06-12},
+  eprint = {2506.10298},
+  eprinttype = {arXiv},
+  eprintclass = {cond-mat},
+  doi = {10.48550/arXiv.2506.10298},
+  url = {http://arxiv.org/abs/2506.10298},
+  urldate = {2025-06-13},
+  abstract = {We introduce GEARS H, a state-of-the-art machine-learning Hamiltonian framework for large-scale electronic structure simulations. Using GEARS H, we present a statistical analysis of the hole concentration induced in defective \$\textbackslash mathrm\{WSe\}\_2\$ interfaced with Ni-doped amorphous \$\textbackslash mathrm\{HfO\}\_2\$ as a function of the Ni doping rate, system density, and Se vacancy rate in 72 systems ranging from 3326 to 4160 atoms-a quantity and scale of interface electronic structure calculation beyond the reach of conventional density functional theory codes and other machine-learning-based methods. We further demonstrate the versatility of our architecture by training models for a molecular system, 2D materials with and without defects, solid solution crystals, and bulk amorphous systems with covalent and ionic bonds. The mean absolute error of the inferred Hamiltonian matrix elements from the validation set is below 2.4 meV for all of these models. GEARS H outperforms other proposed machine-learning Hamiltonian frameworks, and our results indicate that machine-learning Hamiltonian methods, starting with GEARS H, are now production-ready techniques for DFT-accuracy device-scale simulation.},
+  pubstate = {prepublished},
+  keywords = {Condensed Matter - Materials Science,Physics - Computational Physics},
+}
+```
