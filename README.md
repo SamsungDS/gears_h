@@ -1,5 +1,7 @@
 # Surrogate LCAO Hamiltonians (GEARS H)
 
+[![arxiv paper](https://img.shields.io/badge/cond--mat.mtrl--sci-arXiv%3A2506.10298-B31B1B.svg)](https://arxiv.org/abs/2506.10298)
+
 ![Architecture overview.](architecture_figures/0_overview.svg)
 
 SLH seeks to surrogatize and approximate density functional theory (or otherwise) hamiltonians in a basis of localized spherical orbitals.
