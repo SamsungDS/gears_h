@@ -1,69 +1,123 @@
-n_epochs: 50
-callbacks: 
-- name: csv
+n_epochs: 500 # Typically total of 200k-600k steps (batches x epochs)
+callbacks:
+- name: csv # Calling csv logging
 
 data:
-  directory: models
-  experiment: slh
-  data_path: <PATH>
-  n_train: 100
-  n_valid: 10
-  bond_fraction : 1.0
+  directory: slhmodels # The root directory for training output
+  experiment: slh # The actual directory containing the model weights, metadata, etc
+  data_path: <PATH> # Absolute path of the directory containing snapshot directories
+  n_train: 100 # Number of training snapshots
+  n_valid: 10 # As above but validation
+  bond_fraction : 1.0 # The fraction of atom-pairs per snapshot to train on
+  # ^This is typically used for memory savings or introducing more regularizing noise
+
+  # A reweighting vector for how atom-pairs are resampled when using bond_fraction
+  # The higher the number, the more small-distance atom-pairs are oversampled
   sampling_alpha: 0.0
-  batch_size: 2
-  valid_batch_size: 2
-  shuffle_buffer_size: 100
-  energy_unit: eV
-  pos_unit: Ang
-  n_cpus: 4
-  atoms_pad_multiple: 50
-  nl_pad_multiple: 5000
+  batch_size: 2 # Samples per batch, lower the better typically for accuracy
+  valid_batch_size: 2 # As above, but validation
+  n_cpus: 4 # Number of workers used for the asynchronous grain data pipeline
+  atoms_pad_multiple: 50 # Pad system-sized arrays to multiples of this.
+  nl_pad_multiple: 5000 # Pad neighbourlist-sized arrays to multiples of this.
 
 model:
-  atom_centered:
+  atom_centered: # Everything nested in here is atom centered descriptor definition
     descriptor: 
+      # It's a mouthful, but it is what it is
       descriptor_name: ShallowTDSAAtomCenteredDescriptor
+      # Use fused tensor for the many-body outer products
+      # Setting to false makes the model more expressive and expensive
+      # Using fused tensors is strongly recommended for high-L descriptors
       use_fused_tensor: False
+      # Number of tensordense operations. 1-2 is recommended. 0 leaves you with
+      # 2-body descriptors which aren't great
       num_tensordenses: 2
+      # Angular resolution for many-body descriptors
+      # We've found 4 or so to be quite good. Lower is acceptable, but you're probably
+      # losing some accuracy
       max_tensordense_degree: 4
+      # Number of features for the tensordense outputs. 12 is good, anything more works
+      # Typically by 24-48 there's no further returns, and the model gets significantly
+      # heavier
       num_tensordense_features: 12
-      mp_steps: 2
+      # Number of message-passing (self-attention) steps. 0-1 works perfectly well
+      # The accuracy/robustness dependency of the model as a function of this variable
+      # isn't extremely well-understood.
+      mp_steps: 0
+      # Output angular resolution of the message-passing steps. Realistically, this
+      # should be at least the tensordense degree
       mp_degree: 4
       mp_options:
+        # Number of 'attention heads' in the self-attention
         num_heads: 4
+        # The feature counts for the Q, K, and V matrices for the attention
         qkv_features: 32
+      # We require a basis expansion for where the messages are coming from
       mp_basis_options:
+        # A smooth cutoff function and a basic_fourier expansion works well
+        # See E3x's docs to find out more about what these mean
         cutoff_fn: smooth_cutoff
         radial_fn: basic_fourier
         radial_kwargs: {}
+        # This basis can be a bit more relaxed about angular and radial resolution
         max_degree: 2
         num: 8
+    # The basis for the 2-body descriptor
     radial_basis:
+      # Typically you want this to be 80-100% of the largest atom-pair
+      # matrix element distance that you care about. 7+ angstrom is almost
+      # universally recommended
       cutoff: <CUTOFF>
+      # Number of radial basis functions
       num_radial: 16
+      # Angular resolution. 
       max_degree: 2
+      # Elemental embedding size. Essentially a way to make room for elemental
+      # variety. We've don't recall gaining anything from >32, but test if you
+      # desire
       num_elemental_embedding: 32
   bond_centered:
+    # This is the maximum cutoff for which atom-pair matrix elements are nonzero.
+    # Say you have 2 atoms with basis functions 6 and 4 angstroms
+    # This cutoff would be 12 angstroms, since the longest distance you'll have
+    # nonzero matrix elements for is 6+6 angstroms
     cutoff: <CUTOFF>
+    # Angular resolution of bond basis. 2+ is good. 1 starts to be not great
     max_basis_degree: 2
+    # Angular resolution of atom-pair outputs. 4+ is good
     max_degree: 4
+    # tensor or fused_tensor. Same tradeoffs as described above
     tensor_module: tensor
+    # float32 or float64, although we've never seen a difference other than
+    # training time
     tensor_module_dtype: float32
+    # Similar to message-passing options above
     bond_expansion_options:
       cutoff_fn: smooth_cutoff
       radial_fn: basic_fourier
       radial_kwargs: {}
       max_degree: 2
       num: 8
+  # The atom-centered and atom-pair outputs are fed into here
   mlp:
+    # This is an acceptable default, but much testing remains
+    # The intuition here was to use a lower dimensional latent layer as a 
+    # regularizer
     mlp_layer_widths: [32,16,32]
     mlp_dtype: float32
+    # Any activation in E3x works as long as you don't get NaNs
     mlp_activation_function: bent_identity
 
 optimizer:
+  # adan, lamb are alternative optimizers to adam
   name: "adam"
+  # 1-5e-3 are good initial learning rates
   lr: 0.001
+  # Any optional kwargs accepted by the optax optimizer definition go in
+  # here
   opt_kwargs: {nesterov: True}
+  # Learning rate scheduler
+  # TODO: We should add more detail here
   schedule:
     name: exponential_decay
     decay_rate: 0.99
@@ -72,15 +126,23 @@ optimizer:
     transition_steps: 1
 
 loss:
+  # We do normed error of feature, and a combination of RMSE and MSE
+  # seems to work well
   name: weighted_mse_and_rmse
   loss_parameters:
+    # These are relative weights for on and off diagonal losses
+    # These settings are acceptable, but not necessarily optimal
     off_diagonal_weight: 4.0
     on_diagonal_weight : 1.0
     mse_weight         : 1.0
     rmse_weight        : 1.0
+    # Multiple the total loss by this number, we think it's nicer for floating point
+    # but we're not entirely sure strictly speaking
     loss_multiplier    : 5.0
-    alpha              : 0.9
 
+# If the loss doesn't improve for patience epochs, stop training
 patience: null
+# Seed for all RNGs in the workflow
 seed: 2465
+# Whether to disable progress bar during training or not
 disable_pbar: False
