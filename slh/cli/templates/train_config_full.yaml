@@ -1,4 +1,5 @@
-n_epochs: 500 # Typically total of 200k-600k steps (batches x epochs)
+# Set this such that your total number of steps (batches x epochs) is 200k-600k
+n_epochs: 2000
 callbacks:
 - name: csv # Calling csv logging
 
@@ -17,13 +18,18 @@ data:
   batch_size: 2 # Samples per batch, lower the better typically for accuracy
   valid_batch_size: 2 # As above, but validation
   n_cpus: 4 # Number of workers used for the asynchronous grain data pipeline
+
+  # These padding values provide a tradeoff between how much work is 'wasted'
+  # on padded values, and how many times to model needs to be recompiled.
+  # As a rule of thumb, assuming a mostly-equal-sized-snapshot dataset
+  # setting pad multiple to ~10% of the size of snapshots/neighbourlists
+  # works out well
   atoms_pad_multiple: 50 # Pad system-sized arrays to multiples of this.
   nl_pad_multiple: 5000 # Pad neighbourlist-sized arrays to multiples of this.
 
 model:
   atom_centered: # Everything nested in here is atom centered descriptor definition
-    descriptor: 
-      # It's a mouthful, but it is what it is
+    descriptor:
       descriptor_name: ShallowTDSAAtomCenteredDescriptor
       # Use fused tensor for the many-body outer products
       # Setting to false makes the model more expressive and expensive
@@ -66,7 +72,9 @@ model:
     radial_basis:
       # Typically you want this to be 80-100% of the largest atom-pair
       # matrix element distance that you care about. 7+ angstrom is almost
-      # universally recommended
+      # universally recommended. This cutoff can be smaller than the
+      # atom-pair cutoff, but we've found decreased overfitting if it is 
+      # equal to the cutoff (we haven't tried greater than)
       cutoff: <CUTOFF>
       # Number of radial basis functions
       num_radial: 16
@@ -89,7 +97,8 @@ model:
     # tensor or fused_tensor. Same tradeoffs as described above
     tensor_module: tensor
     # float32 or float64, although we've never seen a difference other than
-    # training time
+    # training time. Also, jax won't use float64 unless explicitly asked to
+    # do so everwhere. Check JAX docs for this
     tensor_module_dtype: float32
     # Similar to message-passing options above
     bond_expansion_options:
@@ -117,10 +126,10 @@ optimizer:
   # here
   opt_kwargs: {nesterov: True}
   # Learning rate scheduler
-  # TODO: We should add more detail here
+  # The quantities here apply PER BATCH, not per epoch.
   schedule:
     name: exponential_decay
-    decay_rate: 0.99
+    decay_rate: 0.9999
     end_value: 0.0001
     transition_begin: 20
     transition_steps: 1
@@ -144,5 +153,5 @@ loss:
 patience: null
 # Seed for all RNGs in the workflow
 seed: 2465
-# Whether to disable progress bar during training or not
+# Whether to disable progress bar during training or not 
 disable_pbar: False
