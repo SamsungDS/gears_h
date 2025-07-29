@@ -1,9 +1,9 @@
-n_epochs: 50
-callbacks: 
+n_epochs: 2000
+callbacks:
 - name: csv
 
 data:
-  directory: models
+  directory: slhmodels
   experiment: slh
   data_path: <PATH>
   n_train: 100
@@ -12,22 +12,19 @@ data:
   sampling_alpha: 0.0
   batch_size: 2
   valid_batch_size: 2
-  shuffle_buffer_size: 100
-  energy_unit: eV
-  pos_unit: Ang
   n_cpus: 4
-  atoms_pad_multiple: 50
-  nl_pad_multiple: 5000
+  atoms_pad_multiple: 50 
+  nl_pad_multiple: 5000 
 
 model:
-  atom_centered:
-    descriptor: 
+  atom_centered: 
+    descriptor:
       descriptor_name: ShallowTDSAAtomCenteredDescriptor
       use_fused_tensor: False
       num_tensordenses: 2
       max_tensordense_degree: 4
       num_tensordense_features: 12
-      mp_steps: 2
+      mp_steps: 0
       mp_degree: 4
       mp_options:
         num_heads: 4
@@ -66,7 +63,7 @@ optimizer:
   opt_kwargs: {nesterov: True}
   schedule:
     name: exponential_decay
-    decay_rate: 0.99
+    decay_rate: 0.9999
     end_value: 0.0001
     transition_begin: 20
     transition_steps: 1
@@ -79,8 +76,7 @@ loss:
     mse_weight         : 1.0
     rmse_weight        : 1.0
     loss_multiplier    : 5.0
-    alpha              : 0.9
 
-patience: null
+patience: null # Not implemented
 seed: 2465
 disable_pbar: False
