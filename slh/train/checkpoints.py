@@ -15,7 +15,6 @@ import optax
 
 log = logging.getLogger(__name__)
 
-
 def check_for_ensemble(params: FrozenDict) -> int:
     """Checks if a set of parameters belongs to an ensemble model.
     This is the case if all parameters share the same first dimension (parameter batch)
@@ -28,7 +27,6 @@ def check_for_ensemble(params: FrozenDict) -> int:
         return shapes[0]
     else:
         return 1
-
 
 def create_train_state(model, params: FrozenDict, tx):
     n_models = check_for_ensemble(params)
@@ -66,20 +64,14 @@ def create_params(model, rng_key, sample_input: dict, n_models: int):
             jnp.array(sample_input["ac_ij"]),
             jnp.array(sample_input["ac_D"]),
         )
-        # params = model.init(jax.random.PRNGKey(245), *sample_input)
     elif n_models > 1:
         raise NotImplementedError
-        # num_args = len(sample_input)
-        # # vmap only over parameters, not over any data from the input
-        # in_axes = (0, *[None] * num_args)
-        # params = jax.vmap(model.init, in_axes=in_axes)(model_rng, *sample_input)
     else:
         raise ValueError(f"n_models should be a positive integer, found {n_models}")
 
     params = freeze(params)
 
     return params, rng_key
-
 
 def load_state(state, ckpt_dir):
     start_epoch = 0
@@ -98,7 +90,6 @@ def load_state(state, ckpt_dir):
 
     return state, start_epoch
 
-
 class CheckpointManager:
     def __init__(self) -> None:
         self.async_manager = checkpoints.AsyncManager()
@@ -112,7 +103,6 @@ class CheckpointManager:
             keep=2,
             async_manager=self.async_manager,
         )
-
 
 def stack_parameters(param_list: List[FrozenDict]) -> FrozenDict:
     """Combine a list of parameter sets into a stacked version.
@@ -152,20 +142,6 @@ def load_params(model_version_path: Path, best=True) -> FrozenDict:
     params = jax.tree_util.tree_map(jnp.asarray, raw_restored["model"]["params"])
 
     return params
-
-
-# def restore_single_parameters(model_dir: Path) -> Tuple[Config, FrozenDict]:
-#     """Load the config and parameters of a single model"""
-#     model_dir = Path(model_dir)
-#     model_config = parse_config(model_dir / "config.yaml")
-
-#     if model_config.data.experiment == "":
-#         model_config.data.directory = model_dir.resolve().as_posix()
-#     else:
-#         model_config.data.directory = model_dir.parent.resolve().as_posix()
-
-#     ckpt_dir = model_config.data.model_version_path
-#     return model_config, load_params(ckpt_dir)
 
 class TrainStateExtraArgs(struct.PyTreeNode):
   """Simple train state for the common case with a single Optax optimizer.
