@@ -70,13 +70,6 @@ def analyze(
 
     analyze(dataset_root, num_snapshots)
 
-# @app.command()
-# def docs():
-#     """
-#     Opens the documentation page once we eventually have one.
-#     """
-#     console.print("This will eventually open docs")
-
 @template_app.command("train")
 def template_train_config(
     annotated: bool = typer.Option(False, help="Generate an annotated configuration file with comments explaining the options."),
