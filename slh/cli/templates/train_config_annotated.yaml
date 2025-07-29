@@ -150,6 +150,7 @@ loss:
     loss_multiplier    : 5.0
 
 # If the loss doesn't improve for patience epochs, stop training
+# NOTE: patience is not currently implemented.
 patience: null
 # Seed for all RNGs in the workflow
 seed: 2465
