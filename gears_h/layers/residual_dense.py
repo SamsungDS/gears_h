@@ -5,7 +5,7 @@ import e3x
 import flax.linen as nn
 from jaxtyping import Array, Float
 
-# from slh.layers.activation import stl
+# from gears_h.layers.activation import stl
 
 
 class DenseBlock(nn.Module):

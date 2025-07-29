@@ -5,7 +5,7 @@ from typing import Union
 
 import yaml
 
-from slh.config.train_config import TrainConfig
+from gears_h.config.train_config import TrainConfig
 
 log = logging.getLogger(__name__)
 

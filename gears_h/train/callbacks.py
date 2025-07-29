@@ -7,14 +7,14 @@ import numpy as np
 import tensorflow as tf
 from keras.callbacks import CSVLogger
 
-from slh.config.train_config import TrainConfig
+from gears_h.config.train_config import TrainConfig
 
 log = logging.getLogger(__name__)
 
 def format_str(k):
     return f"{k:.5f}"
 
-class CSVLoggerSLH(CSVLogger):
+class CSVLoggerGEARS_H(CSVLogger):
     def __init__(self, filename, separator=",", append=False):
         super().__init__(filename, separator=separator, append=append)
 
@@ -67,7 +67,7 @@ def initialize_callbacks(config: TrainConfig, model_version_path: Path):
     dummy_model = tf.keras.Model()
     callback_dict = {
         "csv": {
-            "class": CSVLoggerSLH,
+            "class": CSVLoggerGEARS_H,
             "log_path": model_version_path / "log.csv",
             "path_arg_name": "filename",
             "kwargs": {"append": True},

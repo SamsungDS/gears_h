@@ -7,9 +7,9 @@ import jax.numpy as jnp
 from jaxtyping import Array, Float, Int
 from typing import Literal
 
-from slh.layers.descriptor.radial_basis import SpeciesAwareRadialBasis
-from slh.layers.layer_norm import LayerNorm
-# from slh.utilities.functions import soft_abs
+from gears_h.layers.descriptor.radial_basis import SpeciesAwareRadialBasis
+from gears_h.layers.layer_norm import LayerNorm
+# from gears_h.utilities.functions import soft_abs
 
 
 class SAAtomCenteredDescriptor(nn.Module):

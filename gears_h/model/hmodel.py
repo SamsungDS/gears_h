@@ -1,7 +1,7 @@
 import flax.linen as nn
 import jax.numpy as jnp
 
-from slh.layers import (
+from gears_h.layers import (
     SAAtomCenteredDescriptor,
     TDSAAtomCenteredDescriptor,
     BondCenteredTensorMomentDescriptor,

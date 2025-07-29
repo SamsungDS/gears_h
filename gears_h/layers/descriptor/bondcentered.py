@@ -6,7 +6,7 @@ import e3x
 import flax.linen as nn
 import jax.numpy as jnp
 
-from slh.layers.layer_norm import LayerNorm
+from gears_h.layers.layer_norm import LayerNorm
 
 
 class BondCenteredTensorMomentDescriptor(nn.Module):

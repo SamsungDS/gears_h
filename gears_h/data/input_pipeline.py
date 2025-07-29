@@ -10,10 +10,10 @@ from matscipy.neighbours import neighbour_list
 import numpy as np
 from tqdm import tqdm
 
-from slh.config.train_config import TrainConfig
-from slh.data.preprocessing import prefetch_to_single_device
-from slh.data.utilities import split_dataset, split_idxs
-from slh.hblockmapper import (
+from gears_h.config.train_config import TrainConfig
+from gears_h.data.preprocessing import prefetch_to_single_device
+from gears_h.data.utilities import split_dataset, split_idxs
+from gears_h.hblockmapper import (
     MultiElementPairHBlockMapper,
     get_mask_dict,
     make_mapper_from_elements,
@@ -306,7 +306,7 @@ def load_single_analysis(analysis_directory: Path):
             off_diag_analysis_dict[new_key] = {k2: np.array(v2) for k2,v2 in v.items()}
     except FileNotFoundError:
         log.warning(f"Off-diagonal analysis in {analysis_directory} not found.")
-        log.warning(f"Analyze using `slh analyze {analysis_directory.parent} <Num_structures_to_analyze>`")
+        log.warning(f"Analyze using `gears_h analyze {analysis_directory.parent} <Num_structures_to_analyze>`")
         off_diag_analysis_dict = None
     ## Read on-diagonal analysis
     on_diag_analysis_path = analysis_directory / "on_diag_analysis_results.yaml"
@@ -319,7 +319,7 @@ def load_single_analysis(analysis_directory: Path):
             on_diag_analysis_dict[new_key] = {k2: np.array(v2) for k2,v2 in v.items()}
     except FileNotFoundError:
         log.warning(f"On-diagonal analysis in {analysis_directory} not found.")
-        log.warning(f"Analyze using `slh analyze {analysis_directory.parent} <Num_structures_to_analyze>`")
+        log.warning(f"Analyze using `gears_h analyze {analysis_directory.parent} <Num_structures_to_analyze>`")
         on_diag_analysis_dict = None
     
     return off_diag_analysis_dict, on_diag_analysis_dict

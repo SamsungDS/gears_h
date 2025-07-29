@@ -9,12 +9,12 @@ import numpy as np
 import optax
 from scipy.sparse import block_array
 
-from slh.config.common import parse_config
-from slh.hblockmapper import make_mapper_from_elements
-from slh.model.builder import ModelBuilder
-from slh.train.checkpoints import create_train_state, load_params
-from slh.train.run import setup_logging
-from slh.utilities.neighbours import get_neighbourlist_ijD
+from gears_h.config.common import parse_config
+from gears_h.hblockmapper import make_mapper_from_elements
+from gears_h.model.builder import ModelBuilder
+from gears_h.train.checkpoints import create_train_state, load_params
+from gears_h.train.run import setup_logging
+from gears_h.utilities.neighbours import get_neighbourlist_ijD
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +53,7 @@ def create_inference_state(model_path: Path | str):
         model_path (Path | str): Path object or string path to the model directory.
 
     Returns:
-        TrainStateExtraArgs: slh.train.checkpoints.TrainStateExtraArgs object, an extension of 
+        TrainStateExtraArgs: gears_h.train.checkpoints.TrainStateExtraArgs object, an extension of 
             the TrainState class from flax.
     """
     model_path = Path(model_path)
@@ -137,7 +137,7 @@ def get_h_blocks(
      hirreps_on_diagonal: list[np.ndarray],
      atomic_numbers: np.ndarray,
      bond_neighbour_indices: np.ndarray,
-     hmapper: "slh.hblockmapper.MultiElementPairHBlockMapper",
+     hmapper: "gears_h.hblockmapper.MultiElementPairHBlockMapper",
      species_basis_size_dict: dict[int, int],
     ):
     """Combines Hamiltonian irreps into Hamiltonian blocks.
@@ -147,7 +147,7 @@ def get_h_blocks(
         hirreps_on_diagonal (list[np.ndarray]): List of on-diagonal irreps.
         atomic_numbers (np.ndarray): Atomic numbers of the inference system.
         bond_neighbour_indices (np.ndarray): Indices of atoms in the bond-centered neighborlist.
-        hmapper (slh.hblockmapper.MultiElementPairHBlockMapper): Mapper class to connected irreps and H blocks.
+        hmapper (gears_h.hblockmapper.MultiElementPairHBlockMapper): Mapper class to connected irreps and H blocks.
         species_basis_size_dict (dict[int, int]): Dictionary in which the keys are atomic numbers and values 
             are the number of basis functions for each atomic species.
 

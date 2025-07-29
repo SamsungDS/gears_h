@@ -4,16 +4,16 @@ import e3x
 import jax.numpy as jnp
 import numpy as np
 
-import slh
-from slh.config.train_config import ModelConfig
-from slh.layers.descriptor import (
+import gears_h
+from gears_h.config.train_config import ModelConfig
+from gears_h.layers.descriptor import (
     BondCenteredTensorMomentDescriptor,
     SpeciesAwareRadialBasis
 )
-from slh.layers.readout import Readout
-from slh.layers.residual_dense import DenseBlock
-from slh.layers.scale_shift import OffDiagonalScaleShift, OnDiagonalScaleShift
-from slh.model.hmodel import HamiltonianModel
+from gears_h.layers.readout import Readout
+from gears_h.layers.residual_dense import DenseBlock
+from gears_h.layers.scale_shift import OffDiagonalScaleShift, OnDiagonalScaleShift
+from gears_h.model.hmodel import HamiltonianModel
 
 class ModelBuilder:
     def __init__(self, model_config: ModelConfig):
@@ -35,7 +35,7 @@ class ModelBuilder:
         ac_config = self.config['atom_centered']
         descriptor_name = ac_config['descriptor']['descriptor_name']
         descriptor_options = {key : val for key, val in ac_config['descriptor'].items() if key != "descriptor_name"}
-        acd = getattr(slh.layers.descriptor, descriptor_name)(radial_basis=radial_basis,
+        acd = getattr(gears_h.layers.descriptor, descriptor_name)(radial_basis=radial_basis,
                                                               **descriptor_options)
         return acd
     

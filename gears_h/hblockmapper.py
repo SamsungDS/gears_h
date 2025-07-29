@@ -5,7 +5,7 @@ from itertools import product
 import e3x
 import numpy as np
 
-from slh.utilities.mapmaker import get_mapping_spec
+from gears_h.utilities.mapmaker import get_mapping_spec
 
 log = logging.getLogger(__name__)
 

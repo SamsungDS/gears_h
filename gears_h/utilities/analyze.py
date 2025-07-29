@@ -5,13 +5,13 @@ import yaml
 import numpy as np
 from scipy.optimize import dual_annealing
 
-from slh.data.input_pipeline import (get_hamiltonian_mapper_from_dataset, 
+from gears_h.data.input_pipeline import (get_hamiltonian_mapper_from_dataset, 
                                      get_max_ell_and_max_features, 
                                      get_mask_dict, 
                                      prepare_label_dicts, 
                                      read_dataset_as_list, 
                                      prepare_input_dicts)
-from slh.train import run
+from gears_h.train import run
 # TODO fix the circular import problem so we can get just setup_logging
 
 log = logging.getLogger(__name__)

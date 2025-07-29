@@ -7,16 +7,16 @@ import jax.numpy as jnp
 from functools import partial
 import optax
 
-import slh
-from slh.config.common import parse_config
-from slh.data.input_pipeline import load_dataset_from_config, load_analyses
-from slh.model.builder import ModelBuilder
-from slh.train.callbacks import initialize_callbacks
-from slh.train.checkpoints import create_params, create_train_state
-from slh.train.trainer import fit
-from slh.utilities import analyze
+import gears_h
+from gears_h.config.common import parse_config
+from gears_h.data.input_pipeline import load_dataset_from_config, load_analyses
+from gears_h.model.builder import ModelBuilder
+from gears_h.train.callbacks import initialize_callbacks
+from gears_h.train.checkpoints import create_params, create_train_state
+from gears_h.train.trainer import fit
+from gears_h.utilities import analyze
 # TODO fix the circular import problem so we can get just write_analysis
-from slh.utilities.random import seed_py_np_tf
+from gears_h.utilities.random import seed_py_np_tf
 
 log = logging.getLogger(__name__)
 
@@ -104,11 +104,11 @@ def run(user_config, log_level="error"):
     n_params = int(jax.tree.reduce(jax.numpy.add, jax.tree.map(lambda x: len(x.ravel()), params)))
     log.info(f"Number of parameters: {n_params}")
 
-    loss_function = getattr(slh.train.loss, config.loss.name)
+    loss_function = getattr(gears_h.train.loss, config.loss.name)
     loss_parameters = config.loss.model_dump()['loss_parameters']
     loss_function = partial(loss_function, loss_parameters = loss_parameters)
 
-    # TODO Switch to using slh.optimize.get_optimizer and enable different LRs for each parameter group.
+    # TODO Switch to using gears_h.optimize.get_optimizer and enable different LRs for each parameter group.
     # Convenience variables to improve readability of this section
     optimizer_config = config.optimizer.model_dump()
     optimizer_name = optimizer_config['name']

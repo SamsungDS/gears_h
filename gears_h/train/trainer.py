@@ -12,8 +12,8 @@ from optax import tree_utils as otu
 from tensorflow.keras.callbacks import CallbackList
 from tqdm import trange
 
-from slh.data.input_pipeline import GrainDataset
-from slh.train.checkpoints import CheckpointManager, load_state
+from gears_h.data.input_pipeline import GrainDataset
+from gears_h.train.checkpoints import CheckpointManager, load_state
 
 log = logging.getLogger(__name__)
 

@@ -7,7 +7,7 @@ def get_neighbourlist_ijD(
     atoms: ase.Atoms, cutoff: float, unique_pairs: bool = True
 ):
     """Returns a array where each row is atom-pair indices and an array of lattice shifts for that pair.
-    Taken from SLHTools.
+    Taken from GEARS_HTools.
 
     Parameters
     ----------

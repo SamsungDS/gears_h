@@ -13,7 +13,7 @@ from pydantic import (
     model_validator
 )
 
-from slh.config.lr_config import (ConstantSchedule,
+from gears_h.config.lr_config import (ConstantSchedule,
                                   CyclicCosineSchedule, 
                                   ExponentialDecaySchedule,
                                   LinearSchedule,
@@ -23,7 +23,7 @@ from slh.config.lr_config import (ConstantSchedule,
 )
 
 class DataConfig(BaseModel, extra="forbid"):
-    directory: str = "slhmodels"
+    directory: str = "gears_hmodels"
     experiment: str = "default"
     data_path: Optional[str] = None
     train_data_path: Optional[str | list[str]] = None

@@ -6,7 +6,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
-from slh.cli import templates
+from gears_h.cli import templates
 
 console = Console(highlight=False)
 
@@ -33,7 +33,7 @@ def train(
     Starts the training of a H/S model with parameters provided by a configuration file.
     """
 
-    from slh.train.run import run
+    from gears_h.train.run import run
 
     run(train_config_path, log_level)
 
@@ -48,7 +48,7 @@ def infer(
     Uses a trained model to infer the trained quantity for a selected structure.
     """
 
-    from slh.infer.infer import infer
+    from gears_h.infer.infer import infer
 
     infer(model_path, structure_path, return_H=False)
 
@@ -66,7 +66,7 @@ def analyze(
     dataset_root: Path = typer.Argument(..., help = "Dataset root path.")  ,
     num_snapshots: int = typer.Argument(10, help = "Number of snapshots to analyze on.")
 ):
-    from slh.utilities.analyze import analyze
+    from gears_h.utilities.analyze import analyze
 
     analyze(dataset_root, num_snapshots)
 
@@ -95,9 +95,9 @@ def template_train_config(
 
 
 def version_callback(value: bool) -> None:
-    """Get the installed SLH version."""
+    """Get the installed GEARS_H version."""
     if value:
-        console.print(f"SLH {importlib.metadata.version('slh')}")
+        console.print(f"GEARS_H {importlib.metadata.version('gears_h')}")
         raise typer.Exit()
 
 
