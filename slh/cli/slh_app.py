@@ -205,22 +205,22 @@ def docs():
 
 @template_app.command("train")
 def template_train_config(
-    full: bool = typer.Option(False, help="Use all input options."),
+    annotated: bool = typer.Option(False, help="Generate an annotated configuration file with comments explaining the options."),
 ):
     """
-    Creates a training input template in the current working directory.
+    Creates a training configuration template in the current working directory.
     """
-    if full:
-        template_file = "train_config_full.yaml"
-        config_path = "config_full.yaml"
+    if annotated:
+        template_file = "train_config_annotated.yaml"
+        config_path = "config_annotated.yaml"
     else:
-        template_file = "train_config_minimal.yaml"
+        template_file = "train_config.yaml"
         config_path = "config.yaml"
 
     template_content = pkg_resources.read_text(templates, template_file)
 
     if Path(config_path).is_file():
-        console.print("There is already a config file in the working directory.")
+        console.print(f"There is already a configuration file named {config_path} in the working directory. Remove or rename it and rerun this command.")
         sys.exit(1)
     else:
         with open(config_path, "w") as config:
