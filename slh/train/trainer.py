@@ -2,13 +2,12 @@ import logging
 import time
 from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import jax
 import jax.numpy as jnp
 from clu import metrics
 from flax.training.train_state import TrainState
-# from orbax.checkpointing import CheckpointManager, CheckpointManagerOptions # for potential orbax migration
 from optax import tree_utils as otu
 from tensorflow.keras.callbacks import CallbackList
 from tqdm import trange
@@ -24,7 +23,7 @@ def lr_tree_filter(path, value: Any) -> bool:
 def fit(state: TrainState,
         train_dataset: GrainDataset,
         val_dataset: GrainDataset,
-        loss_function: callable,
+        loss_function: Callable,
         logging_metrics: metrics.Collection,
         callbacks: CallbackList,
         n_grad_acc: int,
@@ -78,7 +77,7 @@ def fit(state: TrainState,
             f"n_epochs <= current epoch from checkpoint ({n_epochs} <= {start_epoch})"
         )
 
-    best_params = {} # TODO do we need this if we're saving the state?
+    best_params = {}
     best_mae_loss = jnp.inf
     best_loss = jnp.inf
     epoch_loss = {}
@@ -89,9 +88,6 @@ def fit(state: TrainState,
     for epoch in range(start_epoch, n_epochs):
         epoch_start_time = time.time()
         callbacks.on_epoch_begin(epoch=epoch + 1)
-
-        # TODO when we implement gradient accumulation, start using this value rather than train_batches_per_epoch etc
-        # effective_batch_size = n_grad_acc * train_dataset.batch_size
 
         # Training set loop - set up
         epoch_loss.update({"train_loss": 0.0})
@@ -123,7 +119,6 @@ def fit(state: TrainState,
         for train_batch in range(train_batches_per_epoch // n_grad_acc):
             callbacks.on_train_batch_begin(batch=train_batch)
             batch_data_list = [next(batch_train_dataset) for _ in range(n_grad_acc)]
-            # TODO refactor train_step for gradient accumulation and remove the hardcoded first element of the list below.
             loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss, state = train_step(state, batch_data_list[0])
             
             train_mae_loss_weighted += mae_loss
@@ -142,7 +137,6 @@ def fit(state: TrainState,
         epoch_loss["train_mae_weighted"] = float(train_mae_loss_weighted / train_batches_per_epoch)
         epoch_loss["train_mae_loss_off"] = float(train_mae_loss_off / train_batches_per_epoch)
         epoch_loss["train_mae_loss_on"] = float(train_mae_loss_on / train_batches_per_epoch)
-
 
         # Validation set loop - set up
         epoch_loss.update({"val_loss": 0.0})
@@ -163,7 +157,6 @@ def fit(state: TrainState,
         # Validation set loop - actual training
         for val_batch in range(val_batches_per_epoch // n_grad_acc):
             batch_data_list = [next(batch_val_dataset) for _ in range(n_grad_acc)]
-            # TODO refactor train_step for gradient accumulation and remove the hardcoded first element of the list below.
             loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss = val_step(state, batch_data_list[0])
 
             val_mae_loss_weighted += mae_loss
@@ -186,7 +179,6 @@ def fit(state: TrainState,
                 best_params['params'] = state.params
 
         epoch_end_time = time.time()
-        # TODO store this elsewhere?
         epoch_loss['epoch_time'] = epoch_end_time - epoch_start_time
         callbacks.on_epoch_end(epoch=epoch, logs=epoch_loss)
 
@@ -202,15 +194,11 @@ def fit(state: TrainState,
         epoch_pbar.update()
     epoch_pbar.close()
     callbacks.on_train_end()
-    # train_dataset.cleanup()
-    # val_dataset.cleanup()
-
 
     return
 
 def calculate_loss(params, batch_full, loss_function, apply_function):
     batch, batch_labels = batch_full
-    # TODO Make loss function an argument and allow user input.
     h_irreps_off_diagonal_predicted, h_irreps_on_diagonal_predicted = apply_function(
         params,
         batch["numbers"],
@@ -220,14 +208,6 @@ def calculate_loss(params, batch_full, loss_function, apply_function):
         batch["ac_D"],
     )
 
-    # TODO Remove this when we make the readout layer size automatically calculated.
-    assert (
-        h_irreps_off_diagonal_predicted.shape
-        == batch_labels["h_irreps_off_diagonal"].shape
-        == batch_labels["mask_off_diagonal"].shape
-    ), "This happens when your readout and your labels are not consistent."
-
-    # TODO Currently we are using the hard coded loss weights in the loss function. Make controllable.
     loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss = loss_function(h_irreps_off_diagonal_predicted,
                                    h_irreps_on_diagonal_predicted,
                                    batch_labels)
@@ -244,28 +224,13 @@ def make_step_functions(logging_metrics, state, loss_function):
         mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss = aux
         state = state.apply_gradients(grads=grads, value = loss)
         return loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss, state
-    
-    # TODO add support for ensemble models.
 
-    # @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
     @jax.jit
     def train_step(state, batch):
 
         loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss, state = update_step(state, batch)
         return loss, mae_loss, off_diagonal_mae_loss, on_diagonal_mae_loss, state
-    
-    # TODO OLD KEPT JUST IN CASE. Remove when no longer needed.
-    # @partial(jax.jit, static_argnames=("model_apply", "optimizer"))
-    # def train_step(params: optax.Params,
-    #                model_apply: callable,
-    #                optimizer,
-    #                batch_full_list: list,
-    #                opt_state: OptimizerState,):
-        
-    #     return params, opt_state, grad, loss, step_mae_loss
-    
-    
-    # @partial(jax.jit, static_argnames=("model_apply",))
+
     @jax.jit
     def val_step(state, batch):
 

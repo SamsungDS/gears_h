@@ -10,7 +10,6 @@ from slh.layers import (
     OffDiagonalScaleShift,
     OnDiagonalScaleShift
 )
-# from slh.layers.corrections import ExponentialScaleCorrection
 
 from typing import Union
 

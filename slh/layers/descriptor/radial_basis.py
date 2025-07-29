@@ -19,7 +19,7 @@ class SpeciesAwareRadialBasis(nn.Module):
                         e3x.nn.basic_fourier,
                         limit=self.cutoff,
                     )
-        # TODO Do we really want anything more than Bismuth? No. No, we do not.
+
         self.embedding = e3x.nn.Embed(
             83,
             self.num_elemental_embedding,
@@ -34,19 +34,19 @@ class SpeciesAwareRadialBasis(nn.Module):
         neighbour_displacements: Float[Array, "... num_neighbours 3"],
         Z_j: Float[Array, "... num_neighbours"],
     ):
-        """_summary_
+        """Generate 2-body species aware radial basis.
 
         Parameters
         ----------
-        neighbour_displacements :
+        neighbour_displacements: Float[Array, "... num_neighbours 3"]
             Input array containing vectors to neighbours around a given point.
-        Z_j : _type_
+        Z_j : Float[Array, "... num_neighbours"]
             Input array of atomic numbers of the points.
 
         Returns
         -------
-        _type_
-            _description_
+        Float[Array, "... num_neighbors 1 (max_degree + 1)**2 num_radial]
+            Species-aware radial basis
         """
         assert neighbour_displacements.dtype == jnp.float32
 
@@ -70,49 +70,3 @@ class SpeciesAwareRadialBasis(nn.Module):
         y = basis_expansion * transformed_embedding
 
         return y.astype(jnp.float32)
-
-
-def jinclike(x: Float[Array, "..."], num: int, limit: float = 1.0):
-    r"""Jinc-like functions from https://arxiv.org/pdf/1907.02374.pdf
-
-    We use the f_n version of the functions, without orthogonalizing.
-    The g_n version of these functions, which are orthogonal,
-    require a recurrence relation to be calculated, which is perhaps
-    not the play at least for the moment, especially given how
-    absolutely tiny the differences between them are.
-
-    Parameters
-    ----------
-    x : Float[Array, ...]
-        Input array
-    num : int
-        Number of basis functions
-    limit : float, optional
-        Basis functions are distributed between 0 and ``limit``, by default 1.0
-
-    Returns
-    -------
-    floating array
-      Value of all basis functions for all values in ``x``. The output shape
-      follows the input, with an additional dimension of size ``num`` appended.
-
-    Raises
-    ------
-    ValueError
-        _description_
-    """
-    if num < 1:
-        raise ValueError(f"num must be greater or equal to 1, received {num}")
-
-    with jax.ensure_compile_time_eval():
-        i = jnp.arange(0, num)
-        factor1 = 2.0**0.5 * jnp.pi / limit**1.5
-        factor2 = (-1) ** i * (i + 1) * (i + 2) / jnp.hypot(i + 1, i + 2)
-
-    x = jnp.expand_dims(x, axis=-1)
-
-    return (
-        factor1
-        * factor2
-        * (jnp.sinc(x / limit * (i + 1)) + jnp.sinc(x / limit * (i + 2)))
-    )

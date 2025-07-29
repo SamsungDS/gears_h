@@ -12,7 +12,6 @@ from slh.config.common import parse_config
 from slh.data.input_pipeline import load_dataset_from_config, load_analyses
 from slh.model.builder import ModelBuilder
 from slh.train.callbacks import initialize_callbacks
-# from slh.train.metrics import initialize_metrics
 from slh.train.checkpoints import create_params, create_train_state
 from slh.train.trainer import fit
 from slh.utilities import analyze
@@ -62,8 +61,6 @@ def run(user_config, log_level="error"):
     log.info(f"Running on {jax.devices()}")
 
     callbacks = initialize_callbacks(config, config.data.model_version_path)
-    # loss_fn = initialize_loss_fn(config.loss)
-    # logging_metrics = initialize_metrics(config.metrics)
 
     train_ds, val_ds, data_root = load_dataset_from_config(config, train_rng_seed, val_rng_seed)
 
@@ -148,7 +145,7 @@ def run(user_config, log_level="error"):
         loss_function = loss_function,
         logging_metrics=None,
         callbacks=callbacks,
-        n_grad_acc=1, # TODO make this controllable
+        n_grad_acc=1,
         n_epochs=config.n_epochs,
         ckpt_dir=config.data.model_version_path,
         ckpt_interval=1,

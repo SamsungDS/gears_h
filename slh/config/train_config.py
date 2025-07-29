@@ -25,7 +25,6 @@ from slh.config.lr_config import (ConstantSchedule,
 class DataConfig(BaseModel, extra="forbid"):
     directory: str = "slhmodels"
     experiment: str = "default"
-    # ds_type: Literal["cached", "otf"] = "cached"
     data_path: Optional[str] = None
     train_data_path: Optional[str | list[str]] = None
     val_data_path: Optional[str| list[str]] = None
@@ -174,10 +173,6 @@ class CSVCallback(BaseModel, frozen=True, extra="forbid"):
 
 CallBack = Annotated[CSVCallback, Field(discriminator="name")]
 
-# CallBack = Annotated[ # TODO implement other   callbacks if we want them
-#     Union[CSVCallback, TBCallback, MLFlowCallback], Field(discriminator="name")
-# ]
-
 class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
     name: str = "adam"
     lr: NonNegativeFloat = 0.005
@@ -210,7 +205,6 @@ class TrainConfig(BaseModel, frozen=True, extra="forbid"):
 
     model: ModelConfig
     data: DataConfig
-    # metrics: List[MetricsConfig] = []
     loss: LossConfig
     optimizer: OptimizerConfig = OptimizerConfig()
     callbacks: List[CallBack] = [CSVCallback(name="csv")]
