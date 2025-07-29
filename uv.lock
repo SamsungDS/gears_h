@@ -403,6 +403,63 @@ wheels = [
 ]
 
 [[package]]
+name = "gears-h"
+version = "0.8.0"
+source = { editable = "." }
+dependencies = [
+    { name = "clu" },
+    { name = "e3x" },
+    { name = "grain" },
+    { name = "jax", extra = ["cuda12"] },
+    { name = "jaxtyping" },
+    { name = "matscipy" },
+    { name = "pydantic" },
+    { name = "sphinx" },
+    { name = "tensorflow" },
+    { name = "tqdm" },
+    { name = "typer" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-cov" },
+]
+docs = [
+    { name = "myst-parser" },
+    { name = "sphinx" },
+    { name = "sphinx-autodoc2" },
+    { name = "sphinx-book-theme" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "clu", specifier = ">=0.0.12" },
+    { name = "e3x", specifier = ">=1.0.2" },
+    { name = "grain", specifier = "==0.2.7" },
+    { name = "jax", extras = ["cuda12"], specifier = ">=0.6.0" },
+    { name = "jaxtyping", specifier = ">=0.3.2" },
+    { name = "matscipy", specifier = ">=1.1.1" },
+    { name = "pydantic", specifier = ">=2.11.3" },
+    { name = "sphinx", specifier = ">=8.2.3" },
+    { name = "tensorflow", specifier = ">=2.19.0" },
+    { name = "tqdm", specifier = ">=4.67.1" },
+    { name = "typer", specifier = ">=0.15.2" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8.3.5" },
+    { name = "pytest-cov", specifier = ">=6.1.1" },
+]
+docs = [
+    { name = "myst-parser", specifier = ">=4.0.1" },
+    { name = "sphinx", specifier = ">=8.2.3" },
+    { name = "sphinx-autodoc2", specifier = ">=0.5.0" },
+    { name = "sphinx-book-theme", specifier = ">=1.1.4" },
+]
+
+[[package]]
 name = "google-pasta"
 version = "0.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1487,63 +1544,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/3b/44/6716b257b0aa6bfd51a1b31665d1c205fb12cb5ad56de752dfa15657de2f/sphinxcontrib_serializinghtml-2.0.0.tar.gz", hash = "sha256:e9d912827f872c029017a53f0ef2180b327c3f7fd23c87229f7a8e8b70031d4d", size = 16080 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/52/a7/d2782e4e3f77c8450f727ba74a8f12756d5ba823d81b941f1b04da9d033a/sphinxcontrib_serializinghtml-2.0.0-py3-none-any.whl", hash = "sha256:6e2cb0eef194e10c27ec0023bfeb25badbbb5868244cf5bc5bdc04e4464bf331", size = 92072 },
-]
-
-[[package]]
-name = "surrogatelcaohamiltonians"
-version = "0.8.0"
-source = { editable = "." }
-dependencies = [
-    { name = "clu" },
-    { name = "e3x" },
-    { name = "grain" },
-    { name = "jax", extra = ["cuda12"] },
-    { name = "jaxtyping" },
-    { name = "matscipy" },
-    { name = "pydantic" },
-    { name = "sphinx" },
-    { name = "tensorflow" },
-    { name = "tqdm" },
-    { name = "typer" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-    { name = "pytest-cov" },
-]
-docs = [
-    { name = "myst-parser" },
-    { name = "sphinx" },
-    { name = "sphinx-autodoc2" },
-    { name = "sphinx-book-theme" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "clu", specifier = ">=0.0.12" },
-    { name = "e3x", specifier = ">=1.0.2" },
-    { name = "grain", specifier = "==0.2.7" },
-    { name = "jax", extras = ["cuda12"], specifier = ">=0.6.0" },
-    { name = "jaxtyping", specifier = ">=0.3.2" },
-    { name = "matscipy", specifier = ">=1.1.1" },
-    { name = "pydantic", specifier = ">=2.11.3" },
-    { name = "sphinx", specifier = ">=8.2.3" },
-    { name = "tensorflow", specifier = ">=2.19.0" },
-    { name = "tqdm", specifier = ">=4.67.1" },
-    { name = "typer", specifier = ">=0.15.2" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "pytest", specifier = ">=8.3.5" },
-    { name = "pytest-cov", specifier = ">=6.1.1" },
-]
-docs = [
-    { name = "myst-parser", specifier = ">=4.0.1" },
-    { name = "sphinx", specifier = ">=8.2.3" },
-    { name = "sphinx-autodoc2", specifier = ">=0.5.0" },
-    { name = "sphinx-book-theme", specifier = ">=1.1.4" },
 ]
 
 [[package]]
