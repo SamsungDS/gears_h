@@ -17,10 +17,9 @@ from slh.train import run
 log = logging.getLogger(__name__)
 
 def off_diag_fitting_function(r, coeffs):
+    # a * np.exp(- (8.0 / length_scale) ** b)
     a, length_scale, b = coeffs[:3]
-    polycoeffs = [1.0, *coeffs[3:]]
-    offset = 0.0 # a * np.exp(- (8.0 / length_scale) ** b)
-    return a * np.exp(- (r / length_scale) ** b) * np.polynomial.Chebyshev(polycoeffs, domain=[0.0, 8.0], window=[-1.0, 1.0])(r) - offset
+    return a * np.exp(- (r / length_scale) ** b)
 
 def off_diag_obj_func(coeffs, r, data):
     return np.sum((off_diag_fitting_function(r, coeffs) - data)** 2) + 1e-4 * np.sum(np.abs(coeffs))
@@ -53,9 +52,6 @@ def off_diag_analysis(input_dicts: list[dict[str]],
                                  bounds = [(-100, 100), 
                                            (0.5, 8.0), 
                                            (1.0, 20.0), 
-                                           #  (-10.0, 10.0), 
-                                           #  (-10.0, 10.0), 
-                                           #  (-10.0, 10.0)
                                           ],
                                  args=(D[idx][::1_00], 
                                        l0shifts[idx, i][::1_00]), 
