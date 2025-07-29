@@ -33,6 +33,6 @@ class OnDiagonalScaleShift(nn.Module):
                  atomic_numbers: Int[Array, ' num_atoms']):
         
         x = x.at[..., 0, 0, :].multiply(jnp.abs(self.scales[atomic_numbers]))
-        # x = e3x.nn.add(self.shifts[atomic_numbers], x)
         x = x.at[..., 0, 0, :].add(self.shifts[atomic_numbers])
+        
         return x
