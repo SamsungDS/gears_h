@@ -6,8 +6,18 @@ callbacks:
 data:
   directory: models # The root directory for training output
   experiment: gears_h # The actual directory containing the model weights, metadata, etc
-  data_path: <PATH> # Absolute path of the directory containing snapshot directories
-  n_train: 100 # Number of training snapshots
+  # Absolute path of the directory containing snapshot directories. Can be provided as a list.
+  # gears_h will automatically partition the data into training and validation sets.
+  # Note that when providing lists of data paths, you should analyze each dataset separately.
+  # Conflicts with train_data_path and val_data_path
+  data_path: <PATH>
+  # Training data path(s) and validation data path(s), if you prefer to split your data yourself.
+  # Both can be provided as lists of paths. These are both required when not using data_path, and
+  # cannot be used when data_path is used.
+  #train_data_path: <PATH>
+  #val_data_path: <PATH>
+  # Number of training snapshots, will be applied for each training directory if more than one is provided.
+  n_train: 100
   n_valid: 10 # As above but validation
   bond_fraction : 1.0 # The fraction of atom-pairs per snapshot to train on
   # ^This is typically used for memory savings or introducing more regularizing noise
