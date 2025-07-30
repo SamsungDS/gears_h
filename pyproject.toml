@@ -1,6 +1,6 @@
 [project]
 name = "gears_h"
-version = "0.8.0"
+version = "0.9.0"
 authors = [
     {name = "Anubhab Haldar", email = "a.haldar@samsung.com"},
     {name = "Ali K. Hamze", email = "ali.hamze@samsung.com"},
