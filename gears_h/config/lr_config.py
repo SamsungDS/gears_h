@@ -54,18 +54,18 @@ class ExponentialDecaySchedule(BaseModel, frozen=True, extra="forbid"):
     name: Literal["exponential_decay"] = "exponential_decay"
     transition_steps: int = 1
     transition_begin: int = 20
-    decay_rate: NonNegativeFloat = 0.99
+    decay_rate: NonNegativeFloat = 0.9999
     end_value: NonNegativeFloat = 1e-4
 
 class ReduceOnPlateauSchedule(BaseModel, frozen = True, extra = "forbid"):
     name: Literal["reduce_on_plateau"] = "reduce_on_plateau"
-    factor: NonNegativeFloat = 0.5
-    patience: NonNegativeInt = 10
-    rtol: NonNegativeFloat = 0.0001
+    factor: NonNegativeFloat = 0.9
+    patience: NonNegativeInt = 50
+    rtol: NonNegativeFloat = 0.01
     atol: float = 0.0
     accumulation_size: NonNegativeInt = 1
-    min_scale: NonNegativeFloat = 1e-5
-    cooldown: NonNegativeInt = 0
+    min_scale: NonNegativeFloat = 0.01
+    cooldown: NonNegativeInt = 25
 
 class WarmupExponentialDecaySchedule(BaseModel, frozen = True, extra = "forbid"):
     name: Literal["warmup_exponential_decay_schedule"] = "warmup_exponential_decay_schedule"
