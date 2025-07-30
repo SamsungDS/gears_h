@@ -32,7 +32,7 @@ class DataConfig(BaseModel, extra="forbid"):
 
     n_train: PositiveInt | list[PositiveInt] = 1000
     n_valid: PositiveInt | list[PositiveInt] = 100
-    batch_size: PositiveInt = 32
+    batch_size: PositiveInt = 2
     valid_batch_size: PositiveInt = 100
     shuffle_buffer_size: PositiveInt = 1000
     additional_properties_info: dict[str, str] = {}
@@ -72,51 +72,17 @@ class DataConfig(BaseModel, extra="forbid"):
 
 class RadialBasisConfig(BaseModel, extra="forbid"):
     cutoff: PositiveFloat
-    num_radial: PositiveInt = 16
-    max_degree: NonNegativeInt = 2
+    num_radial: PositiveInt = 24
+    max_degree: NonNegativeInt = 4
     num_elemental_embedding: PositiveInt = 32
-
-class SAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
-    descriptor_name: Literal["SAAtomCenteredDescriptor"] = "SAAtomCenteredDescriptor"
-    use_fused_tensor: bool = False
-    embedding_residual_connection: bool = True
-    mp_steps: int = 2
-    mp_degree: int = 4
-    mp_options: dict = {}
-
-class TDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
-    descriptor_name: Literal["TDSAAtomCenteredDescriptor"] = "TDSAAtomCenteredDescriptor"
-    max_tensordense_degree: int = 4
-    num_tensordense_features: int = 32
-    use_fused_tensor: bool = False
-    embedding_residual_connection: bool = False
-    mp_steps: int = 2
-    mp_degree: int = 4
-    mp_options: dict = {}
 
 class ShallowTDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
     descriptor_name: Literal["ShallowTDSAAtomCenteredDescriptor"] = "ShallowTDSAAtomCenteredDescriptor"
-    num_tensordenses: int = 2
+    num_tensordenses: int = 1
     max_tensordense_degree: int = 4
-    num_tensordense_features: int = 32
+    num_tensordense_features: int = 12
     use_fused_tensor: bool = False
-    mp_steps: int = 2
-    mp_degree: int = 4
-    mp_options: dict = {}
-    mp_basis_options: dict[str, str | int | dict] = {"radial_fn" : "basic_fourier",
-                                                     "radial_kwargs" : {},
-                                                     "max_degree" : 2,
-                                                     "num" : 8,
-                                                     "cutoff_fn" : "smooth_cutoff"
-                                                    }
-
-class SlightlyDifferentShallowTDSAAtomCenteredDescriptor(BaseModel, extra="forbid"):
-    descriptor_name: Literal["SlightlyDifferentShallowTDSAAtomCenteredDescriptor"] = "SlightlyDifferentShallowTDSAAtomCenteredDescriptor"
-    max_tensordense_degree: int = 4
-    num_tensordense_features: int = 32
-    use_fused_tensor: bool = False
-    embedding_residual_connection: bool = False
-    mp_steps: int = 2
+    mp_steps: int = 0
     mp_degree: int = 4
     mp_options: dict = {}
     mp_basis_options: dict[str, str | int | dict] = {"radial_fn" : "basic_fourier",
@@ -127,11 +93,7 @@ class SlightlyDifferentShallowTDSAAtomCenteredDescriptor(BaseModel, extra="forbi
                                                     }
 
 class AtomCenteredConfig(BaseModel, extra="forbid"):
-    descriptor: Union[SAAtomCenteredDescriptorConfig, 
-                      TDSAAtomCenteredDescriptorConfig,
-                      ShallowTDSAAtomCenteredDescriptorConfig,
-                      SlightlyDifferentShallowTDSAAtomCenteredDescriptor
-                     ] = Field(ShallowTDSAAtomCenteredDescriptorConfig(),
+    descriptor: ShallowTDSAAtomCenteredDescriptorConfig = Field(ShallowTDSAAtomCenteredDescriptorConfig(),
                                discriminator='descriptor_name')
     radial_basis: RadialBasisConfig
 
@@ -139,13 +101,13 @@ class BondCenteredConfig(BaseModel, extra="forbid"):
     bond_expansion_options: dict[str, str | int | dict] = {"radial_fn" : "basic_fourier",
                                                            "radial_kwargs" : {},
                                                            "cutoff_fn" : "smooth_cutoff",
-                                                           "max_degree" : 2,
-                                                           "num" : 8
+                                                           "max_degree" : 4,
+                                                           "num" : 24
                                                           }
     cutoff: PositiveFloat
-    max_basis_degree: NonNegativeInt = 2
+    max_basis_degree: NonNegativeInt = 4
     max_degree: NonNegativeInt = 4
-    tensor_module: Literal["fused_tensor", "tensor"] = "tensor"
+    tensor_module: Literal["fused_tensor", "tensor"] = "fused_tensor"
     tensor_module_dtype: Literal["float32", "float64", "bfloat16"] = "float32"
 
 
@@ -174,9 +136,9 @@ class CSVCallback(BaseModel, frozen=True, extra="forbid"):
 CallBack = Annotated[CSVCallback, Field(discriminator="name")]
 
 class OptimizerConfig(BaseModel, frozen=True, extra="forbid"):
-    name: str = "adam"
+    name: str = "adan"
     lr: NonNegativeFloat = 0.005
-    opt_kwargs: dict[str, Any] = {"nesterov" : True}
+    opt_kwargs: dict[str, Any] = {"weight_decay" : 0.001}
     schedule: Union[ConstantSchedule,
                     CyclicCosineSchedule, 
                     ExponentialDecaySchedule,

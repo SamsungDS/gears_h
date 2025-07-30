@@ -34,10 +34,10 @@ model:
       # Use fused tensor for the many-body outer products
       # Setting to false makes the model more expressive and expensive
       # Using fused tensors is strongly recommended for high-L descriptors
-      use_fused_tensor: False
+      use_fused_tensor: True
       # Number of tensordense operations. 1-2 is recommended. 0 leaves you with
       # 2-body descriptors which aren't great
-      num_tensordenses: 2
+      num_tensordenses: 1
       # Angular resolution for many-body descriptors
       # We've found 4 or so to be quite good. Lower is acceptable, but you're probably
       # losing some accuracy
@@ -77,9 +77,9 @@ model:
       # equal to the cutoff (we haven't tried greater than)
       cutoff: <CUTOFF>
       # Number of radial basis functions
-      num_radial: 16
+      num_radial: 24
       # Angular resolution. 
-      max_degree: 2
+      max_degree: 4
       # Elemental embedding size. Essentially a way to make room for elemental
       # variety. We've don't recall gaining anything from >32, but test if you
       # desire
@@ -91,11 +91,11 @@ model:
     # nonzero matrix elements for is 6+6 angstroms
     cutoff: <CUTOFF>
     # Angular resolution of bond basis. 2+ is good. 1 starts to be not great
-    max_basis_degree: 2
+    max_basis_degree: 4
     # Angular resolution of atom-pair outputs. 4+ is good
     max_degree: 4
     # tensor or fused_tensor. Same tradeoffs as described above
-    tensor_module: tensor
+    tensor_module: fused_tensor
     # float32 or float64, although we've never seen a difference other than
     # training time. Also, jax won't use float64 unless explicitly asked to
     # do so everwhere. Check JAX docs for this
@@ -105,8 +105,8 @@ model:
       cutoff_fn: smooth_cutoff
       radial_fn: basic_fourier
       radial_kwargs: {}
-      max_degree: 2
-      num: 8
+      max_degree: 4
+      num: 24
   # The atom-centered and atom-pair outputs are fed into here
   mlp:
     # This is an acceptable default, but much testing remains
@@ -119,12 +119,13 @@ model:
 
 optimizer:
   # adan, lamb are alternative optimizers to adam
-  name: "adam"
+  name: "adan"
   # 1-5e-3 are good initial learning rates
-  lr: 0.001
+  lr: 0.005
   # Any optional kwargs accepted by the optax optimizer definition go in
   # here
-  opt_kwargs: {nesterov: True}
+  opt_kwargs:
+    weight_decay: 0.001
   # Learning rate scheduler
   # The quantities here apply PER BATCH, not per epoch.
   schedule:
