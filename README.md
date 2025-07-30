@@ -25,7 +25,7 @@ git clone git@github.sec.samsung.net:aml/SurrogateLCAOHamiltonians.git
 cd SurrogateLCAOHamiltonians
 uv venv
 uv pip install .
-source ./venv/bin/activate
+source .venv/bin/activate
 ```
 
 You're now ready to use GEARS H!
