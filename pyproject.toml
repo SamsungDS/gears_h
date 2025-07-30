@@ -1,5 +1,5 @@
 [project]
-name = "surrogatelcaohamiltonians"
+name = "gears_h"
 version = "0.8.0"
 authors = [
     {name = "Anubhab Haldar", email = "a.haldar@samsung.com"},
@@ -33,14 +33,14 @@ dependencies = [
 ]
 
 [project.scripts]
-slh = 'slh.cli.slh_app:app'
+gears_h = 'gears_h.cli.gears_h_app:app'
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["slh"]
+packages = ["gears_h"]
 
 [dependency-groups]
 dev = [
