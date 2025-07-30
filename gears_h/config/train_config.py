@@ -14,17 +14,17 @@ from pydantic import (
 )
 
 from gears_h.config.lr_config import (ConstantSchedule,
-                                  CyclicCosineSchedule, 
-                                  ExponentialDecaySchedule,
-                                  LinearSchedule,
-                                  ReduceOnPlateauSchedule,
-                                  WarmupCosineDecaySchedule,
-                                  WarmupExponentialDecaySchedule
+                                      CyclicCosineSchedule, 
+                                      ExponentialDecaySchedule,
+                                      LinearSchedule,
+                                      ReduceOnPlateauSchedule,
+                                      WarmupCosineDecaySchedule,
+                                      WarmupExponentialDecaySchedule
 )
 
 class DataConfig(BaseModel, extra="forbid"):
-    directory: str = "gears_hmodels"
-    experiment: str = "default"
+    directory: str = "models"
+    experiment: str = "gears_h"
     data_path: Optional[str] = None
     train_data_path: Optional[str | list[str]] = None
     val_data_path: Optional[str| list[str]] = None

@@ -4,8 +4,8 @@ callbacks:
 - name: csv # Calling csv logging
 
 data:
-  directory: slhmodels # The root directory for training output
-  experiment: slh # The actual directory containing the model weights, metadata, etc
+  directory: models # The root directory for training output
+  experiment: gears_h # The actual directory containing the model weights, metadata, etc
   data_path: <PATH> # Absolute path of the directory containing snapshot directories
   n_train: 100 # Number of training snapshots
   n_valid: 10 # As above but validation

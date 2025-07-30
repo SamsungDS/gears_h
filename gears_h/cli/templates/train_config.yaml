@@ -3,8 +3,8 @@ callbacks:
 - name: csv
 
 data:
-  directory: slhmodels
-  experiment: slh
+  directory: models
+  experiment: gears_h
   data_path: <PATH>
   n_train: 100
   n_valid: 10
