@@ -20,8 +20,8 @@ model:
   atom_centered: 
     descriptor:
       descriptor_name: ShallowTDSAAtomCenteredDescriptor
-      use_fused_tensor: False
-      num_tensordenses: 2
+      use_fused_tensor: True
+      num_tensordenses: 1
       max_tensordense_degree: 4
       num_tensordense_features: 12
       mp_steps: 0
@@ -37,30 +37,31 @@ model:
         num: 8
     radial_basis:
       cutoff: <CUTOFF>
-      num_radial: 16
-      max_degree: 2
+      num_radial: 24
+      max_degree: 4
       num_elemental_embedding: 32
   bond_centered:
     cutoff: <CUTOFF>
-    max_basis_degree: 2
+    max_basis_degree: 4
     max_degree: 4
-    tensor_module: tensor
+    tensor_module: fused_tensor
     tensor_module_dtype: float32
     bond_expansion_options:
       cutoff_fn: smooth_cutoff
       radial_fn: basic_fourier
       radial_kwargs: {}
-      max_degree: 2
-      num: 8
+      max_degree: 4
+      num: 24
   mlp:
     mlp_layer_widths: [32,16,32]
     mlp_dtype: float32
     mlp_activation_function: bent_identity
 
 optimizer:
-  name: "adam"
-  lr: 0.001
-  opt_kwargs: {nesterov: True}
+  name: "adan"
+  lr: 0.005
+  opt_kwargs:
+    weight_decay: 0.001
   schedule:
     name: exponential_decay
     decay_rate: 0.9999
