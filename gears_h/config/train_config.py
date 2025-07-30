@@ -76,42 +76,9 @@ class RadialBasisConfig(BaseModel, extra="forbid"):
     max_degree: NonNegativeInt = 2
     num_elemental_embedding: PositiveInt = 32
 
-class SAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
-    descriptor_name: Literal["SAAtomCenteredDescriptor"] = "SAAtomCenteredDescriptor"
-    use_fused_tensor: bool = False
-    embedding_residual_connection: bool = True
-    mp_steps: int = 2
-    mp_degree: int = 4
-    mp_options: dict = {}
-
-class TDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
-    descriptor_name: Literal["TDSAAtomCenteredDescriptor"] = "TDSAAtomCenteredDescriptor"
-    max_tensordense_degree: int = 4
-    num_tensordense_features: int = 32
-    use_fused_tensor: bool = False
-    embedding_residual_connection: bool = False
-    mp_steps: int = 2
-    mp_degree: int = 4
-    mp_options: dict = {}
-
 class ShallowTDSAAtomCenteredDescriptorConfig(BaseModel, extra="forbid"):
     descriptor_name: Literal["ShallowTDSAAtomCenteredDescriptor"] = "ShallowTDSAAtomCenteredDescriptor"
-    num_tensordenses: int = 2
-    max_tensordense_degree: int = 4
-    num_tensordense_features: int = 32
-    use_fused_tensor: bool = False
-    mp_steps: int = 2
-    mp_degree: int = 4
-    mp_options: dict = {}
-    mp_basis_options: dict[str, str | int | dict] = {"radial_fn" : "basic_fourier",
-                                                     "radial_kwargs" : {},
-                                                     "max_degree" : 2,
-                                                     "num" : 8,
-                                                     "cutoff_fn" : "smooth_cutoff"
-                                                    }
-
-class SlightlyDifferentShallowTDSAAtomCenteredDescriptor(BaseModel, extra="forbid"):
-    descriptor_name: Literal["SlightlyDifferentShallowTDSAAtomCenteredDescriptor"] = "SlightlyDifferentShallowTDSAAtomCenteredDescriptor"
+    num_tensordenses: int = 1
     max_tensordense_degree: int = 4
     num_tensordense_features: int = 32
     use_fused_tensor: bool = False
@@ -127,11 +94,7 @@ class SlightlyDifferentShallowTDSAAtomCenteredDescriptor(BaseModel, extra="forbi
                                                     }
 
 class AtomCenteredConfig(BaseModel, extra="forbid"):
-    descriptor: Union[SAAtomCenteredDescriptorConfig, 
-                      TDSAAtomCenteredDescriptorConfig,
-                      ShallowTDSAAtomCenteredDescriptorConfig,
-                      SlightlyDifferentShallowTDSAAtomCenteredDescriptor
-                     ] = Field(ShallowTDSAAtomCenteredDescriptorConfig(),
+    descriptor: ShallowTDSAAtomCenteredDescriptorConfig = Field(ShallowTDSAAtomCenteredDescriptorConfig(),
                                discriminator='descriptor_name')
     radial_basis: RadialBasisConfig
 
