@@ -2,8 +2,7 @@ import flax.linen as nn
 import jax.numpy as jnp
 
 from gears_h.layers import (
-    SAAtomCenteredDescriptor,
-    TDSAAtomCenteredDescriptor,
+    ShallowTDSAAtomCenteredDescriptor,
     BondCenteredTensorMomentDescriptor,
     DenseBlock,
     Readout,
@@ -11,11 +10,8 @@ from gears_h.layers import (
     OnDiagonalScaleShift
 )
 
-from typing import Union
-
-
 class HamiltonianModel(nn.Module):
-    atom_centered: Union[SAAtomCenteredDescriptor,TDSAAtomCenteredDescriptor]
+    atom_centered: ShallowTDSAAtomCenteredDescriptor
     bond_centered: BondCenteredTensorMomentDescriptor
     dense: DenseBlock
     off_diag_readout: Readout

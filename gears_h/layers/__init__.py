@@ -1,8 +1,6 @@
 from gears_h.layers.descriptor import (
-    BondCenteredTensorMomentDescriptor,
-    SAAtomCenteredDescriptor,
-    SpeciesAwareRadialBasis,
-    TDSAAtomCenteredDescriptor
+    ShallowTDSAAtomCenteredDescriptor,
+    BondCenteredTensorMomentDescriptor
 )
 from gears_h.layers.layer_norm import LayerNorm
 from gears_h.layers.readout import Readout
