@@ -1,9 +1,10 @@
-# direction: right
+direction: right
  
 vars: {
     d2-config: {
       layout-engine: elk
       pad: 10
+    #   elk-nodeNodeBetweenLayers: 10
     #   theme-id: 101
     }
 }
@@ -23,37 +24,44 @@ acf: {
     |
 }
 
+# test: |latex \huge{\Sigma} |
+
 ac: Atom-Centered Descriptor {
     class: ac
     _.f.equation -> sum_j: {style: {stroke: "#000000"; font-color: black}}
-    sum_j: ∑ j {class: operator}
+    sum_j: ∑ {class: operator}
+    # sum_j: ∑ j {class: operator}
+    # sum_j: {label: ""; class: operator; equation: |latex \huge{\Sigma_j} |}
+    # sum_j  -> nl_block: {style: {stroke: "#000000"; font-color: black}}
     sum_j -> ntd: {style: {stroke: "#000000"; font-color: black}}
     ntd: TensorDenses {class: in_module; style: {stroke-dash: 3; multiple: true}}
     c: Concatenate  {class: in_module}
-    sum_j  -> c: {style: {stroke: "#000000"; font-color: black}}
-    ntd -> c: {style: {stroke: "#000000"; font-color: black}}
+    
+    ntd -> mp_block: {style: {stroke: "#000000"; font-color: black}}
 
-    c -> mp_block: {style: {stroke: "#000000"; font-color: black}}
-
-    mp_block:  Message-Passing Blocks {
+    mp_block:  Message-Passing\nBlocks {
         class: in_module
         style: {stroke-dash: 3; multiple: true}
     }
     
-    nl_block: Nonlinear Block {
+    nl_block: Nonlinear Blocks {
         class: in_module
+        style: {multiple: true}
     }
+    
     mp_block -> nl_block: {style: {stroke: "#000000"; font-color: black}}
+    nl_block -> c: {style: {stroke: "#000000"; font-color: black}}
 }
 
-ac.nl_block -> acf.equation: {style: {stroke: "#000000"; font-color: black}}
+ac.c -> acf.equation: {style: {stroke: "#000000"; font-color: black}}
 
 classes: {
     operator: {shape: circle
-               width: 35
-               height: 35
+               width: 40
+               height: 40
                style: {fill: "#FFFFFF"
                        stroke: "#000000"
+                       font-size: 24
                       }
     }
     empty: {
@@ -76,6 +84,7 @@ classes: {
         style: {
             fill: "#FFFFFF"
             stroke: "#000000"
+            font-size: 24
         }
     }
     ac: {
@@ -83,6 +92,7 @@ classes: {
             fill: "#BBCC33"
             stroke: "#000000"
             bold: true
+            font-size: 28
         }
     }
     bc: {

@@ -1,40 +1,42 @@
-# direction: right
+direction: right
 vars: {
   d2-config: {
     layout-engine: elk
     # theme-id: 200
-    pad: 10
+    pad: 40
   }
 }
 
 z: {
   label: ""
   equation: |latex
-    \large{Z}
+    \huge{Z}
   |
   class: input
 }
 r: {label: ""
     equation: |latex
-        \large{\mathbf{r}_{ij}}
+        \huge{\mathbf{r}_{ij}}
     |
     class: input
 }
 
-sarb: Species-Aware Radial Basis {class: sarb}
-ac: Atom-Centered {class: ac}
-bc: Bond-Centered {class: bc}
-rd: Residual Dense {class: rd}
-ondro: On-diagonal \nTensorDense Readout {class: ro}
-offdro: Off-diagonal \nTensorDense Readout {class: ro}
+sarb: Species-Aware\nRadial Basis {class: sarb}
+ac: Atom\nCentered {class: ac}
+bc: Bond\nCentered {class: bc}
+rd: Residual\nDense {class: rd}
+ondro: On-diagonal\nTensorDense\nReadout {class: ro}
+offdro: Off-diagonal\nTensorDense\nReadout {class: ro}
+onscsh: On-diagonal\nScale Shift {class: scaleshift}
+offscsh: Off-diagonal\nScale Shift {class: scaleshift}
 outs: H Irreps. {class: outs}
 
 ac -> rd: {style: {stroke: "#000000"}}
 z -> sarb -> ac -> bc -> rd: {style: {stroke: "#000000"}}
 r -> sarb: {style: {stroke: "#000000"}}
 r -> bc: {style: {stroke: "#000000"}}
-rd -> ondro -> outs: {style: {stroke: "#000000"}}
-rd -> offdro -> outs: {style: {stroke: "#000000"}}
+rd -> ondro -> onscsh -> outs: {style: {stroke: "#000000"}}
+rd -> offdro -> offscsh -> outs: {style: {stroke: "#000000"}}
 
 classes: {
   empty: {
@@ -50,30 +52,42 @@ classes: {
     style: {
       fill: "#44BB99"
       stroke: "#000000"
+      font-size: 24
     }
   }
   ac: {
     style: {
       fill: "#BBCC33"
       stroke: "#000000"
+      font-size: 24
     }
   }
   bc: {
     style: {
       fill: "#EEDD88"
       stroke: "#000000"
+      font-size: 24
     }
   }
   rd: {
     style: {
       fill: "#EE8866"
       stroke: "#000000"
+      font-size: 24
     }
   }
   ro: {
     style: {
       fill: "#FFAABB"
       stroke: "#000000"
+      font-size: 24
+    }
+  }
+  scaleshift: {
+    style: {
+      fill: "#77AADD"
+      stroke: "#000000"
+      font-size: 24
     }
   }
   outs: {
@@ -81,6 +95,7 @@ classes: {
       fill: "#DDDDDD"
       stroke: "#000000"
       multiple: true
+      font-size: 24
     }
     shape: parallelogram
   }
