@@ -37,12 +37,18 @@ uv pip install -e .
 
 ## Usage
 
+Here we present a very brief overview of the workflow.
+A jupyter notebook with example data, model training, inference, and additional detail and discussion is available [in the examples folder](https://github.com/SamsungDS/gears_h/blob/main/examples/WSe2-x/wse2_example.ipynb).
+
 First, you'll need a configuration file.
 You can start from a base template, which you can generate by:
 ```console
 gears_h template train --full
 ```
 This will write out a file name `config_full.yaml`, which you can edit to point to your dataset and to customize your model parameters.
+
+For training dataset generation, please see our companion tool [gears_h_tools](https://github.com/SamsungDS/gears_h_tools).
+Currently, we only have support for generating training data from GPAW, but support for other LCAO codes is planned.
 
 Before training, we recommend analyzing your dataset. 
 This sets up the scale-shift layers, which increases model accuracy.
