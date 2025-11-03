@@ -21,10 +21,10 @@ Installation is easiest using `uv`. Follow their installation instructions [here
 Once you have `uv`, follow these steps to install GEARS H and activate your new python environment:
 
 ```console
-git clone git@github.sec.samsung.net:aml/SurrogateLCAOHamiltonians.git
-cd SurrogateLCAOHamiltonians
+git clone https://github.com/SamsungDS/gears_h.git
+cd gears_h
 uv venv
-uv pip install .
+uv sync
 source .venv/bin/activate
 ```
 
