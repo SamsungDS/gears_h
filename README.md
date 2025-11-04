@@ -14,6 +14,7 @@ GEARS H seeks to surrogatize and approximate density functional theory (or other
   - [Usage](#usage)
   - [Authors](#authors)
   - [References](#references)
+  - [Acknowledgements](#acknowledgements)
 
 ## Installation
 
@@ -103,3 +104,7 @@ If you use this code, please cite our paper:
   keywords = {Condensed Matter - Materials Science,Physics - Computational Physics},
 }
 ```
+
+## Acknowledgements
+
+`gears_h` draws from [`apax`](https://github.com/apax-hub/apax), especially in the CLI, configuration files, and parts of the training loop structure. We thank the authors of `apax` for making it available to the community.
