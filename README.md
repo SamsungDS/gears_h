@@ -81,7 +81,7 @@ GEARS H was designed and built by
 - Anubhab Haldar
 - Ali K. Hamze
 
-under the supervision of Yongwoo Shin.
+under the supervision of Yongwoo Shin and with input from Nikhil Sivadas.
 
 ## References
 
